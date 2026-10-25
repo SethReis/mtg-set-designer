@@ -1,0 +1,218 @@
+[
+ {
+  "expr": "set.cards.0.rule_text",
+  "status": "ok",
+  "output": "\"<kw-a><nospellcheck><key>Flying</key></nospellcheck></kw-a>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.0.text",
+  "status": "ok",
+  "output": "\"<kw-a><nospellcheck><key>Flying</key></nospellcheck></kw-a><sep><line>\\n</line></sep><i-flavor></i-flavor>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.1.rule_text",
+  "status": "ok",
+  "output": "\"<kw-a><nospellcheck><key>Flying</key></nospellcheck></kw-a>, <kw-a><nospellcheck><key>haste</key></nospellcheck></kw-a>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.1.text",
+  "status": "ok",
+  "output": "\"<kw-a><nospellcheck><key>Flying</key></nospellcheck></kw-a>, <kw-a><nospellcheck><key>haste</key></nospellcheck></kw-a><sep><line>\\n</line></sep><i-flavor></i-flavor>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.2.rule_text",
+  "status": "ok",
+  "output": "\"Target creature gains <kw-a><nospellcheck><key>flying</key></nospellcheck></kw-a> until end of turn.\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.2.text",
+  "status": "ok",
+  "output": "\"Target creature gains <kw-a><nospellcheck><key>flying</key></nospellcheck></kw-a> until end of turn.<sep><line>\\n</line></sep><i-flavor></i-flavor>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.3.rule_text",
+  "status": "ok",
+  "output": "\"<kw-A><nospellcheck><key>Cycling <param-cost><sym>2</sym></param-cost></key></nospellcheck><atom-reminder-expert> <i-auto>(<param-cost><sym-auto>2</sym-auto></param-cost>, Discard this card: Draw a card.)</i-auto></atom-reminder-expert></kw-A>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.3.text",
+  "status": "ok",
+  "output": "\"<kw-A><nospellcheck><key>Cycling <param-cost><sym>2</sym></param-cost></key></nospellcheck><atom-reminder-expert> <i-auto>(<param-cost><sym-auto>2</sym-auto></param-cost>, Discard this card: Draw a card.)</i-auto></atom-reminder-expert></kw-A><sep><line>\\n</line></sep><i-flavor></i-flavor>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.4.rule_text",
+  "status": "ok",
+  "output": "\"<kw-A><nospellcheck><key>Kicker <param-cost><sym>1R</sym></param-cost></key></nospellcheck><atom-reminder-expert> <i-auto>(You may pay an additional <param-mana><sym-auto>1R</sym-auto></param-mana> as you cast this spell.)</i-auto></atom-reminder-expert></kw-A>\\n<atom-cardname><nospellcheck>Kicker</nospellcheck></atom-cardname> deals 2 damage to any target. If this spell was kicked, it deals 4 damage instead.\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.4.text",
+  "status": "ok",
+  "output": "\"<kw-A><nospellcheck><key>Kicker <param-cost><sym>1R</sym></param-cost></key></nospellcheck><atom-reminder-expert> <i-auto>(You may pay an additional <param-mana><sym-auto>1R</sym-auto></param-mana> as you cast this spell.)</i-auto></atom-reminder-expert></kw-A>\\n<atom-cardname><nospellcheck>Kicker</nospellcheck></atom-cardname> deals 2 damage to any target. If this spell was kicked, it deals 4 damage instead.<sep><line>\\n</line></sep><i-flavor></i-flavor>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.5.rule_text",
+  "status": "ok",
+  "output": "\"Equipped creature gets +2/+0.\\n<kw-a><nospellcheck><key>Equip <param-cost><sym>3</sym></param-cost></key></nospellcheck></kw-a>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.5.text",
+  "status": "ok",
+  "output": "\"Equipped creature gets +2/+0.\\n<kw-a><nospellcheck><key>Equip <param-cost><sym>3</sym></param-cost></key></nospellcheck></kw-a><sep><line>\\n</line></sep><i-flavor></i-flavor>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.6.rule_text",
+  "status": "ok",
+  "output": "\"<kw-A><nospellcheck><key>Ward—<param-cost>Pay 3 life</param-cost>.</key></nospellcheck><atom-reminder-expert> <i-auto>(Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player <param-cost>pays 3 life</param-cost>.)</i-auto></atom-reminder-expert></kw-A>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.6.text",
+  "status": "ok",
+  "output": "\"<kw-A><nospellcheck><key>Ward—<param-cost>Pay 3 life</param-cost>.</key></nospellcheck><atom-reminder-expert> <i-auto>(Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player <param-cost>pays 3 life</param-cost>.)</i-auto></atom-reminder-expert></kw-A><sep><line>\\n</line></sep><i-flavor></i-flavor>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.7.rule_text",
+  "status": "ok",
+  "output": "\"<kw-a><nospellcheck><key>Scry <param-number>2</param-number></key></nospellcheck></kw-a>. Draw a card.\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.7.text",
+  "status": "ok",
+  "output": "\"<kw-a><nospellcheck><key>Scry <param-number>2</param-number></key></nospellcheck></kw-a>. Draw a card.<sep><line>\\n</line></sep><i-flavor></i-flavor>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.8.rule_text",
+  "status": "ok",
+  "output": "\"<kw-A><i-auto><nospellcheck><key>Landfall</key></nospellcheck></i-auto></kw-A> — Whenever a land you control enters, <atom-cardname><nospellcheck>Landfall</nospellcheck></atom-cardname> gets +1/+1 until end of turn.\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.8.text",
+  "status": "ok",
+  "output": "\"<kw-A><i-auto><nospellcheck><key>Landfall</key></nospellcheck></i-auto></kw-A> — Whenever a land you control enters, <atom-cardname><nospellcheck>Landfall</nospellcheck></atom-cardname> gets +1/+1 until end of turn.<sep><line>\\n</line></sep><i-flavor></i-flavor>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.9.rule_text",
+  "status": "ok",
+  "output": "\"<error-spelling:en_US:/magic.mse-game/dictionary/magic-words>Flyingly</error-spelling:en_US:/magic.mse-game/dictionary/magic-words> nonsense, <error-spelling:en_US:/magic.mse-game/dictionary/magic-words>unhasted</error-spelling:en_US:/magic.mse-game/dictionary/magic-words>.\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.9.text",
+  "status": "ok",
+  "output": "\"<error-spelling:en_US:/magic.mse-game/dictionary/magic-words>Flyingly</error-spelling:en_US:/magic.mse-game/dictionary/magic-words> nonsense, <error-spelling:en_US:/magic.mse-game/dictionary/magic-words>unhasted</error-spelling:en_US:/magic.mse-game/dictionary/magic-words>.<sep><line>\\n</line></sep><i-flavor></i-flavor>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.10.rule_text",
+  "status": "ok",
+  "output": "\"<kw-a><nospellcheck><key>Flying</key></nospellcheck></kw-a>, <kw-a><nospellcheck><key>vigilance</key></nospellcheck></kw-a>\\nWhen <atom-cardname><nospellcheck>Two Keywords</nospellcheck></atom-cardname> enters, <kw-a><nospellcheck><key>scry <param-number>1</param-number></key></nospellcheck></kw-a>.\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.10.text",
+  "status": "ok",
+  "output": "\"<kw-a><nospellcheck><key>Flying</key></nospellcheck></kw-a>, <kw-a><nospellcheck><key>vigilance</key></nospellcheck></kw-a>\\nWhen <atom-cardname><nospellcheck>Two Keywords</nospellcheck></atom-cardname> enters, <kw-a><nospellcheck><key>scry <param-number>1</param-number></key></nospellcheck></kw-a>.<sep><line>\\n</line></sep><i-flavor></i-flavor>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.11.rule_text",
+  "status": "ok",
+  "output": "\"<kw-1><nospellcheck><key>Bloodpact <param-cost><sym>1B</sym></param-cost></key></nospellcheck><atom-reminder-custom> <i-auto>(<param-cost><sym-auto>1B</sym-auto></param-cost>, Sacrifice a creature: Draw a card.)</i-auto></atom-reminder-custom></kw-1>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.11.text",
+  "status": "ok",
+  "output": "\"<kw-1><nospellcheck><key>Bloodpact <param-cost><sym>1B</sym></param-cost></key></nospellcheck><atom-reminder-custom> <i-auto>(<param-cost><sym-auto>1B</sym-auto></param-cost>, Sacrifice a creature: Draw a card.)</i-auto></atom-reminder-custom></kw-1><sep><line>\\n</line></sep><i-flavor></i-flavor>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.12.rule_text",
+  "status": "ok",
+  "output": "\"<kw-0><nospellcheck><key><param-prefix>Shroud</param-prefix>walk</key></nospellcheck></kw-0>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.12.text",
+  "status": "ok",
+  "output": "\"<kw-0><nospellcheck><key><param-prefix>Shroud</param-prefix>walk</key></nospellcheck></kw-0><sep><line>\\n</line></sep><i-flavor></i-flavor>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.13.rule_text",
+  "status": "ok",
+  "output": "\"<kw-1><nospellcheck><key>Glimmer</key></nospellcheck><atom-reminder-custom> <i-auto>(This creature has hexproof while untapped.)</i-auto></atom-reminder-custom></kw-1>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.13.text",
+  "status": "ok",
+  "output": "\"<kw-1><nospellcheck><key>Glimmer</key></nospellcheck><atom-reminder-custom> <i-auto>(This creature has hexproof while untapped.)</i-auto></atom-reminder-custom></kw-1><sep><line>\\n</line></sep><i-flavor></i-flavor>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.14.rule_text",
+  "status": "ok",
+  "output": "\"<kw-0><nospellcheck><key>Glimmer</key></nospellcheck></kw-0>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.14.text",
+  "status": "ok",
+  "output": "\"<kw-0><nospellcheck><key>Glimmer</key></nospellcheck></kw-0><sep><line>\\n</line></sep><i-flavor></i-flavor>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.15.rule_text",
+  "status": "ok",
+  "output": "\"<kw-1><nospellcheck><key>Scour <param-number>2</param-number></key></nospellcheck>.<atom-reminder-action> <i-auto>(Mill <param-number>2</param-number> cards, then you may return a land card milled this way to your hand.)</i-auto></atom-reminder-action></kw-1>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.15.text",
+  "status": "ok",
+  "output": "\"<kw-1><nospellcheck><key>Scour <param-number>2</param-number></key></nospellcheck>.<atom-reminder-action> <i-auto>(Mill <param-number>2</param-number> cards, then you may return a land card milled this way to your hand.)</i-auto></atom-reminder-action></kw-1><sep><line>\\n</line></sep><i-flavor></i-flavor>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.16.rule_text",
+  "status": "ok",
+  "output": "\"<kw-0><nospellcheck><key>Scour <param-number>3</param-number></key></nospellcheck></kw-0>.\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.16.text",
+  "status": "ok",
+  "output": "\"<kw-0><nospellcheck><key>Scour <param-number>3</param-number></key></nospellcheck></kw-0>.<sep><line>\\n</line></sep><i-flavor></i-flavor>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.17.rule_text",
+  "status": "ok",
+  "output": "\"<kw-1><nospellcheck><key>Scour <param-number>1</param-number></key></nospellcheck>.<atom-reminder-action> <i-auto>(Mill <param-number>1</param-number> cards, then you may return a land card milled this way to your hand.)</i-auto></atom-reminder-action></kw-1>\"",
+  "project": "keyword_project"
+ },
+ {
+  "expr": "set.cards.17.text",
+  "status": "ok",
+  "output": "\"<kw-1><nospellcheck><key>Scour <param-number>1</param-number></key></nospellcheck>.<atom-reminder-action> <i-auto>(Mill <param-number>1</param-number> cards, then you may return a land card milled this way to your hand.)</i-auto></atom-reminder-action></kw-1><sep><line>\\n</line></sep><i-flavor></i-flavor>\"",
+  "project": "keyword_project"
+ }
+]

@@ -1,0 +1,135 @@
+# Expressions evaluated by real MSE (tools/mse_oracle.py) to pin down script semantics.
+# One self-contained expression per line; `#` lines and blank lines are ignored.
+# Use unique variable names per line: variables persist between lines in the CLI.
+
+# ---- truthiness
+if 1 then "y" else "n"
+if 0 then "y" else "n"
+if 1.5 then "y" else "n"
+if "yes" then "y" else "n"
+if "true" then "y" else "n"
+if "no" then "y" else "n"
+if "" then "y" else "n"
+if "maybe" then "y" else "n"
+if nil then "y" else "n"
+if [] then "y" else "n"
+not nil
+not 1
+true and 1
+false and 1
+false or 1
+true or 1
+nil or "x"
+true xor false
+
+# ---- numbers and printing
+"" + 2.0
+"" + 0.1
+"" + 1/3
+"" + 1234567.0
+"" + 1e3
+2.0
+1/3
+7 / 2
+6 / 3
+-7 div 2
+7.5 div 2
+-7 mod 3
+7.5 mod 2
+2 ^ 0.5
+2 ^ 10
+2.0 ^ 2
+3 - 1.5
+3 * 2
+"3" * 2
+"3" - 1
+nil - 1
+nil + 1
+true + 1
+"a" + true
+-"3"
+- 2.5
+
+# ---- equality and ordering
+1 == "1"
+nil == ""
+1 == 1.0
+[1,2] == [1,2]
+[a:1] == [b:1]
+true == "true"
+"a" == "a"
+nil == nil
+"10" < "9"
+"a" < "b"
+nil < 1
+1 < 1.5
+"2" < 10
+
+# ---- printing values
+"say \"hi\""
+[a: 1, b: "x"]
+[]
+nil
+true
+"multi\nline"
+"a\{b\}"
+"tab\there"
+"back\\slash"
+"<b>tag</b>"
+"\<b>"
+[1.5, nil, true, [2]]
+{ 1 }
+
+# ---- or else and missing members
+nil or else 2
+[a:1].b or else 2
+[a:1].a or else 2
+[1,2].5 or else "none"
+[1,2].1
+[a:1].b
+"abc".1
+nil.x or else 1
+([a: 1].b)() or else "called"
+([a: 1].b)(1) or else "with args"
+([a: 1].b)()
+f16 := { x16 }@(x16: nil.y); "ok"
+(1 + "x") or else 3
+
+# ---- functions and scope
+f1 := { x1 * 2 }; x1 := 5; f1()
+y2 := 1; f2 := { y2 := 2; y2 }; [f2(), y2]
+f3 := { input * 2 }; f3(4)
+f4 := { a4 + b4 }@(b4: 10); [f4(a4: 1), f4(a4: 1, b4: 2)]
+f5 := { input + 1 }; g5 := { input * 10 }; (f5 + g5)(2)
+nil(input: 5)
+f6 := { input }; f6()
+input7 := 3; f7 := { input7 }; f7(input7: 4)
+f8 := { a8 }@(a8: 1); a8 := 5; f8()
+f9 := { if input > 1 then input * f9(input - 1) else 1 }; f9(5)
+f10 := { input }; f10("x", 2)
+"{1 + 1}"
+"a{1}b{2}"
+"{[1]}"
+f11 := { input + 1 }; g11 := f11 + f11 + f11; g11(1)
+f12 := { [a12, b12] }@(a12: 1)@(b12: 2); f12()
+f13 := { x13 := input; x13 }; x13 := "outer"; [f13(1), x13]
+f14 := { z14 := 1 }; f14(); z14 or else "unset"
+case 2 of 1: "one", 2: "two", else: "many"
+case "q" of 1: "one"
+[1, 2] + [3]
+[a: 1] + [b: 2]
+[a: 1] + [a: 2]
+"x" + [1]
+f15 := { input }; f15 + "s"
+
+# ---- loops
+for x from 1 to 3 do x
+for x from 1 to 3 do [x]
+for x from 3 to 1 do [x]
+for k:v from 5 to 7 do [k]
+for each v in [10, 20] do v
+for each k:v in [10, 20] do [k]
+for each v in [b: 1, a: 2] do [v]
+for each k:v in [b: 1, a: 2] do [k]
+for each v in [] do v
+for each c in "ab" do c

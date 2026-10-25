@@ -1,0 +1,57 @@
+# Rules text of every card in tests/fixtures/keyword_project.py, as MSE expands it.
+#! project: keyword_project
+
+# flying
+set.cards.0.rule_text
+set.cards.0.text
+# flying-haste
+set.cards.1.rule_text
+set.cards.1.text
+# lowercase
+set.cards.2.rule_text
+set.cards.2.text
+# cycling
+set.cards.3.rule_text
+set.cards.3.text
+# kicker
+set.cards.4.rule_text
+set.cards.4.text
+# equip
+set.cards.5.rule_text
+set.cards.5.text
+# ward
+set.cards.6.rule_text
+set.cards.6.text
+# scry
+set.cards.7.rule_text
+set.cards.7.text
+# landfall
+set.cards.8.rule_text
+set.cards.8.text
+# no-match
+set.cards.9.rule_text
+set.cards.9.text
+# two-keywords
+set.cards.10.rule_text
+set.cards.10.text
+# bloodpact
+set.cards.11.rule_text
+set.cards.11.text
+# shroudwalk
+set.cards.12.rule_text
+set.cards.12.text
+# glimmer-common
+set.cards.13.rule_text
+set.cards.13.text
+# glimmer-rare
+set.cards.14.rule_text
+set.cards.14.text
+# scour-green-1
+set.cards.15.rule_text
+set.cards.15.text
+# scour-green-2
+set.cards.16.rule_text
+set.cards.16.text
+# scour-blue
+set.cards.17.rule_text
+set.cards.17.text

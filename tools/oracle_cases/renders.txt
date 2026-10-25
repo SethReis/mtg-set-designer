@@ -1,0 +1,13 @@
+# Whole cards as real MSE renders them (write_image_file(input: card), 375x523).
+# Compared region by region in tests/render/test_render_oracle.py.
+#! project: oracle_project
+#! images
+
+set.cards.0
+set.cards.1
+set.cards.2
+set.cards.3
+set.cards.4
+set.cards.5
+set.cards.6
+set.cards.7

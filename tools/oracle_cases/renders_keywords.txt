@@ -1,0 +1,12 @@
+# Text-heavy cards (keywords, reminder text, CARDNAME, mechanics) as real MSE renders them.
+#! project: keyword_project
+#! images
+
+set.cards.3
+set.cards.4
+set.cards.6
+set.cards.7
+set.cards.8
+set.cards.10
+set.cards.11
+set.cards.15

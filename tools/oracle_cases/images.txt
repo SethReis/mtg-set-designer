@@ -1,0 +1,48 @@
+﻿# Image cases: each expression is written to a PNG by real MSE (write_image_file) and
+# compared with our generated pixels. `[WxH] expr` generates at that size.
+# Large frames are cropped to 120x120 (crop is pixel exact) to keep the PNGs small.
+#! project: oracle_project
+#! images
+
+# ---- files and simple effects (loyalty.png is 269x172 with alpha)
+"/magic-m15-altered.mse-style/loyalty.png"
+invert_image("/magic-m15-altered.mse-style/loyalty.png")
+recolor_image(input: "/magic-m15-altered.mse-style/loyalty.png", color: rgb(200,30,30))
+recolor_image(input: "/magic-m15-altered.mse-style/loyalty.png", color: rgb(240,220,160))
+recolor_image(input: "/magic-m15-altered.mse-style/loyalty.png", red: rgb(0,0,255), green: rgb(255,0,0), blue: rgb(0,255,0))
+set_alpha(input: "/magic-m15-altered.mse-style/loyalty.png", alpha: 0.5)
+saturate(input: "/magic-m15-altered.mse-style/loyalty.png", amount: 0.5)
+flip_horizontal("/magic-m15-altered.mse-style/loyalty.png")
+flip_vertical("/magic-m15-altered.mse-style/loyalty.png")
+flip_image("/magic-m15-altered.mse-style/loyalty.png", horizontal: true)
+crop(input: "/magic-m15-altered.mse-style/loyalty.png", width: 50, height: 40, offset_x: 10, offset_y: 20)
+crop_image(input: "/magic-m15-altered.mse-style/loyalty.png", width: 300, height: 200, offset_x: -10, offset_y: -10, background_color: rgb(0,0,255))
+enlarge(input: "/magic-m15-altered.mse-style/loyalty.png", border_size: 0.1)
+fill_image("/magic-m15-altered.mse-style/loyalty.png", color: rgb(10,200,30))
+drop_shadow(input: "/magic-m15-altered.mse-style/loyalty.png", offset_x: 0.05, offset_y: 0.05, alpha: 0.8, blur_radius: 0.01, color: rgb(0,0,0))
+drop_shadow(input: "/magic-m15-altered.mse-style/loyalty.png", offset_x: 0.02, offset_y: 0.03, alpha: 1, blur_radius: 0.02, color: rgb(0,0,0))
+add_drop_shadow("/magic-m15-altered.mse-style/loyalty.png", offset_x: 0.05, offset_y: 0.05, alpha: 0.8, blur_radius: 0.01, color: rgb(0,0,0))
+insert_image(base_image: "/magic-m15-altered.mse-style/loyalty.png", inserted_image: "/magic-m15-altered.mse-style/loyaltyup.png", offset_x: 30, offset_y: 20)
+nine_slice_image("/magic-m15-altered.mse-style/loyalty.png", width: 400, height: 100, top: 20, bottom: 20, left: 30, right: 30)
+resize_image("/magic-m15-altered.mse-style/loyalty.png", width: 100, height: 50)
+[100x50] "/magic-m15-altered.mse-style/loyalty.png"
+[134x0] "/magic-m15-altered.mse-style/loyalty.png"
+
+# ---- blends of full frames (375x523), cropped
+crop(input: masked_blend(light: "/magic-modules.mse-include/cards/375 m15 simple/rcard.jpg", dark: "/magic-modules.mse-include/cards/375 m15 simple/wcard.jpg", mask: "/magic-modules.mse-include/cards/375 m15 simple/hybrid_blend_card.png"), width: 120, height: 120, offset_x: 130, offset_y: 0)
+crop(input: linear_blend(image1: "/magic-modules.mse-include/cards/375 m15 simple/gcard.jpg", image2: "/magic-modules.mse-include/cards/375 m15 simple/ucard.jpg", x1: 0.4, y1: 0, x2: 0.6, y2: 0), width: 120, height: 120, offset_x: 130, offset_y: 200)
+crop(input: linear_blend(image1: "/magic-modules.mse-include/cards/375 m15 simple/gcard.jpg", image2: "/magic-modules.mse-include/cards/375 m15 simple/ucard.jpg", x1: 0.2, y1: 0.2, x2: 0.8, y2: 0.7), width: 120, height: 120, offset_x: 130, offset_y: 200)
+crop(input: combine_blend(image1: "/magic-modules.mse-include/cards/375 m15 simple/gcard.jpg", image2: "/magic-modules.mse-include/cards/375 m15 simple/rcard.jpg", combine: "symmetric overlay"), width: 120, height: 120, offset_x: 0, offset_y: 0)
+crop(input: combine_blend(image1: "/magic-modules.mse-include/cards/375 m15 simple/gcard.jpg", image2: "/magic-modules.mse-include/cards/375 m15 simple/rcard.jpg", combine: "multiply"), width: 120, height: 120, offset_x: 0, offset_y: 0)
+crop(input: combine_blend(image1: "/magic-modules.mse-include/cards/375 m15 simple/gcard.jpg", image2: "/magic-modules.mse-include/cards/375 m15 simple/rcard.jpg", combine: "screen"), width: 120, height: 120, offset_x: 0, offset_y: 0)
+crop(input: set_mask(image: "/magic-modules.mse-include/cards/375 m15 simple/gcard.jpg", mask: "/magic-modules.mse-include/cards/375 m15 simple/hybrid_blend_card.png"), width: 120, height: 120, offset_x: 130, offset_y: 0)
+crop(input: set_mask(image: "/magic-modules.mse-include/cards/375 m15 simple/gcard.jpg", mask: "/magic-m15-altered.mse-style/loyalty.png"), width: 120, height: 120, offset_x: 130, offset_y: 200)
+
+crop(input: combine_blend(image1: "/magic-modules.mse-include/cards/375 m15 simple/gcard.jpg", image2: "/magic-modules.mse-include/cards/375 m15 simple/rcard.jpg", combine: "lightmap relative"), width: 120, height: 120, offset_x: 0, offset_y: 0)
+crop(input: combine_blend(image1: "/magic-modules.mse-include/cards/375 m15 simple/ucard.jpg", image2: "/magic-modules.mse-include/cards/375 m15 simple/wcard.jpg", combine: "lightmap relative"), width: 120, height: 120, offset_x: 0, offset_y: 0)
+
+# ---- real style scripts (card bound; extra_card as M15 initialises it)
+card := set.cards.0; extra_card := [alternate_pinlines: "none"]; input := card.card_color; crop(input: card_background(), width: 120, height: 120, offset_x: 0, offset_y: 0)
+card := set.cards.1; extra_card := [alternate_pinlines: "none"]; input := card.card_color; crop(input: card_background(), width: 120, height: 120, offset_x: 130, offset_y: 0)
+card := set.cards.3; extra_card := [alternate_pinlines: "none"]; input := card.card_color; crop(input: card_background(), width: 120, height: 120, offset_x: 0, offset_y: 0)
+card := set.cards.2; extra_card := [alternate_pinlines: "none"]; input := card.card_color; crop(input: card_background(), width: 120, height: 120, offset_x: 130, offset_y: 0)

@@ -1,0 +1,260 @@
+[
+ {
+  "expr": "﻿# Image cases: each expression is written to a PNG by real MSE (write_image_file) and",
+  "status": "error",
+  "output": "ERROR: (50): Unknown character in script: '»'\nERROR: (51): Unknown character in script: '¿'\nERROR: (48): Expected closing ')' for this '(' instead of 'end of input'\nERROR: (16): Expected closing ')' for this '(' instead of 'end of input'",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "\"/magic-m15-altered.mse-style/loyalty.png\"",
+  "status": "ok",
+  "output": "\"images-001.png\"",
+  "image": "images/images-001.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "invert_image(\"/magic-m15-altered.mse-style/loyalty.png\")",
+  "status": "ok",
+  "output": "\"images-002.png\"",
+  "image": "images/images-002.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "recolor_image(input: \"/magic-m15-altered.mse-style/loyalty.png\", color: rgb(200,30,30))",
+  "status": "ok",
+  "output": "\"images-003.png\"",
+  "image": "images/images-003.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "recolor_image(input: \"/magic-m15-altered.mse-style/loyalty.png\", color: rgb(240,220,160))",
+  "status": "ok",
+  "output": "\"images-004.png\"",
+  "image": "images/images-004.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "recolor_image(input: \"/magic-m15-altered.mse-style/loyalty.png\", red: rgb(0,0,255), green: rgb(255,0,0), blue: rgb(0,255,0))",
+  "status": "ok",
+  "output": "\"images-005.png\"",
+  "image": "images/images-005.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "set_alpha(input: \"/magic-m15-altered.mse-style/loyalty.png\", alpha: 0.5)",
+  "status": "ok",
+  "output": "\"images-006.png\"",
+  "image": "images/images-006.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "saturate(input: \"/magic-m15-altered.mse-style/loyalty.png\", amount: 0.5)",
+  "status": "ok",
+  "output": "\"images-007.png\"",
+  "image": "images/images-007.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "flip_horizontal(\"/magic-m15-altered.mse-style/loyalty.png\")",
+  "status": "ok",
+  "output": "\"images-008.png\"",
+  "image": "images/images-008.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "flip_vertical(\"/magic-m15-altered.mse-style/loyalty.png\")",
+  "status": "ok",
+  "output": "\"images-009.png\"",
+  "image": "images/images-009.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "flip_image(\"/magic-m15-altered.mse-style/loyalty.png\", horizontal: true)",
+  "status": "ok",
+  "output": "\"images-010.png\"",
+  "image": "images/images-010.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "crop(input: \"/magic-m15-altered.mse-style/loyalty.png\", width: 50, height: 40, offset_x: 10, offset_y: 20)",
+  "status": "ok",
+  "output": "\"images-011.png\"",
+  "image": "images/images-011.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "crop_image(input: \"/magic-m15-altered.mse-style/loyalty.png\", width: 300, height: 200, offset_x: -10, offset_y: -10, background_color: rgb(0,0,255))",
+  "status": "ok",
+  "output": "\"images-012.png\"",
+  "image": "images/images-012.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "enlarge(input: \"/magic-m15-altered.mse-style/loyalty.png\", border_size: 0.1)",
+  "status": "ok",
+  "output": "\"images-013.png\"",
+  "image": "images/images-013.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "fill_image(\"/magic-m15-altered.mse-style/loyalty.png\", color: rgb(10,200,30))",
+  "status": "ok",
+  "output": "\"images-014.png\"",
+  "image": "images/images-014.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "drop_shadow(input: \"/magic-m15-altered.mse-style/loyalty.png\", offset_x: 0.05, offset_y: 0.05, alpha: 0.8, blur_radius: 0.01, color: rgb(0,0,0))",
+  "status": "ok",
+  "output": "\"images-015.png\"",
+  "image": "images/images-015.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "drop_shadow(input: \"/magic-m15-altered.mse-style/loyalty.png\", offset_x: 0.02, offset_y: 0.03, alpha: 1, blur_radius: 0.02, color: rgb(0,0,0))",
+  "status": "ok",
+  "output": "\"images-016.png\"",
+  "image": "images/images-016.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "add_drop_shadow(\"/magic-m15-altered.mse-style/loyalty.png\", offset_x: 0.05, offset_y: 0.05, alpha: 0.8, blur_radius: 0.01, color: rgb(0,0,0))",
+  "status": "ok",
+  "output": "\"images-017.png\"",
+  "image": "images/images-017.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "insert_image(base_image: \"/magic-m15-altered.mse-style/loyalty.png\", inserted_image: \"/magic-m15-altered.mse-style/loyaltyup.png\", offset_x: 30, offset_y: 20)",
+  "status": "ok",
+  "output": "\"images-018.png\"",
+  "image": "images/images-018.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "nine_slice_image(\"/magic-m15-altered.mse-style/loyalty.png\", width: 400, height: 100, top: 20, bottom: 20, left: 30, right: 30)",
+  "status": "ok",
+  "output": "\"images-019.png\"",
+  "image": "images/images-019.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "resize_image(\"/magic-m15-altered.mse-style/loyalty.png\", width: 100, height: 50)",
+  "status": "ok",
+  "output": "\"images-020.png\"",
+  "image": "images/images-020.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "[100x50] \"/magic-m15-altered.mse-style/loyalty.png\"",
+  "status": "ok",
+  "output": "\"images-021.png\"",
+  "image": "images/images-021.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "[134x0] \"/magic-m15-altered.mse-style/loyalty.png\"",
+  "status": "ok",
+  "output": "\"images-022.png\"",
+  "image": "images/images-022.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "crop(input: masked_blend(light: \"/magic-modules.mse-include/cards/375 m15 simple/rcard.jpg\", dark: \"/magic-modules.mse-include/cards/375 m15 simple/wcard.jpg\", mask: \"/magic-modules.mse-include/cards/375 m15 simple/hybrid_blend_card.png\"), width: 120, height: 120, offset_x: 130, offset_y: 0)",
+  "status": "ok",
+  "output": "\"images-023.png\"",
+  "image": "images/images-023.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "crop(input: linear_blend(image1: \"/magic-modules.mse-include/cards/375 m15 simple/gcard.jpg\", image2: \"/magic-modules.mse-include/cards/375 m15 simple/ucard.jpg\", x1: 0.4, y1: 0, x2: 0.6, y2: 0), width: 120, height: 120, offset_x: 130, offset_y: 200)",
+  "status": "ok",
+  "output": "\"images-024.png\"",
+  "image": "images/images-024.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "crop(input: linear_blend(image1: \"/magic-modules.mse-include/cards/375 m15 simple/gcard.jpg\", image2: \"/magic-modules.mse-include/cards/375 m15 simple/ucard.jpg\", x1: 0.2, y1: 0.2, x2: 0.8, y2: 0.7), width: 120, height: 120, offset_x: 130, offset_y: 200)",
+  "status": "ok",
+  "output": "\"images-025.png\"",
+  "image": "images/images-025.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "crop(input: combine_blend(image1: \"/magic-modules.mse-include/cards/375 m15 simple/gcard.jpg\", image2: \"/magic-modules.mse-include/cards/375 m15 simple/rcard.jpg\", combine: \"symmetric overlay\"), width: 120, height: 120, offset_x: 0, offset_y: 0)",
+  "status": "ok",
+  "output": "\"images-026.png\"",
+  "image": "images/images-026.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "crop(input: combine_blend(image1: \"/magic-modules.mse-include/cards/375 m15 simple/gcard.jpg\", image2: \"/magic-modules.mse-include/cards/375 m15 simple/rcard.jpg\", combine: \"multiply\"), width: 120, height: 120, offset_x: 0, offset_y: 0)",
+  "status": "ok",
+  "output": "\"images-027.png\"",
+  "image": "images/images-027.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "crop(input: combine_blend(image1: \"/magic-modules.mse-include/cards/375 m15 simple/gcard.jpg\", image2: \"/magic-modules.mse-include/cards/375 m15 simple/rcard.jpg\", combine: \"screen\"), width: 120, height: 120, offset_x: 0, offset_y: 0)",
+  "status": "ok",
+  "output": "\"images-028.png\"",
+  "image": "images/images-028.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "crop(input: set_mask(image: \"/magic-modules.mse-include/cards/375 m15 simple/gcard.jpg\", mask: \"/magic-modules.mse-include/cards/375 m15 simple/hybrid_blend_card.png\"), width: 120, height: 120, offset_x: 130, offset_y: 0)",
+  "status": "ok",
+  "output": "\"images-029.png\"",
+  "image": "images/images-029.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "crop(input: set_mask(image: \"/magic-modules.mse-include/cards/375 m15 simple/gcard.jpg\", mask: \"/magic-m15-altered.mse-style/loyalty.png\"), width: 120, height: 120, offset_x: 130, offset_y: 200)",
+  "status": "ok",
+  "output": "\"images-030.png\"",
+  "image": "images/images-030.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "crop(input: combine_blend(image1: \"/magic-modules.mse-include/cards/375 m15 simple/gcard.jpg\", image2: \"/magic-modules.mse-include/cards/375 m15 simple/rcard.jpg\", combine: \"lightmap relative\"), width: 120, height: 120, offset_x: 0, offset_y: 0)",
+  "status": "ok",
+  "output": "\"images-031.png\"",
+  "image": "images/images-031.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "crop(input: combine_blend(image1: \"/magic-modules.mse-include/cards/375 m15 simple/ucard.jpg\", image2: \"/magic-modules.mse-include/cards/375 m15 simple/wcard.jpg\", combine: \"lightmap relative\"), width: 120, height: 120, offset_x: 0, offset_y: 0)",
+  "status": "ok",
+  "output": "\"images-032.png\"",
+  "image": "images/images-032.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "card := set.cards.0; extra_card := [alternate_pinlines: \"none\"]; input := card.card_color; crop(input: card_background(), width: 120, height: 120, offset_x: 0, offset_y: 0)",
+  "status": "ok",
+  "output": "\"images-033.png\"",
+  "image": "images/images-033.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "card := set.cards.1; extra_card := [alternate_pinlines: \"none\"]; input := card.card_color; crop(input: card_background(), width: 120, height: 120, offset_x: 130, offset_y: 0)",
+  "status": "ok",
+  "output": "\"images-034.png\"",
+  "image": "images/images-034.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "card := set.cards.3; extra_card := [alternate_pinlines: \"none\"]; input := card.card_color; crop(input: card_background(), width: 120, height: 120, offset_x: 0, offset_y: 0)",
+  "status": "ok",
+  "output": "\"images-035.png\"",
+  "image": "images/images-035.png",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "card := set.cards.2; extra_card := [alternate_pinlines: \"none\"]; input := card.card_color; crop(input: card_background(), width: 120, height: 120, offset_x: 130, offset_y: 0)",
+  "status": "ok",
+  "output": "\"images-036.png\"",
+  "image": "images/images-036.png",
+  "project": "oracle_project"
+ }
+]

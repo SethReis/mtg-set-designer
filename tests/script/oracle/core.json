@@ -1,0 +1,592 @@
+[
+ {
+  "expr": "if 1 then \"y\" else \"n\"",
+  "status": "error",
+  "output": "ERROR: Can't convert from integer number to boolean"
+ },
+ {
+  "expr": "if 0 then \"y\" else \"n\"",
+  "status": "error",
+  "output": "ERROR: Can't convert from integer number to boolean"
+ },
+ {
+  "expr": "if 1.5 then \"y\" else \"n\"",
+  "status": "error",
+  "output": "ERROR: Can't convert from real number to boolean"
+ },
+ {
+  "expr": "if \"yes\" then \"y\" else \"n\"",
+  "status": "ok",
+  "output": "\"y\""
+ },
+ {
+  "expr": "if \"true\" then \"y\" else \"n\"",
+  "status": "ok",
+  "output": "\"y\""
+ },
+ {
+  "expr": "if \"no\" then \"y\" else \"n\"",
+  "status": "ok",
+  "output": "\"n\""
+ },
+ {
+  "expr": "if \"\" then \"y\" else \"n\"",
+  "status": "ok",
+  "output": "\"n\""
+ },
+ {
+  "expr": "if \"maybe\" then \"y\" else \"n\"",
+  "status": "error",
+  "output": "ERROR: Can't convert \"maybe\" from string (\"maybe\") to boolean"
+ },
+ {
+  "expr": "if nil then \"y\" else \"n\"",
+  "status": "ok",
+  "output": "\"n\""
+ },
+ {
+  "expr": "if [] then \"y\" else \"n\"",
+  "status": "error",
+  "output": "ERROR: Can't convert from collection to boolean"
+ },
+ {
+  "expr": "not nil",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "not 1",
+  "status": "error",
+  "output": "ERROR: Can't convert from integer number to boolean"
+ },
+ {
+  "expr": "true and 1",
+  "status": "ok",
+  "output": "1"
+ },
+ {
+  "expr": "false and 1",
+  "status": "ok",
+  "output": "false"
+ },
+ {
+  "expr": "false or 1",
+  "status": "ok",
+  "output": "1"
+ },
+ {
+  "expr": "true or 1",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "nil or \"x\"",
+  "status": "ok",
+  "output": "\"x\""
+ },
+ {
+  "expr": "true xor false",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "\"\" + 2.0",
+  "status": "ok",
+  "output": "\"2\""
+ },
+ {
+  "expr": "\"\" + 0.1",
+  "status": "ok",
+  "output": "\"0.1\""
+ },
+ {
+  "expr": "\"\" + 1/3",
+  "status": "ok",
+  "output": "\"0.333333\""
+ },
+ {
+  "expr": "\"\" + 1234567.0",
+  "status": "ok",
+  "output": "\"1.23457e+06\""
+ },
+ {
+  "expr": "\"\" + 1e3",
+  "status": "error",
+  "output": "ERROR: (6): Expected 'end of input' instead of 'e3'"
+ },
+ {
+  "expr": "2.0",
+  "status": "ok",
+  "output": "2"
+ },
+ {
+  "expr": "1/3",
+  "status": "ok",
+  "output": "0.333333"
+ },
+ {
+  "expr": "7 / 2",
+  "status": "ok",
+  "output": "3.5"
+ },
+ {
+  "expr": "6 / 3",
+  "status": "ok",
+  "output": "2"
+ },
+ {
+  "expr": "-7 div 2",
+  "status": "ok",
+  "output": "-3"
+ },
+ {
+  "expr": "7.5 div 2",
+  "status": "ok",
+  "output": "3"
+ },
+ {
+  "expr": "-7 mod 3",
+  "status": "ok",
+  "output": "-1"
+ },
+ {
+  "expr": "7.5 mod 2",
+  "status": "ok",
+  "output": "1.5"
+ },
+ {
+  "expr": "2 ^ 0.5",
+  "status": "ok",
+  "output": "1.41421"
+ },
+ {
+  "expr": "2 ^ 10",
+  "status": "ok",
+  "output": "1024"
+ },
+ {
+  "expr": "2.0 ^ 2",
+  "status": "ok",
+  "output": "4"
+ },
+ {
+  "expr": "3 - 1.5",
+  "status": "ok",
+  "output": "1.5"
+ },
+ {
+  "expr": "3 * 2",
+  "status": "ok",
+  "output": "6"
+ },
+ {
+  "expr": "\"3\" * 2",
+  "status": "ok",
+  "output": "6"
+ },
+ {
+  "expr": "\"3\" - 1",
+  "status": "ok",
+  "output": "2"
+ },
+ {
+  "expr": "nil - 1",
+  "status": "ok",
+  "output": "-1"
+ },
+ {
+  "expr": "nil + 1",
+  "status": "ok",
+  "output": "1"
+ },
+ {
+  "expr": "true + 1",
+  "status": "ok",
+  "output": "\"true1\""
+ },
+ {
+  "expr": "\"a\" + true",
+  "status": "ok",
+  "output": "\"atrue\""
+ },
+ {
+  "expr": "-\"3\"",
+  "status": "ok",
+  "output": "-3"
+ },
+ {
+  "expr": "- 2.5",
+  "status": "ok",
+  "output": "-2.5"
+ },
+ {
+  "expr": "1 == \"1\"",
+  "status": "ok",
+  "output": "false"
+ },
+ {
+  "expr": "nil == \"\"",
+  "status": "ok",
+  "output": "false"
+ },
+ {
+  "expr": "1 == 1.0",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "[1,2] == [1,2]",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "[a:1] == [b:1]",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "true == \"true\"",
+  "status": "ok",
+  "output": "false"
+ },
+ {
+  "expr": "\"a\" == \"a\"",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "nil == nil",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "\"10\" < \"9\"",
+  "status": "ok",
+  "output": "false"
+ },
+ {
+  "expr": "\"a\" < \"b\"",
+  "status": "error",
+  "output": "ERROR: Can't convert \"a\" from string (\"a\") to integer number"
+ },
+ {
+  "expr": "nil < 1",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "1 < 1.5",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "\"2\" < 10",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "\"say \\\"hi\\\"\"",
+  "status": "ok",
+  "output": "\"say \\\"hi\\\"\""
+ },
+ {
+  "expr": "[a: 1, b: \"x\"]",
+  "status": "ok",
+  "output": "[\"a\":1,\"b\":\"x\"]"
+ },
+ {
+  "expr": "[]",
+  "status": "ok",
+  "output": "[]"
+ },
+ {
+  "expr": "nil",
+  "status": "ok",
+  "output": "nil"
+ },
+ {
+  "expr": "true",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "\"multi\\nline\"",
+  "status": "ok",
+  "output": "\"multi\\nline\""
+ },
+ {
+  "expr": "\"a\\{b\\}\"",
+  "status": "ok",
+  "output": "\"a{b}\""
+ },
+ {
+  "expr": "\"tab\\there\"",
+  "status": "ok",
+  "output": "\"tab\\there\""
+ },
+ {
+  "expr": "\"back\\\\slash\"",
+  "status": "ok",
+  "output": "\"back\\\\slash\""
+ },
+ {
+  "expr": "\"<b>tag</b>\"",
+  "status": "ok",
+  "output": "\"<b>tag</b>\""
+ },
+ {
+  "expr": "\"\\<b>\"",
+  "status": "ok",
+  "output": "\"\\<b>\""
+ },
+ {
+  "expr": "[1.5, nil, true, [2]]",
+  "status": "ok",
+  "output": "[1.5,nil,true,[2]]"
+ },
+ {
+  "expr": "{ 1 }",
+  "status": "error",
+  "output": "ERROR: Can't convert from function to string"
+ },
+ {
+  "expr": "nil or else 2",
+  "status": "ok",
+  "output": "nil"
+ },
+ {
+  "expr": "[a:1].b or else 2",
+  "status": "ok",
+  "output": "2"
+ },
+ {
+  "expr": "[a:1].a or else 2",
+  "status": "ok",
+  "output": "1"
+ },
+ {
+  "expr": "[1,2].5 or else \"none\"",
+  "status": "ok",
+  "output": "\"none\""
+ },
+ {
+  "expr": "[1,2].1",
+  "status": "ok",
+  "output": "2"
+ },
+ {
+  "expr": "[a:1].b",
+  "status": "error",
+  "output": "ERROR: collection has no member 'b'"
+ },
+ {
+  "expr": "\"abc\".1",
+  "status": "ok",
+  "output": "\"b\""
+ },
+ {
+  "expr": "nil.x or else 1",
+  "status": "ok",
+  "output": "1"
+ },
+ {
+  "expr": "([a: 1].b)() or else \"called\"",
+  "status": "ok",
+  "output": "\"called\""
+ },
+ {
+  "expr": "([a: 1].b)(1) or else \"with args\"",
+  "status": "ok",
+  "output": "\"with args\""
+ },
+ {
+  "expr": "([a: 1].b)()",
+  "status": "error",
+  "output": "ERROR: collection has no member 'b'"
+ },
+ {
+  "expr": "f16 := { x16 }@(x16: nil.y); \"ok\"",
+  "status": "ok",
+  "output": "\"ok\""
+ },
+ {
+  "expr": "(1 + \"x\") or else 3",
+  "status": "ok",
+  "output": "\"1x\""
+ },
+ {
+  "expr": "f1 := { x1 * 2 }; x1 := 5; f1()",
+  "status": "ok",
+  "output": "10"
+ },
+ {
+  "expr": "y2 := 1; f2 := { y2 := 2; y2 }; [f2(), y2]",
+  "status": "ok",
+  "output": "[2,1]"
+ },
+ {
+  "expr": "f3 := { input * 2 }; f3(4)",
+  "status": "ok",
+  "output": "8"
+ },
+ {
+  "expr": "f4 := { a4 + b4 }@(b4: 10); [f4(a4: 1), f4(a4: 1, b4: 2)]",
+  "status": "ok",
+  "output": "[11,3]"
+ },
+ {
+  "expr": "f5 := { input + 1 }; g5 := { input * 10 }; (f5 + g5)(2)",
+  "status": "ok",
+  "output": "30"
+ },
+ {
+  "expr": "nil(input: 5)",
+  "status": "ok",
+  "output": "5"
+ },
+ {
+  "expr": "f6 := { input }; f6()",
+  "status": "error",
+  "output": "ERROR: Variable not set: input\n         in function f6"
+ },
+ {
+  "expr": "input7 := 3; f7 := { input7 }; f7(input7: 4)",
+  "status": "ok",
+  "output": "4"
+ },
+ {
+  "expr": "f8 := { a8 }@(a8: 1); a8 := 5; f8()",
+  "status": "ok",
+  "output": "1"
+ },
+ {
+  "expr": "f9 := { if input > 1 then input * f9(input - 1) else 1 }; f9(5)",
+  "status": "ok",
+  "output": "120"
+ },
+ {
+  "expr": "f10 := { input }; f10(\"x\", 2)",
+  "status": "ok",
+  "output": "\"x\""
+ },
+ {
+  "expr": "\"{1 + 1}\"",
+  "status": "ok",
+  "output": "2"
+ },
+ {
+  "expr": "\"a{1}b{2}\"",
+  "status": "ok",
+  "output": "\"a1b2\""
+ },
+ {
+  "expr": "\"{[1]}\"",
+  "status": "ok",
+  "output": "[1]"
+ },
+ {
+  "expr": "f11 := { input + 1 }; g11 := f11 + f11 + f11; g11(1)",
+  "status": "ok",
+  "output": "4"
+ },
+ {
+  "expr": "f12 := { [a12, b12] }@(a12: 1)@(b12: 2); f12()",
+  "status": "ok",
+  "output": "[1,2]"
+ },
+ {
+  "expr": "f13 := { x13 := input; x13 }; x13 := \"outer\"; [f13(1), x13]",
+  "status": "ok",
+  "output": "[1,\"outer\"]"
+ },
+ {
+  "expr": "f14 := { z14 := 1 }; f14(); z14 or else \"unset\"",
+  "status": "error",
+  "output": "ERROR: Variable not set: z14"
+ },
+ {
+  "expr": "case 2 of 1: \"one\", 2: \"two\", else: \"many\"",
+  "status": "ok",
+  "output": "\"two\""
+ },
+ {
+  "expr": "case \"q\" of 1: \"one\"",
+  "status": "ok",
+  "output": "nil"
+ },
+ {
+  "expr": "[1, 2] + [3]",
+  "status": "ok",
+  "output": "[1,2,3]"
+ },
+ {
+  "expr": "[a: 1] + [b: 2]",
+  "status": "ok",
+  "output": "[\"a\":1,\"b\":2]"
+ },
+ {
+  "expr": "[a: 1] + [a: 2]",
+  "status": "ok",
+  "output": "[\"a\":1,\"a\":2]"
+ },
+ {
+  "expr": "\"x\" + [1]",
+  "status": "error",
+  "output": "ERROR: Can't convert from collection to string"
+ },
+ {
+  "expr": "f15 := { input }; f15 + \"s\"",
+  "status": "error",
+  "output": "ERROR: Can't convert from function to string"
+ },
+ {
+  "expr": "for x from 1 to 3 do x",
+  "status": "ok",
+  "output": "6"
+ },
+ {
+  "expr": "for x from 1 to 3 do [x]",
+  "status": "ok",
+  "output": "[1,2,3]"
+ },
+ {
+  "expr": "for x from 3 to 1 do [x]",
+  "status": "ok",
+  "output": "nil"
+ },
+ {
+  "expr": "for k:v from 5 to 7 do [k]",
+  "status": "ok",
+  "output": "[0,1,2]"
+ },
+ {
+  "expr": "for each v in [10, 20] do v",
+  "status": "ok",
+  "output": "30"
+ },
+ {
+  "expr": "for each k:v in [10, 20] do [k]",
+  "status": "ok",
+  "output": "[0,1]"
+ },
+ {
+  "expr": "for each v in [b: 1, a: 2] do [v]",
+  "status": "ok",
+  "output": "[2,1]"
+ },
+ {
+  "expr": "for each k:v in [b: 1, a: 2] do [k]",
+  "status": "ok",
+  "output": "[\"a\",\"b\"]"
+ },
+ {
+  "expr": "for each v in [] do v",
+  "status": "ok",
+  "output": "nil"
+ },
+ {
+  "expr": "for each c in \"ab\" do c",
+  "status": "error",
+  "output": "ERROR: Can't convert from string (\"ab\") to collection"
+ }
+]

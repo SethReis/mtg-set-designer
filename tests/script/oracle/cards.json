@@ -1,0 +1,416 @@
+[
+ {
+  "expr": "length(set.cards)",
+  "status": "ok",
+  "output": "8",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "set.title",
+  "status": "ok",
+  "output": "\"Oracle Test Set\"",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "set.set_code",
+  "status": "ok",
+  "output": "\"ORC\"",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "set.artist",
+  "status": "ok",
+  "output": "\"Set Artist\"",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "set.card_language",
+  "status": "ok",
+  "output": "\"English\"",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "set.mana_cost_sorting",
+  "status": "ok",
+  "output": "\"tarkir wedge sorting\"",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "set.curly_quotes",
+  "status": "ok",
+  "output": "\"yes\"",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "type_name(set.curly_quotes)",
+  "status": "ok",
+  "output": "\"value\"",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "set.mark_errors",
+  "status": "ok",
+  "output": "\"yes\"",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "set.automatic_reminder_text",
+  "status": "ok",
+  "output": "\"old, expert, pseudo, action, custom, lower case\"",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "type_name(set.border_color)",
+  "status": "ok",
+  "output": "\"value\"",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "set.symbol",
+  "status": "ok",
+  "output": "<value>",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "set.description",
+  "status": "ok",
+  "output": "\"\"",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "set.cards.0.border_color or else \"error\"",
+  "status": "ok",
+  "output": "rgb(0,0,0)",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "type_name(set.cards.0.image)",
+  "status": "ok",
+  "output": "\"value\"",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "set.cards.0.nonexistent_field or else \"no field\"",
+  "status": "ok",
+  "output": "\"no field\"",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.name]",
+  "status": "ok",
+  "output": "[\"Grizzly Bears\",\"Boros Guildmage\",\"Lightning Helix\",\"Steel Overseer\",\"Forest\",\"Ajani Goldmane\",\"Delver of Secrets\",\"Insectile Aberration\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.uid]",
+  "status": "ok",
+  "output": "[\"grizzly-bears\",\"boros-guildmage\",\"lightning-helix\",\"steel-overseer\",\"forest\",\"ajani-goldmane\",\"delver/1\",\"delver/2\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.casting_cost]",
+  "status": "ok",
+  "output": "[\"1G\",\"R/WR/W\",\"RW\",\"2\",\"\",\"2WW\",\"U\",\"\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.rarity]",
+  "status": "ok",
+  "output": "[\"common\",\"uncommon\",\"uncommon\",\"rare\",\"common\",\"mythic rare\",\"common\",\"common\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.power]",
+  "status": "ok",
+  "output": "[\"2\",\"2\",\"\",\"1\",\"\",\"\",\"1\",\"3\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.toughness]",
+  "status": "ok",
+  "output": "[\"2\",\"2\",\"\",\"1\",\"\",\"\",\"1\",\"2\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.loyalty]",
+  "status": "ok",
+  "output": "[\"\",\"\",\"\",\"\",\"\",\"4\",\"\",\"\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.illustrator]",
+  "status": "ok",
+  "output": "[\"Jeff A. Menges\",\"Set Artist\",\"Set Artist\",\"Set Artist\",\"Set Artist\",\"Set Artist\",\"Set Artist\",\"Set Artist\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.flavor_text]",
+  "status": "ok",
+  "output": "[\"<i-flavor>Don’t feed them.</i-flavor>\",\"<i-flavor></i-flavor>\",\"<i-flavor></i-flavor>\",\"<i-flavor></i-flavor>\",\"<i-flavor></i-flavor>\",\"<i-flavor></i-flavor>\",\"<i-flavor></i-flavor>\",\"<i-flavor></i-flavor>\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.notes]",
+  "status": "ok",
+  "output": "[\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.cmc]",
+  "status": "ok",
+  "output": "[\"2\",\"2\",\"2\",\"2\",\"0\",\"4\",\"1\",\"0\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.card_color]",
+  "status": "ok",
+  "output": "[\"green\",\"white, red, hybrid, horizontal\",\"white, red, multicolor, horizontal\",\"artifact\",\"land\",\"white\",\"blue\",\"colorless\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.indicator]",
+  "status": "ok",
+  "output": "[\"green\",\"white, red, hybrid, horizontal\",\"white, red, multicolor, horizontal\",\"artifact\",\"land\",\"white\",\"blue\",\"blue\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.super_type]",
+  "status": "ok",
+  "output": "[\"<word-list-type-en>Creature</word-list-type-en>\",\"<word-list-type-en>Creature</word-list-type-en>\",\"<word-list-type-en>Instant</word-list-type-en>\",\"<word-list-type-en>Legendary Artifact Creature</word-list-type-en>\",\"<word-list-type-en>Basic Land</word-list-type-en>\",\"<word-list-type-en>Legendary Planeswalker</word-list-type-en>\",\"<word-list-type-en>Creature</word-list-type-en>\",\"<word-list-type-en>Creature</word-list-type-en>\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.sub_type]",
+  "status": "ok",
+  "output": "[\"<word-list-race-en>Bear</word-list-race-en><soft><atom-sep> </atom-sep></soft><word-list-class-en></word-list-class-en>\",\"<word-list-race-en>Human</word-list-race-en><atom-sep> </atom-sep><word-list-class-en>Wizard</word-list-class-en><soft><atom-sep> </atom-sep></soft><word-list-class-en></word-list-class-en>\",\"<word-list-spell></word-list-spell>\",\"<word-list-race-en>Construct</word-list-race-en><soft><atom-sep> </atom-sep></soft><word-list-class-en></word-list-class-en>\",\"<word-list-land>Forest</word-list-land><soft><atom-sep> </atom-sep></soft><word-list-land></word-list-land>\",\"<word-list-planeswalker>Ajani</word-list-planeswalker><soft><atom-sep> </atom-sep></soft><word-list-planeswalker></word-list-planeswalker>\",\"<word-list-race-en>Human</word-list-race-en><atom-sep> </atom-sep><word-list-class-en>Wizard</word-list-class-en><soft><atom-sep> </atom-sep></soft><word-list-class-en></word-list-class-en>\",\"<word-list-race-en>Human</word-list-race-en><atom-sep> </atom-sep><word-list-class-en>Insect</word-list-class-en><soft><atom-sep> </atom-sep></soft><word-list-class-en></word-list-class-en>\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.type]",
+  "status": "ok",
+  "output": "[\"<word-list-type-en>Creature</word-list-type-en><sep> — </sep><word-list-race-en>Bear</word-list-race-en><soft><atom-sep> </atom-sep></soft><word-list-class-en></word-list-class-en>\",\"<word-list-type-en>Creature</word-list-type-en><sep> — </sep><word-list-race-en>Human</word-list-race-en><atom-sep> </atom-sep><word-list-class-en>Wizard</word-list-class-en><soft><atom-sep> </atom-sep></soft><word-list-class-en></word-list-class-en>\",\"<word-list-type-en>Instant</word-list-type-en><sep-soft> — </sep-soft><word-list-spell></word-list-spell>\",\"<word-list-type-en>Legendary Artifact Creature</word-list-type-en><sep> — </sep><word-list-race-en>Construct</word-list-race-en><soft><atom-sep> </atom-sep></soft><word-list-class-en></word-list-class-en>\",\"<word-list-type-en>Basic Land</word-list-type-en><sep> — </sep><word-list-land>Forest</word-list-land><soft><atom-sep> </atom-sep></soft><word-list-land></word-list-land>\",\"<word-list-type-en>Legendary Planeswalker</word-list-type-en><sep> — </sep><word-list-planeswalker>Ajani</word-list-planeswalker><soft><atom-sep> </atom-sep></soft><word-list-planeswalker></word-list-planeswalker>\",\"<word-list-type-en>Creature</word-list-type-en><sep> — </sep><word-list-race-en>Human</word-list-race-en><atom-sep> </atom-sep><word-list-class-en>Wizard</word-list-class-en><soft><atom-sep> </atom-sep></soft><word-list-class-en></word-list-class-en>\",\"<word-list-type-en>Creature</word-list-type-en><sep> — </sep><word-list-race-en>Human</word-list-race-en><atom-sep> </atom-sep><word-list-class-en>Insect</word-list-class-en><soft><atom-sep> </atom-sep></soft><word-list-class-en></word-list-class-en>\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.full_name]",
+  "status": "ok",
+  "output": "[\"Grizzly Bears\",\"Boros Guildmage\",\"Lightning Helix\",\"Steel Overseer\",\"Forest\",\"Ajani Goldmane\",\"Delver of Secrets // Insectile Aberration\",\"Insectile Aberration (Delver of Secrets)\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.pt]",
+  "status": "ok",
+  "output": "[\"2<sep>/</sep>2\",\"2<sep>/</sep>2\",\"\",\"1<sep>/</sep>1\",\"\",\"\",\"1<sep>/</sep>1\",\"3<sep>/</sep>2\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.color_identity]",
+  "status": "ok",
+  "output": "[\"G\",\"WR\",\"WR\",\"C\",\"C\",\"W\",\"U\",\"U\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.color_count]",
+  "status": "ok",
+  "output": "[\"1\",\"2\",\"2\",\"0\",\"0\",\"1\",\"1\",\"1\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.exact_color]",
+  "status": "ok",
+  "output": "[\"G\",\"WR\",\"WR\",\"C\",\"C\",\"W\",\"U\",\"U\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.color_category]",
+  "status": "ok",
+  "output": "[\"Green\",\"Hybrid\",\"Multicolor\",\"Artifact\",\"Land\",\"White\",\"Blue\",\"Colorless\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.shape]",
+  "status": "ok",
+  "output": "[\"normal\",\"normal\",\"normal\",\"normal\",\"normal\",\"normal\",\"normal\",\"normal\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.transformation]",
+  "status": "ok",
+  "output": "[\"position default, background default, rim default, icon default, none\",\"position default, background default, rim default, icon default, none\",\"position default, background default, rim default, icon default, none\",\"position default, background default, rim default, icon default, none\",\"position default, background default, rim default, icon default, none\",\"position default, background default, rim default, icon default, none\",\"position default, background default, rim default, icon default, front triangle\",\"position default, background default, rim default, icon default, back triangle\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.card_symbol]",
+  "status": "ok",
+  "output": "[\"none\",\"none\",\"none\",\"none\",\"none\",\"none\",\"none\",\"none\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.watermark]",
+  "status": "ok",
+  "output": "[\"none\",\"none\",\"none\",\"none\",\"none\",\"none\",\"none\",\"none\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.rule_text]",
+  "status": "ok",
+  "output": "[\"\",\"<sym>1R</sym>: Target creature gains <kw-a><nospellcheck><key>haste</key></nospellcheck></kw-a> until end of turn.\",\"Lightning Helix deals 3 damage to any target and you gain 3 life.\",\"<sym>T</sym>: Put a +1/+1 counter on each artifact creature you control.\",\"\",\"\",\"\",\"<kw-a><nospellcheck><key>Flying</key></nospellcheck></kw-a>\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.text]",
+  "status": "ok",
+  "output": "[\"<sep><line>\\n</line></sep><i-flavor>Don’t feed them.</i-flavor>\",\"<sym>1R</sym>: Target creature gains <kw-a><nospellcheck><key>haste</key></nospellcheck></kw-a> until end of turn.<sep><line>\\n</line></sep><i-flavor></i-flavor>\",\"Lightning Helix deals 3 damage to any target and you gain 3 life.<sep><line>\\n</line></sep><i-flavor></i-flavor>\",\"<sym>T</sym>: Put a +1/+1 counter on each artifact creature you control.<sep><line>\\n</line></sep><i-flavor></i-flavor>\",\"<sep><line>\\n</line></sep><i-flavor></i-flavor>\",\"<sep><line>\\n</line></sep><i-flavor></i-flavor>\",\"<sep><line>\\n</line></sep><i-flavor></i-flavor>\",\"<kw-a><nospellcheck><key>Flying</key></nospellcheck></kw-a><sep><line>\\n</line></sep><i-flavor></i-flavor>\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.card_number]",
+  "status": "ok",
+  "output": "[\"0003\",\"0005\",\"0004\",\"0006\",\"0007\",\"0001\",\"0002\",\"0002\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.custom_card_number]",
+  "status": "ok",
+  "output": "[\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.card_code_text]",
+  "status": "ok",
+  "output": "[\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "length(set)",
+  "status": "ok",
+  "output": "8",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each card in set.cards do [card_number()]",
+  "status": "ok",
+  "output": "[3,5,4,6,7,1,2,2]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "card_count()",
+  "status": "error",
+  "output": "ERROR: Variable not set: card\n         in function set_filter_under_partition\n         in function card_count",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.linked_card_1]",
+  "status": "ok",
+  "output": "[\"\",\"\",\"\",\"\",\"\",\"\",\"delver/2\",\"delver/1\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each c in set.cards do [c.linked_relation_1]",
+  "status": "ok",
+  "output": "[\"\",\"\",\"\",\"\",\"\",\"\",\"Back Face\",\"Front Face\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "get_front_face(set.cards.7).name",
+  "status": "ok",
+  "output": "\"Delver of Secrets\"",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "get_back_face(set.cards.6).name",
+  "status": "ok",
+  "output": "\"Insectile Aberration\"",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "get_front_face(set.cards.6) == nil",
+  "status": "ok",
+  "output": "true",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "get_back_face(set.cards.7) == nil",
+  "status": "ok",
+  "output": "true",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "get_back_face(set.cards.0) == nil",
+  "status": "ok",
+  "output": "true",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "get_card_from_uid(\"delver/2\").name",
+  "status": "ok",
+  "output": "\"Insectile Aberration\"",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "get_card_from_uid(\"nope\") or else \"missing\"",
+  "status": "ok",
+  "output": "nil",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "get_cards_from_link(set.cards.6, linked_relation: \"Back Face\").0.name",
+  "status": "ok",
+  "output": "\"Insectile Aberration\"",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "length(get_cards_from_link(set.cards.6, linked_relation: \"Front Face\"))",
+  "status": "ok",
+  "output": "0",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "get_link_from_cards(set.cards.7, linked_card: set.cards.6)",
+  "status": "ok",
+  "output": "[\"Back Face\",\"Front Face\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "get_link_from_cards(set.cards.6, linked_card: set.cards.7)",
+  "status": "ok",
+  "output": "[\"Front Face\",\"Back Face\"]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "get_link_from_cards(set.cards.0, linked_card: set.cards.6)",
+  "status": "ok",
+  "output": "[nil,nil]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "set.cards.6 == set.cards.6",
+  "status": "ok",
+  "output": "true",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "set.cards.6 == set.cards.7",
+  "status": "ok",
+  "output": "false",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each card in set.cards do [is_linked_dfc()]",
+  "status": "ok",
+  "output": "[false,false,false,false,false,false,true,true]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each card in set.cards do [cmc(card.casting_cost)]",
+  "status": "ok",
+  "output": "[2,2,2,2,0,4,1,0]",
+  "project": "oracle_project"
+ },
+ {
+  "expr": "for each card in set.cards do [token_shape(card.shape)]",
+  "status": "ok",
+  "output": "[false,false,false,false,false,false,false,false]",
+  "project": "oracle_project"
+ }
+]

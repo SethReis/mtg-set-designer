@@ -1,0 +1,85 @@
+# Card, set and link values with tests/fixtures/oracle_project.py loaded as a set.
+# Card order: 0 Grizzly Bears, 1 Boros Guildmage, 2 Lightning Helix, 3 Steel Overseer,
+# 4 Forest, 5 Ajani Goldmane, 6 Delver of Secrets (front), 7 Insectile Aberration (back).
+#! project: oracle_project
+
+# ---- set
+length(set.cards)
+set.title
+set.set_code
+set.artist
+set.card_language
+set.mana_cost_sorting
+set.curly_quotes
+type_name(set.curly_quotes)
+set.mark_errors
+set.automatic_reminder_text
+type_name(set.border_color)
+set.symbol
+set.description
+set.cards.0.border_color or else "error"
+type_name(set.cards.0.image)
+set.cards.0.nonexistent_field or else "no field"
+
+# ---- raw and lightly scripted fields
+for each c in set.cards do [c.name]
+for each c in set.cards do [c.uid]
+for each c in set.cards do [c.casting_cost]
+for each c in set.cards do [c.rarity]
+for each c in set.cards do [c.power]
+for each c in set.cards do [c.toughness]
+for each c in set.cards do [c.loyalty]
+for each c in set.cards do [c.illustrator]
+for each c in set.cards do [c.flavor_text]
+for each c in set.cards do [c.notes]
+
+# ---- derived fields
+for each c in set.cards do [c.cmc]
+for each c in set.cards do [c.card_color]
+for each c in set.cards do [c.indicator]
+for each c in set.cards do [c.super_type]
+for each c in set.cards do [c.sub_type]
+for each c in set.cards do [c.type]
+for each c in set.cards do [c.full_name]
+for each c in set.cards do [c.pt]
+for each c in set.cards do [c.color_identity]
+for each c in set.cards do [c.color_count]
+for each c in set.cards do [c.exact_color]
+for each c in set.cards do [c.color_category]
+for each c in set.cards do [c.shape]
+for each c in set.cards do [c.transformation]
+for each c in set.cards do [c.card_symbol]
+for each c in set.cards do [c.watermark]
+for each c in set.cards do [c.rule_text]
+for each c in set.cards do [c.text]
+
+# ---- numbering (position/number_of_items over the set)
+for each c in set.cards do [c.card_number]
+for each c in set.cards do [c.custom_card_number]
+for each c in set.cards do [c.card_code_text]
+length(set)
+for each card in set.cards do [card_number()]
+card_count()
+
+# ---- links
+for each c in set.cards do [c.linked_card_1]
+for each c in set.cards do [c.linked_relation_1]
+get_front_face(set.cards.7).name
+get_back_face(set.cards.6).name
+get_front_face(set.cards.6) == nil
+get_back_face(set.cards.7) == nil
+get_back_face(set.cards.0) == nil
+get_card_from_uid("delver/2").name
+get_card_from_uid("nope") or else "missing"
+get_cards_from_link(set.cards.6, linked_relation: "Back Face").0.name
+length(get_cards_from_link(set.cards.6, linked_relation: "Front Face"))
+get_link_from_cards(set.cards.7, linked_card: set.cards.6)
+get_link_from_cards(set.cards.6, linked_card: set.cards.7)
+get_link_from_cards(set.cards.0, linked_card: set.cards.6)
+set.cards.6 == set.cards.6
+set.cards.6 == set.cards.7
+
+# ---- game functions that read card (dynamic `card` variable)
+for each card in set.cards do [is_linked_dfc()]
+for each card in set.cards do [cmc(card.casting_cost)]
+for each card in set.cards do [token_shape(card.shape)]

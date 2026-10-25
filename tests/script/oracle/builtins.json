@@ -1,0 +1,1227 @@
+[
+ {
+  "expr": "to_int(\"12\")",
+  "status": "ok",
+  "output": "12"
+ },
+ {
+  "expr": "to_int(\"\")",
+  "status": "ok",
+  "output": "0"
+ },
+ {
+  "expr": "to_int(true)",
+  "status": "ok",
+  "output": "1"
+ },
+ {
+  "expr": "to_int(3.9)",
+  "status": "ok",
+  "output": "3"
+ },
+ {
+  "expr": "to_int(-3.9)",
+  "status": "ok",
+  "output": "-3"
+ },
+ {
+  "expr": "to_int(\"3.5\")",
+  "status": "error",
+  "output": "ERROR: Can't convert \"3.5\" from string (\"3.5\") to integer number"
+ },
+ {
+  "expr": "to_int(\"abc\")",
+  "status": "error",
+  "output": "ERROR: Can't convert \"abc\" from string (\"abc\") to integer number"
+ },
+ {
+  "expr": "to_int(nil)",
+  "status": "ok",
+  "output": "0"
+ },
+ {
+  "expr": "to_real(\"2.5\")",
+  "status": "ok",
+  "output": "2.5"
+ },
+ {
+  "expr": "to_real(\"\")",
+  "status": "ok",
+  "output": "0"
+ },
+ {
+  "expr": "to_real(3)",
+  "status": "ok",
+  "output": "3"
+ },
+ {
+  "expr": "to_number(\"12\")",
+  "status": "ok",
+  "output": "12"
+ },
+ {
+  "expr": "to_number(\"2.5\")",
+  "status": "ok",
+  "output": "2.5"
+ },
+ {
+  "expr": "to_number(\"\")",
+  "status": "ok",
+  "output": "0"
+ },
+ {
+  "expr": "to_number(nil)",
+  "status": "ok",
+  "output": "0"
+ },
+ {
+  "expr": "to_number(true)",
+  "status": "ok",
+  "output": "1"
+ },
+ {
+  "expr": "to_number(\"x\")",
+  "status": "error",
+  "output": "ERROR: Can't convert \"x\" from string (\"x\") to real number"
+ },
+ {
+  "expr": "to_number(7)",
+  "status": "ok",
+  "output": "7"
+ },
+ {
+  "expr": "to_string(12)",
+  "status": "ok",
+  "output": "\"12\""
+ },
+ {
+  "expr": "to_string(2.5)",
+  "status": "ok",
+  "output": "\"2.5\""
+ },
+ {
+  "expr": "to_string(nil)",
+  "status": "ok",
+  "output": "\"\""
+ },
+ {
+  "expr": "to_string(true)",
+  "status": "ok",
+  "output": "\"true\""
+ },
+ {
+  "expr": "to_string([1])",
+  "status": "error",
+  "output": "ERROR: Can't convert from collection to string"
+ },
+ {
+  "expr": "to_string([1]) or else \"bad\"",
+  "status": "ok",
+  "output": "\"bad\""
+ },
+ {
+  "expr": "to_boolean(1)",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "to_boolean(0)",
+  "status": "ok",
+  "output": "false"
+ },
+ {
+  "expr": "to_boolean(\"yes\")",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "to_code(\"a\\\"b\")",
+  "status": "ok",
+  "output": "\"\\\"a\\\\\\\"b\\\"\""
+ },
+ {
+  "expr": "to_code([1, \"x\"])",
+  "status": "ok",
+  "output": "\"[1,\\\"x\\\"]\""
+ },
+ {
+  "expr": "type_name(1)",
+  "status": "ok",
+  "output": "\"integer number\""
+ },
+ {
+  "expr": "type_name(1.5)",
+  "status": "ok",
+  "output": "\"real number\""
+ },
+ {
+  "expr": "type_name(\"s\")",
+  "status": "ok",
+  "output": "\"string (\\\"s\\\")\""
+ },
+ {
+  "expr": "type_name(nil)",
+  "status": "ok",
+  "output": "\"nothing\""
+ },
+ {
+  "expr": "type_name(true)",
+  "status": "ok",
+  "output": "\"boolean\""
+ },
+ {
+  "expr": "type_name([1])",
+  "status": "ok",
+  "output": "\"collection\""
+ },
+ {
+  "expr": "type_name([a: 1])",
+  "status": "ok",
+  "output": "\"collection\""
+ },
+ {
+  "expr": "type_name({1})",
+  "status": "ok",
+  "output": "\"function\""
+ },
+ {
+  "expr": "type_name(to_upper)",
+  "status": "ok",
+  "output": "\"built-in function 'to_upper'\""
+ },
+ {
+  "expr": "to_text(\"plain\")",
+  "status": "ok",
+  "output": "\"plain\""
+ },
+ {
+  "expr": "to_text(\"<b>bold</b> text\")",
+  "status": "ok",
+  "output": "\"bold text\""
+ },
+ {
+  "expr": "to_text(\"a\\<b\")",
+  "status": "ok",
+  "output": "\"a<b\""
+ },
+ {
+  "expr": "to_text(12)",
+  "status": "ok",
+  "output": "\"12\""
+ },
+ {
+  "expr": "to_text(nil)",
+  "status": "ok",
+  "output": "\"\""
+ },
+ {
+  "expr": "to_text()",
+  "status": "error",
+  "output": "ERROR: Variable not set: input\n         in function to_text"
+ },
+ {
+  "expr": "f1 := { to_text() }; f1(\"x<i>y</i>\")",
+  "status": "ok",
+  "output": "\"xy\""
+ },
+ {
+  "expr": "to_upper(\"abc Def\")",
+  "status": "ok",
+  "output": "\"ABC DEF\""
+ },
+ {
+  "expr": "to_lower(\"ABC Def\")",
+  "status": "ok",
+  "output": "\"abc def\""
+ },
+ {
+  "expr": "to_title(\"hello WORLD again\")",
+  "status": "ok",
+  "output": "\"Hello World Again\""
+ },
+ {
+  "expr": "reverse(\"abc\")",
+  "status": "ok",
+  "output": "\"cba\""
+ },
+ {
+  "expr": "trim(\"  a b  \")",
+  "status": "ok",
+  "output": "\"a b\""
+ },
+ {
+  "expr": "trim(\"\\n x \\t\")",
+  "status": "ok",
+  "output": "\"x\""
+ },
+ {
+  "expr": "substring(\"abcdef\", begin: 2)",
+  "status": "ok",
+  "output": "\"cdef\""
+ },
+ {
+  "expr": "substring(\"abcdef\", begin: 1, end: 3)",
+  "status": "ok",
+  "output": "\"bc\""
+ },
+ {
+  "expr": "substring(\"abcdef\", begin: -2, end: 2)",
+  "status": "ok",
+  "output": "\"ab\""
+ },
+ {
+  "expr": "substring(\"abcdef\", begin: 4, end: 2)",
+  "status": "ok",
+  "output": "\"\""
+ },
+ {
+  "expr": "substring(\"abcdef\", begin: 10)",
+  "status": "ok",
+  "output": "\"\""
+ },
+ {
+  "expr": "substring(\"abcdef\", end: 100)",
+  "status": "ok",
+  "output": "\"abcdef\""
+ },
+ {
+  "expr": "contains(\"abcdef\", match: \"cd\")",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "contains(\"abcdef\", match: \"x\")",
+  "status": "ok",
+  "output": "false"
+ },
+ {
+  "expr": "contains(\"abc\", match: \"\")",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "contains(\"a.c\", match: \".\")",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "sort_text(\"cabba\")",
+  "status": "ok",
+  "output": "\"aabbc\""
+ },
+ {
+  "expr": "sort_text(\"UWBRG\", order: \"WUBRG\")",
+  "status": "ok",
+  "output": "\"WUBRG\""
+ },
+ {
+  "expr": "sort_text(\"2UWX\", order: \"XWUBRG\")",
+  "status": "ok",
+  "output": "\"XWU\""
+ },
+ {
+  "expr": "regex_escape(\"a.b*c(d)\")",
+  "status": "ok",
+  "output": "\"a\\\\.b\\\\*c\\\\(d\\\\)\""
+ },
+ {
+  "expr": "regex_escape(\"x+y?z|w[1]{2}^$\\\\\")",
+  "status": "ok",
+  "output": "\"x\\\\+y\\\\?z\\\\|w\\\\[1\\\\]2\\\\^\\\\$\\\\\\\\\""
+ },
+ {
+  "expr": "length(\"abcd\")",
+  "status": "ok",
+  "output": "4"
+ },
+ {
+  "expr": "length([1, 2, 3])",
+  "status": "ok",
+  "output": "3"
+ },
+ {
+  "expr": "length([a: 1, b: 2])",
+  "status": "ok",
+  "output": "2"
+ },
+ {
+  "expr": "length(\"\")",
+  "status": "ok",
+  "output": "0"
+ },
+ {
+  "expr": "length(nil)",
+  "status": "error",
+  "output": "ERROR: Can't convert from nothing to collection\n         in function length"
+ },
+ {
+  "expr": "number_of_items(in: [1, 2])",
+  "status": "ok",
+  "output": "2"
+ },
+ {
+  "expr": "number_of_items(in: \"abc\")",
+  "status": "ok",
+  "output": "3"
+ },
+ {
+  "expr": "position(of: \"b\", in: \"abc\")",
+  "status": "ok",
+  "output": "1"
+ },
+ {
+  "expr": "position(of: \"z\", in: \"abc\")",
+  "status": "ok",
+  "output": "-1"
+ },
+ {
+  "expr": "position(of: 2, in: [1, 2, 3])",
+  "status": "ok",
+  "output": "1"
+ },
+ {
+  "expr": "position(of: \"x\", in: [1, 2])",
+  "status": "ok",
+  "output": "-1"
+ },
+ {
+  "expr": "trace(\"hello\")",
+  "status": "error",
+  "output": "ERROR: Trace: hello\n\"hello\""
+ },
+ {
+  "expr": "min(3, 1.5, 2)",
+  "status": "ok",
+  "output": "1.5"
+ },
+ {
+  "expr": "max(3, 1.5, 2)",
+  "status": "ok",
+  "output": "3"
+ },
+ {
+  "expr": "max(1, 2)",
+  "status": "ok",
+  "output": "2"
+ },
+ {
+  "expr": "min(4)",
+  "status": "ok",
+  "output": "4"
+ },
+ {
+  "expr": "max(\"10\", 9)",
+  "status": "ok",
+  "output": "10"
+ },
+ {
+  "expr": "max(0, -2)",
+  "status": "ok",
+  "output": "0"
+ },
+ {
+  "expr": "assert(1 == 1)",
+  "status": "ok",
+  "output": "nil"
+ },
+ {
+  "expr": "assert(1 == 2)",
+  "status": "warning",
+  "output": "WARNING: Assertion failure on line 1:\n            expected: 1 == 2\n            found: 1 != 2\nnil"
+ },
+ {
+  "expr": "match(\"abc\", match: \"b\")",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "match(\"abc\", match: \"^b\")",
+  "status": "ok",
+  "output": "false"
+ },
+ {
+  "expr": "match(\"ABC\", match: \"(?i)b\")",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "match_text(\"a b\", match: \"[[:space:]]\")",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "match(\"\", match: \"x\")",
+  "status": "ok",
+  "output": "false"
+ },
+ {
+  "expr": "is_x1 := match@(match: \"x\"); is_x1(\"axe\")",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "match(\"a\\nb\", match: \"^b\")",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "match(\"a\\nb\", match: \"a$\")",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "match(\"a\\nb\", match: \"a.b\")",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "filter_text(\"A\\nb\", match: \"(?i)[a-z]+\")",
+  "status": "ok",
+  "output": "\"Ab\""
+ },
+ {
+  "expr": "match(\"ab\", match: \"\\\\w\\\\b\")",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "regex_escape(\"a{b}c\")",
+  "status": "error",
+  "output": "ERROR: Variable not set: b"
+ },
+ {
+  "expr": "filter_text(\"a1b22c333\", match: \"[0-9]+\")",
+  "status": "ok",
+  "output": "\"122333\""
+ },
+ {
+  "expr": "filter_text(\"abc\", match: \"[0-9]+\")",
+  "status": "ok",
+  "output": "\"\""
+ },
+ {
+  "expr": "filter_text(\"2/R3/W\", match: \"^[0123456789]+\")",
+  "status": "ok",
+  "output": "\"2\""
+ },
+ {
+  "expr": "filter_text(\"cat hat bat\", match: \"[a-z]at\", in_context: \"<match> b\")",
+  "status": "ok",
+  "output": "\"hat\""
+ },
+ {
+  "expr": "break_text(\"a1b22c333\", match: \"[0-9]+\")",
+  "status": "ok",
+  "output": "[\"1\",\"22\",\"333\"]"
+ },
+ {
+  "expr": "break_text(\"abc\", match: \"[0-9]\")",
+  "status": "ok",
+  "output": "[]"
+ },
+ {
+  "expr": "break_text(\"2/R3/W\", match: \"(?ix) 1/2 | [|][WUBRGC] | TK | [0-9](/[WUBRGCVHSCEKPLOTQ2]) | [0-9]+(?!/[WUBRGCVHSCEKPLOTQ2]) | [WUBRGCVHS0-9](/[WUBRGCVHS])\\{0,4} \")",
+  "status": "ok",
+  "output": "[\"2/R\",\"3/W\"]"
+ },
+ {
+  "expr": "break_text(\"one two\", match: \"[^[:space:]]+\")",
+  "status": "ok",
+  "output": "[\"one\",\"two\"]"
+ },
+ {
+  "expr": "split_text(\"a, b,c\", match: \" *, *\")",
+  "status": "ok",
+  "output": "[\"a\",\"b\",\"c\"]"
+ },
+ {
+  "expr": "split_text(\",a,,b,\", match: \",\")",
+  "status": "ok",
+  "output": "[\"\",\"a\",\"\",\"b\",\"\"]"
+ },
+ {
+  "expr": "split_text(\",a,,b,\", match: \",\", include_empty: false)",
+  "status": "ok",
+  "output": "[\"a\",\"b\"]"
+ },
+ {
+  "expr": "split_text(\"\", match: \",\")",
+  "status": "ok",
+  "output": "[\"\"]"
+ },
+ {
+  "expr": "split_text(\"\", match: \",\", include_empty: false)",
+  "status": "ok",
+  "output": "[]"
+ },
+ {
+  "expr": "split_text(\"abc\", match: \",\")",
+  "status": "ok",
+  "output": "[\"abc\"]"
+ },
+ {
+  "expr": "replace(\"a-b-c\", match: \"-\", replace: \"+\")",
+  "status": "ok",
+  "output": "\"a+b+c\""
+ },
+ {
+  "expr": "replace(\"abc\", match: \"(b)\", replace: \"[\\\\1]\")",
+  "status": "ok",
+  "output": "\"a[b]c\""
+ },
+ {
+  "expr": "replace(\"abc\", match: \"b\", replace: \"<&>\")",
+  "status": "ok",
+  "output": "\"a<b>c\""
+ },
+ {
+  "expr": "replace(\"abc\", match: \"b\", replace: \"x\\\\&y\")",
+  "status": "ok",
+  "output": "\"ax&yc\""
+ },
+ {
+  "expr": "replace(\"abc\", match: \"b\", replace: \"\\\\\\\\\")",
+  "status": "ok",
+  "output": "\"a\\\\c\""
+ },
+ {
+  "expr": "replace(\"ab12\", match: \"([a-z])([0-9])\", replace: \"\\\\2\\\\1\")",
+  "status": "ok",
+  "output": "\"a1b2\""
+ },
+ {
+  "expr": "replace(\"abc\", match: \"(x)?b\", replace: \"[\\\\1]\")",
+  "status": "ok",
+  "output": "\"a[]c\""
+ },
+ {
+  "expr": "replace(\"aaa\", match: \"a\", replace: { \"<\" + input + \">\" })",
+  "status": "ok",
+  "output": "\"<a><a><a>\""
+ },
+ {
+  "expr": "replace(\"a1b2\", match: \"([a-z])([0-9])\", replace: { _2 + _1 })",
+  "status": "ok",
+  "output": "\"1a2b\""
+ },
+ {
+  "expr": "replace(\"Hello World\", match: \"(^| )([A-z])([^ ]*)\", replace: { _1 + to_lower(_2) + to_upper(_3) })",
+  "status": "ok",
+  "output": "\"hELLO wORLD\""
+ },
+ {
+  "expr": "replace(\" x \", match: \"[ ]+\", in_context: \"^<match>\", replace: \"\")",
+  "status": "ok",
+  "output": "\"x \""
+ },
+ {
+  "expr": "replace(\" x \", match: \"[ ]+\", in_context: \"<match>$\", replace: \"\")",
+  "status": "ok",
+  "output": "\" x\""
+ },
+ {
+  "expr": "replace(\"cat hat\", match: \"at\", in_context: \"h<match>\", replace: \"AT\")",
+  "status": "ok",
+  "output": "\"cat hAT\""
+ },
+ {
+  "expr": "replace(\"aaa\", match: \"a\", replace: \"aa\", recursive: false)",
+  "status": "ok",
+  "output": "\"aaaaaa\""
+ },
+ {
+  "expr": "replace_text(\"x.y\", match: \"\\\\.\", replace: \",\")",
+  "status": "ok",
+  "output": "\"x,y\""
+ },
+ {
+  "expr": "replace(\"abc\", match: \"\", replace: \"-\")",
+  "status": "ok",
+  "output": "\"-a-b-c-\""
+ },
+ {
+  "expr": "r1 := replace@(match: \"a\", replace: \"b\") + replace@(match: \"b\", replace: \"c\"); r1(\"aXb\")",
+  "status": "ok",
+  "output": "\"cXc\""
+ },
+ {
+  "expr": "remove_tags(\"<b>bold</b> and <i>it</i>\")",
+  "status": "ok",
+  "output": "\"bold and it\""
+ },
+ {
+  "expr": "remove_tags(\"no tags\")",
+  "status": "ok",
+  "output": "\"no tags\""
+ },
+ {
+  "expr": "remove_tags(\"a\\<b\")",
+  "status": "ok",
+  "output": "\"a\\<b\""
+ },
+ {
+  "expr": "remove_tag(\"<b>x</b><bx>y</bx><i>z</i>\", tag: \"<b\")",
+  "status": "ok",
+  "output": "\"xy<i>z</i>\""
+ },
+ {
+  "expr": "remove_tag(\"<word-list-type>Elf</word-list-type>\", tag: \"<word-list\")",
+  "status": "ok",
+  "output": "\"Elf\""
+ },
+ {
+  "expr": "remove_tag(\"<soft>a</soft>b\", tag: \"<soft>\")",
+  "status": "ok",
+  "output": "\"ab\""
+ },
+ {
+  "expr": "tag_contents(\"<b>x</b> <b>yz</b>\", tag: \"<b>\", contents: { to_upper(input) })",
+  "status": "ok",
+  "output": "\"<b>X</b> <b>YZ</b>\""
+ },
+ {
+  "expr": "tag_contents(\"<b>x</b>\", tag: \"<b\", contents: { \"[\" + input + \"]\" })",
+  "status": "ok",
+  "output": "\"<b>[x]</b>\""
+ },
+ {
+  "expr": "tag_contents(\"<b>x\", tag: \"<b>\", contents: { \"Q\" })",
+  "status": "ok",
+  "output": "\"\""
+ },
+ {
+  "expr": "tag_contents(\"<soft>a</soft>\", tag: \"<soft>\", contents: {\"\"})",
+  "status": "ok",
+  "output": "\"<soft></soft>\""
+ },
+ {
+  "expr": "curly_quotes(\"Don't feed them.\")",
+  "status": "ok",
+  "output": "\"Don’t feed them.\""
+ },
+ {
+  "expr": "curly_quotes(\"\\\"Hello,\\\" she said.\")",
+  "status": "ok",
+  "output": "\"“Hello,” she said.\""
+ },
+ {
+  "expr": "curly_quotes(\"'tis the 'end'\")",
+  "status": "ok",
+  "output": "\"‘tis the ‘end’\""
+ },
+ {
+  "expr": "curly_quotes(\"(\\\"x\\\") [\\\"y\\\"]\")",
+  "status": "ok",
+  "output": "\"(“x”) [“y”]\""
+ },
+ {
+  "expr": "curly_quotes(\"a\\n\\\"b\\\"\")",
+  "status": "ok",
+  "output": "\"a\\n“b”\""
+ },
+ {
+  "expr": "curly_quotes(\"<i>\\\"q\\\"</i>\")",
+  "status": "ok",
+  "output": "\"<i>“q”</i>\""
+ },
+ {
+  "expr": "filter_list([1, 2, 3, 4], filter: { input > 2 })",
+  "status": "ok",
+  "output": "[3,4]"
+ },
+ {
+  "expr": "filter_list([a: 1, b: 5], filter: { input > 2 })",
+  "status": "ok",
+  "output": "[5]"
+ },
+ {
+  "expr": "sort_list([3, 1, 2])",
+  "status": "ok",
+  "output": "[1,2,3]"
+ },
+ {
+  "expr": "sort_list([\"b\", \"a\", \"c\"])",
+  "status": "ok",
+  "output": "[\"a\",\"b\",\"c\"]"
+ },
+ {
+  "expr": "sort_list([3, 1, 3, 2], remove_duplicates: true)",
+  "status": "ok",
+  "output": "[1,2,3]"
+ },
+ {
+  "expr": "sort_list([\"ccc\", \"a\", \"bb\"], order_by: { length(input) })",
+  "status": "ok",
+  "output": "[\"a\",\"bb\",\"ccc\"]"
+ },
+ {
+  "expr": "sort_list(\"cba\")",
+  "status": "ok",
+  "output": "\"abc\""
+ },
+ {
+  "expr": "chosen(\"white, blue\", choice: \"blue\")",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "chosen(\"white, blue\", choice: \"red\")",
+  "status": "ok",
+  "output": "false"
+ },
+ {
+  "expr": "chosen(\"white,blue\", choice: \"blue\")",
+  "status": "ok",
+  "output": "true"
+ },
+ {
+  "expr": "chosen(\"\", choice: \"blue\")",
+  "status": "ok",
+  "output": "false"
+ },
+ {
+  "expr": "chosen(\"white blue\", choice: \"white\")",
+  "status": "ok",
+  "output": "false"
+ },
+ {
+  "expr": "count_chosen(\"white, blue, land\")",
+  "status": "ok",
+  "output": "3"
+ },
+ {
+  "expr": "count_chosen(\"\")",
+  "status": "ok",
+  "output": "0"
+ },
+ {
+  "expr": "count_chosen(\"white, blue, land\", choices: \"white,blue,black,red,green,artifact\")",
+  "status": "ok",
+  "output": "2"
+ },
+ {
+  "expr": "count_chosen(\"artifact,white\", choices: \"white,blue,black,red,green,artifact\")",
+  "status": "ok",
+  "output": "2"
+ },
+ {
+  "expr": "count_chosen(\"asdf\", choices: \"white,blue,black,red,green,artifact\")",
+  "status": "ok",
+  "output": "0"
+ },
+ {
+  "expr": "remove_choice(\"white, blue, overlay\", choice: \"overlay\")",
+  "status": "ok",
+  "output": "\"white, blue\""
+ },
+ {
+  "expr": "remove_choice(\"white, blue, overlay\", choices: \"radial, overlay, blue\")",
+  "status": "ok",
+  "output": "\"white\""
+ },
+ {
+  "expr": "require_choice(\"white\", choices: \"multicolor, hybrid\")",
+  "status": "ok",
+  "output": "\"white, multicolor\""
+ },
+ {
+  "expr": "require_choice(\"white, hybrid\", choices: \"multicolor, hybrid\")",
+  "status": "ok",
+  "output": "\"white, hybrid\""
+ },
+ {
+  "expr": "exclusive_choice(\"white, multicolor, hybrid\", choices: \"multicolor, hybrid\")",
+  "status": "ok",
+  "output": "\"white, multicolor\""
+ },
+ {
+  "expr": "exclusive_choice(\"white, hybrid\", choice1: \"multicolor\", choice2: \"hybrid\")",
+  "status": "ok",
+  "output": "\"white, hybrid\""
+ },
+ {
+  "expr": "require_exclusive_choice(\"white\", choices: \"horizontal, vertical\")",
+  "status": "ok",
+  "output": "\"white, horizontal\""
+ },
+ {
+  "expr": "require_exclusive_choice(\"white, vertical, horizontal\", choices: \"horizontal, vertical\")",
+  "status": "ok",
+  "output": "\"white, horizontal\""
+ },
+ {
+  "expr": "english_number(0)",
+  "status": "ok",
+  "output": "\"zero\""
+ },
+ {
+  "expr": "english_number(1)",
+  "status": "ok",
+  "output": "\"one\""
+ },
+ {
+  "expr": "english_number(13)",
+  "status": "ok",
+  "output": "\"thirteen\""
+ },
+ {
+  "expr": "english_number(14)",
+  "status": "ok",
+  "output": "\"fourteen\""
+ },
+ {
+  "expr": "english_number(20)",
+  "status": "ok",
+  "output": "\"twenty\""
+ },
+ {
+  "expr": "english_number(21)",
+  "status": "ok",
+  "output": "\"twenty-one\""
+ },
+ {
+  "expr": "english_number(40)",
+  "status": "ok",
+  "output": "\"forty\""
+ },
+ {
+  "expr": "english_number(99)",
+  "status": "ok",
+  "output": "\"ninety-nine\""
+ },
+ {
+  "expr": "english_number(100)",
+  "status": "ok",
+  "output": "\"100\""
+ },
+ {
+  "expr": "english_number(-5)",
+  "status": "ok",
+  "output": "\"-5\""
+ },
+ {
+  "expr": "english_number(\"X\")",
+  "status": "ok",
+  "output": "\"X\""
+ },
+ {
+  "expr": "english_number(\"3\")",
+  "status": "ok",
+  "output": "\"three\""
+ },
+ {
+  "expr": "english_number_a(1)",
+  "status": "ok",
+  "output": "\"a\""
+ },
+ {
+  "expr": "english_number_a(2)",
+  "status": "ok",
+  "output": "\"two\""
+ },
+ {
+  "expr": "english_number_multiple(1)",
+  "status": "ok",
+  "output": "\"\""
+ },
+ {
+  "expr": "english_number_multiple(5)",
+  "status": "ok",
+  "output": "\"five\""
+ },
+ {
+  "expr": "english_number_ordinal(1)",
+  "status": "ok",
+  "output": "\"first\""
+ },
+ {
+  "expr": "english_number_ordinal(2)",
+  "status": "ok",
+  "output": "\"second\""
+ },
+ {
+  "expr": "english_number_ordinal(3)",
+  "status": "ok",
+  "output": "\"third\""
+ },
+ {
+  "expr": "english_number_ordinal(4)",
+  "status": "ok",
+  "output": "\"fourth\""
+ },
+ {
+  "expr": "english_number_ordinal(12)",
+  "status": "ok",
+  "output": "\"twelfth\""
+ },
+ {
+  "expr": "english_number_ordinal(20)",
+  "status": "ok",
+  "output": "\"twentieth\""
+ },
+ {
+  "expr": "english_number_ordinal(21)",
+  "status": "ok",
+  "output": "\"twenty-first\""
+ },
+ {
+  "expr": "english_number_ordinal(100)",
+  "status": "ok",
+  "output": "\"100th\""
+ },
+ {
+  "expr": "english_number_ordinal(0)",
+  "status": "ok",
+  "output": "\"0th\""
+ },
+ {
+  "expr": "english_singular(\"cities\")",
+  "status": "ok",
+  "output": "\"city\""
+ },
+ {
+  "expr": "english_singular(\"heroes\")",
+  "status": "ok",
+  "output": "\"hero\""
+ },
+ {
+  "expr": "english_singular(\"matches\")",
+  "status": "ok",
+  "output": "\"match\""
+ },
+ {
+  "expr": "english_singular(\"wolves\")",
+  "status": "ok",
+  "output": "\"wolf\""
+ },
+ {
+  "expr": "english_singular(\"elves\")",
+  "status": "ok",
+  "output": "\"elf\""
+ },
+ {
+  "expr": "english_singular(\"dwarves\")",
+  "status": "ok",
+  "output": "\"dwarf\""
+ },
+ {
+  "expr": "english_singular(\"cats\")",
+  "status": "ok",
+  "output": "\"cat\""
+ },
+ {
+  "expr": "english_singular(\"men\")",
+  "status": "ok",
+  "output": "\"man\""
+ },
+ {
+  "expr": "english_singular(\"sheep\")",
+  "status": "ok",
+  "output": "\"sheep\""
+ },
+ {
+  "expr": "english_number(\"<param-number>1</param-number>\")",
+  "status": "ok",
+  "output": "\"<hint-1><param-number>one</param-number>\""
+ },
+ {
+  "expr": "english_number(\"<param-number>3</param-number>\")",
+  "status": "ok",
+  "output": "\"<hint-2><param-number>three</param-number>\""
+ },
+ {
+  "expr": "english_number(\"<param-number>X</param-number>\")",
+  "status": "ok",
+  "output": "\"<hint-2><param-number>X</param-number>\""
+ },
+ {
+  "expr": "english_number_a(\"<param-number>1</param-number>\")",
+  "status": "ok",
+  "output": "\"<hint-1><param-number>a</param-number>\""
+ },
+ {
+  "expr": "english_number_multiple(\"<param-number>1</param-number>\")",
+  "status": "ok",
+  "output": "\"<hint-1><param-number></param-number>\""
+ },
+ {
+  "expr": "english_number_ordinal(\"<param-number>2</param-number>\")",
+  "status": "ok",
+  "output": "\"<hint-2><param-number>second</param-number>\""
+ },
+ {
+  "expr": "english_singular(\"<param-name>Elves</param-name>\")",
+  "status": "ok",
+  "output": "\"<param-name>Elf</param-name>\""
+ },
+ {
+  "expr": "process_english_hints(\"Mill <hint-1><param-number>one</param-number> card(s).\")",
+  "status": "ok",
+  "output": "\"Mill <param-number>one</param-number> card.\""
+ },
+ {
+  "expr": "process_english_hints(\"Mill <hint-2><param-number>two</param-number> card(s).\")",
+  "status": "ok",
+  "output": "\"Mill <param-number>two</param-number> cards.\""
+ },
+ {
+  "expr": "process_english_hints(\"Look at <hint-1><param-number>a</param-number> card(s) and put (it|them) back.\")",
+  "status": "ok",
+  "output": "\"Look at <param-number>a</param-number> card and put (it|them) back.\""
+ },
+ {
+  "expr": "process_english_hints(\"Create a <param-name>Elf</param-name> token.\")",
+  "status": "ok",
+  "output": "\"Create an <param-name>Elf</param-name> token.\""
+ },
+ {
+  "expr": "process_english_hints(\"Create a <param-name>Goblin</param-name> token.\")",
+  "status": "ok",
+  "output": "\"Create a <param-name>Goblin</param-name> token.\""
+ },
+ {
+  "expr": "process_english_hints(\"Pay <param-cost></param-cost> now.\")",
+  "status": "ok",
+  "output": "\"Pay<param-cost></param-cost> now.\""
+ },
+ {
+  "expr": "process_english_hints(\"<hint-1>x <singular>one</singular><plural>many</plural> y\")",
+  "status": "ok",
+  "output": "\"x one y\""
+ },
+ {
+  "expr": "process_english_hints(\"<hint-2>x <singular>one</singular><plural>many</plural> y\")",
+  "status": "ok",
+  "output": "\"x many y\""
+ },
+ {
+  "expr": "process_english_hints(\"no hints (keep) here\")",
+  "status": "ok",
+  "output": "\"no hints (keep) here\""
+ },
+ {
+  "expr": "english_number_a(\"<param-number>1</param-number>\") + \" card(s)\"",
+  "status": "ok",
+  "output": "\"<hint-1><param-number>a</param-number> card(s)\""
+ },
+ {
+  "expr": "process_english_hints(english_number_a(\"<param-number>1</param-number>\") + \" card(s)\")",
+  "status": "ok",
+  "output": "\"<param-number>a</param-number> card\""
+ },
+ {
+  "expr": "process_english_hints(english_number_a(\"<param-number>4</param-number>\") + \" card(s)\")",
+  "status": "ok",
+  "output": "\"<param-number>four</param-number> cards\""
+ },
+ {
+  "expr": "sort_text(\"GW\", order: \"(WUBRG)\")",
+  "status": "ok",
+  "output": "\"GW\""
+ },
+ {
+  "expr": "sort_text(\"WG\", order: \"(WUBRG)\")",
+  "status": "ok",
+  "output": "\"GW\""
+ },
+ {
+  "expr": "sort_text(\"RWB\", order: \"(WUBRG)\")",
+  "status": "ok",
+  "output": "\"WBR\""
+ },
+ {
+  "expr": "sort_text(\"UBG\", order: \"(WUBRG)\")",
+  "status": "ok",
+  "output": "\"GUB\""
+ },
+ {
+  "expr": "sort_text(\"GU2\", order: \"\\\\?XYZI[0123456789]VHSFCAI(EKPLO)(WUBRG)\")",
+  "status": "ok",
+  "output": "\"2GU\""
+ },
+ {
+  "expr": "sort_text(\"WR11X\", order: \"\\\\?XYZI[0123456789]VHSFCAI(EKPLO)(WUBRG)\")",
+  "status": "ok",
+  "output": "\"X11RW\""
+ },
+ {
+  "expr": "sort_text(\"RGW\", order: \"\\\\?XYZI[0123456789]VHSFCAI(EPOKL)(WBGUR)\")",
+  "status": "ok",
+  "output": "\"GRW\""
+ },
+ {
+  "expr": "sort_text(\"2/R3/W\", order: \"[/\\\\?XYZI0123456789VHSCAIEKPLOMWUBRG]\")",
+  "status": "ok",
+  "output": "\"2/R3/W\""
+ },
+ {
+  "expr": "sort_text(\"WWUG\", order: \"<WUBRG>\")",
+  "status": "ok",
+  "output": "\"WUG\""
+ },
+ {
+  "expr": "sort_text(\"GWU\", order: \"<WUBRG>\")",
+  "status": "ok",
+  "output": "\"WUG\""
+ },
+ {
+  "expr": "sort_text(\"1GW\", order: \"in_place((WUBRG))\")",
+  "status": "ok",
+  "output": "\"1GW\""
+ },
+ {
+  "expr": "sort_text(\"TQT\", order: \"<TQ>\")",
+  "status": "ok",
+  "output": "\"TQ\""
+ },
+ {
+  "expr": "sort_text(\"a/b\", order: \"</>\")",
+  "status": "ok",
+  "output": "\"/\""
+ },
+ {
+  "expr": "sort_text(\"UWW\", order: \"WU\")",
+  "status": "ok",
+  "output": "\"WWU\""
+ },
+ {
+  "expr": "sort_text(\"abc\", order: \"any()\")",
+  "status": "ok",
+  "output": "\"abc\""
+ },
+ {
+  "expr": "sort_text(\"cab\", order: \"b any()\")",
+  "status": "ok",
+  "output": "\"bca\""
+ },
+ {
+  "expr": "sort_text(\"UGW\", order: \"mixed(WG)U\")",
+  "status": "ok",
+  "output": "\"GWU\""
+ },
+ {
+  "expr": "sort_text(\"W/UB\", order: \"pattern(./. (WUBRG))\")",
+  "status": "ok",
+  "output": "\"W/U\""
+ },
+ {
+  "expr": "sort_text(\"U/WB\", order: \"pattern(./. (WUBRG))\")",
+  "status": "ok",
+  "output": "\"W/U\""
+ },
+ {
+  "expr": "sort_text(\"WUB\", order: \"reverse_order(W U B)\")",
+  "status": "ok",
+  "output": "\"BUW\""
+ },
+ {
+  "expr": "sort_text(\"x y\", order: \"x y\")",
+  "status": "ok",
+  "output": "\"xy\""
+ },
+ {
+  "expr": "number_of_items(in: \"WUG\", filter: \"<WUBRG>\")",
+  "status": "ok",
+  "output": "3"
+ }
+]

@@ -1,0 +1,30 @@
+"""Mechanics are first-class: editing one updates every card that uses it.
+Reminder text is rendered from the definition, never stored on cards."""
+from __future__ import annotations
+
+from enum import Enum
+
+from pydantic import BaseModel
+
+
+class MechanicKind(str, Enum):
+    KEYWORD = "keyword"                 # Flying, Cycling {2}
+    ABILITY_WORD = "ability_word"       # Landfall — ...
+    KEYWORD_ACTION = "keyword_action"   # Scry 2
+
+
+class ReminderPolicy(str, Enum):
+    ALWAYS = "always"
+    COMMONS_ONLY = "commons_only"
+    FIRST_PER_COLOR = "first_per_color"
+    NEVER = "never"
+
+
+class Mechanic(BaseModel):
+    id: str
+    name: str
+    kind: MechanicKind = MechanicKind.KEYWORD
+    parameter: str | None = None        # e.g. "cost" for "Cycling {2}"
+    reminder_text: str = ""             # may use {param} placeholders
+    design_intent: str = ""
+    reminder_policy: ReminderPolicy = ReminderPolicy.COMMONS_ONLY

@@ -1,0 +1,84 @@
+"""A set project on disk: a folder of human-readable, git-friendly JSON.
+
+    my_set/
+      set.json           SetInfo
+      mechanics.json     list of Mechanic
+      archetypes.json    list of Archetype
+      cards/<id>.json    one Card per file
+      assets/            set symbol, custom frames, art (referenced by path)
+
+Cards load in id (file name) order; a card's place in the set comes from its
+collector number, not from file order.
+"""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Iterator
+
+from pydantic import BaseModel, Field
+
+from .archetype import Archetype
+from .card import Card, Face
+from .mechanic import Mechanic
+from .set_info import SetInfo
+
+
+class SetProject(BaseModel):
+    info: SetInfo
+    mechanics: list[Mechanic] = Field(default_factory=list)
+    archetypes: list[Archetype] = Field(default_factory=list)
+    cards: list[Card] = Field(default_factory=list)
+
+    def card(self, card_id: str) -> Card:
+        return next(c for c in self.cards if c.id == card_id)
+
+    def iter_faces(self) -> Iterator[tuple[Card, int, Face]]:
+        """Every face of every card, for analysis that counts faces separately."""
+        for card in self.cards:
+            for index, face in card.iter_faces():
+                yield card, index, face
+
+
+def _write_json(path: Path, data: object) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    if not path.exists() or path.read_text(encoding="utf-8") != text:    # keep mtimes stable
+        path.write_text(text, encoding="utf-8")
+
+
+def _dump(model: BaseModel) -> dict:
+    return model.model_dump(mode="json")
+
+
+def save_project(project: SetProject, folder: Path) -> None:
+    folder = Path(folder)
+    _write_json(folder / "set.json", _dump(project.info))
+    _write_json(folder / "mechanics.json", [_dump(m) for m in project.mechanics])
+    _write_json(folder / "archetypes.json", [_dump(a) for a in project.archetypes])
+    cards_dir = folder / "cards"
+    for card in project.cards:
+        _write_json(cards_dir / f"{card.id}.json", _dump(card))
+    # remove files of cards that were deleted from the project
+    keep = {f"{card.id}.json" for card in project.cards}
+    if cards_dir.is_dir():
+        for path in cards_dir.glob("*.json"):
+            if path.name not in keep:
+                path.unlink()
+
+
+def _read_json(path: Path, default: object) -> object:
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else default
+
+
+def load_project(folder: Path) -> SetProject:
+    folder = Path(folder)
+    cards_dir = folder / "cards"
+    cards = [Card.model_validate(_read_json(p, {})) for p in sorted(cards_dir.glob("*.json"))] \
+        if cards_dir.is_dir() else []
+    return SetProject(
+        info=SetInfo.model_validate(_read_json(folder / "set.json", {})),
+        mechanics=[Mechanic.model_validate(m) for m in _read_json(folder / "mechanics.json", [])],
+        archetypes=[Archetype.model_validate(a) for a in _read_json(folder / "archetypes.json", [])],
+        cards=cards,
+    )
