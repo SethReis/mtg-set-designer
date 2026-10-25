@@ -67,6 +67,37 @@ def save_project(project: SetProject, folder: Path) -> None:
                 path.unlink()
 
 
+def save_card(folder: Path, card: Card) -> None:
+    """Write one card's file (autosave after an edit)."""
+    _write_json(Path(folder) / "cards" / f"{card.id}.json", _dump(card))
+
+
+def delete_card(folder: Path, card_id: str) -> None:
+    (Path(folder) / "cards" / f"{card_id}.json").unlink(missing_ok=True)
+
+
+def save_info(folder: Path, info: SetInfo) -> None:
+    _write_json(Path(folder) / "set.json", _dump(info))
+
+
+def slug(text: str) -> str:
+    """"Grizzly Bears!" -> "grizzly-bears" (a file-name-safe id)."""
+    import re
+    out = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+    return out or "card"
+
+
+def new_card_id(project: SetProject, name: str) -> str:
+    """A unique id for a new card. Ids never change afterwards, even if the card is renamed."""
+    base, taken = slug(name), {c.id for c in project.cards}
+    if base not in taken:
+        return base
+    n = 2
+    while f"{base}-{n}" in taken:
+        n += 1
+    return f"{base}-{n}"
+
+
 def _read_json(path: Path, default: object) -> object:
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else default
 

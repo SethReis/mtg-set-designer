@@ -1,9 +1,5 @@
-"""Entry point: `python -m setdesigner`."""
+"""Entry point: `python -m setdesigner` (add --browser to use a browser tab)."""
+from setdesigner.ui.app import main
 
-
-def main() -> None:
-    print("Set designer: UI not built yet. See HANDOFF.md for the build order.")
-
-
-if __name__ == "__main__":
+if __name__ in {"__main__", "__mp_main__"}:
     main()

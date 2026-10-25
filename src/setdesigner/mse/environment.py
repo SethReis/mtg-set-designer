@@ -70,6 +70,13 @@ class ScriptEnvironment:
                 self.set.cards.append(obj)
             self.set.by_uid[uid] = obj
 
+    def remove_card(self, card_id: str) -> None:
+        """Forget a deleted card (so it no longer counts in numbering etc.)."""
+        gone = [c for c in self.set.cards if c.uid == card_id or c.uid.startswith(card_id + "/")]
+        for obj in gone:
+            self.set.cards.remove(obj)
+            self.set.by_uid.pop(obj.uid, None)
+
     # ------------------------------------------------------------ contexts
 
     def style_field_defs(self, style: str) -> tuple[dict[str, FieldDef], dict[str, FieldDef]]:

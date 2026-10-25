@@ -9,6 +9,7 @@ description = "Set-first designer for custom Magic: The Gathering sets (private,
 requires-python = ">=3.11"
 dependencies = [
     "nicegui",
+    "pywebview",        # nicegui's native mode: the app's own desktop window
     "pydantic>=2",
     "pillow",
     "numpy",            # pixel math for MSE's image functions
@@ -17,7 +18,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest"]
+dev = ["pytest", "pytest-asyncio"]     # pytest-asyncio: NiceGUI's simulated-user UI tests
 svg = ["cairosvg"]      # SVG set symbols (PNG works without it)
 
 [tool.setuptools.packages.find]
@@ -26,3 +27,7 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["tests"]
+addopts = "-p nicegui.testing.user_plugin"     # the `user` fixture for UI tests
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+main_file = ""

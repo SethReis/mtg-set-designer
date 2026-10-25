@@ -7,5 +7,8 @@ __pycache__/
 Full-Magic-Pack-main/
 mse_sample.zip
 
+# Claude Code's local launch configs (point at temporary folders)
+.claude/
+
 # Rendered output (tools/render_cards.py)
 out/

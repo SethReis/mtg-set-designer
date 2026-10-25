@@ -8,10 +8,23 @@ See `HANDOFF.md` for the design decisions and roadmap.
 ```
 python -m venv .venv
 .venv\Scripts\activate
-pip install -e .[dev]
+pip install --no-cache-dir -e .[dev]
 ```
 
 Or just run `run.bat`, which does the above on first launch.
+
+## Running the app
+
+```
+python -m setdesigner             # opens its own window (or double-click run.bat)
+python -m setdesigner --browser   # in a browser tab at http://localhost:8765 instead
+```
+
+The start page creates a new set folder (default `sets/<code>/`) or opens an
+existing one; recently opened sets are listed there. The editor has three
+columns: the card list, the card form and a live preview drawn by Magic Set
+Editor. Every change is saved automatically to `cards/<id>.json`, so there is
+no Save button. See `docs/editor.md`.
 
 ## MSE packages
 
