@@ -7,6 +7,7 @@ from nicegui import run, ui
 
 from ..app import text_input
 from ..model import Card, Rarity, Status
+from ..mse.mapping import split_type_line
 
 COLOR_PIPS = {"W": "#f3eccb", "U": "#3b82c4", "B": "#3a3434", "R": "#d9472b", "G": "#2f8f4e"}
 RARITY_LETTERS = {Rarity.COMMON: "C", Rarity.UNCOMMON: "U", Rarity.RARE: "R",
@@ -181,7 +182,12 @@ def register(state) -> None:
                             .props("dense no-caps flat size=sm")
 
         # ------------------------------------------------------------ layout
-        with ui.row().classes("w-full no-wrap gap-4 items-start").style("height: calc(100vh - 80px)"):
+        # The columns fill exactly the space under the header (each scrolls on its own),
+        # so the page itself never needs a scrollbar: the page is a flex column whose
+        # content takes the remaining height.
+        ui.query(".q-page").classes("column")
+        ui.query(".nicegui-content").classes("grow h-0 min-h-0")
+        with ui.row().classes("w-full h-full no-wrap gap-4 items-start"):
 
             # ---- card list
             with ui.column().classes("w-64 shrink-0 h-full gap-2"):
@@ -234,8 +240,13 @@ def register(state) -> None:
                                      on_change=lambda e: changed("name", e.value)).classes("grow")
                             cost = text_field("mana_cost", "Mana cost", face.mana_cost, "w-48")
                         symbol_palette("mana_cost", cost, costs_only=True)
-                        ui.input("Type line", value=face.type_line,
-                                 on_change=lambda e: changed("type_line", e.value)).classes("w-full")
+                        # two fields so nobody has to type the "—" (added when both are filled)
+                        types, subtypes = split_type_line(face.type_line)
+                        with ui.row().classes("w-full no-wrap gap-4"):
+                            ui.input("Types", value=types, placeholder="Legendary Creature",
+                                     on_change=lambda e: changed("types", e.value)).classes("grow")
+                            ui.input("Subtypes", value=subtypes, placeholder="Elf Druid",
+                                     on_change=lambda e: changed("subtypes", e.value)).classes("grow")
                         symbol_palette("rules_text", None)
                         text_field("rules_text", "Rules text", face.rules_text, "w-full", textarea=True)
                         ui.textarea("Flavor text", value=face.flavor_text,

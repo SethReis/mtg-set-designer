@@ -6,8 +6,8 @@ import pytest
 
 from fixtures.oracle_project import oracle_project
 from setdesigner.model import Card, Face
-from setdesigner.mse.mapping import (card_to_mse, mse_color_indicator, mse_mana_cost,
-                                     split_type_line)
+from setdesigner.mse.mapping import (card_to_mse, loyalty_abilities, mse_color_indicator,
+                                     mse_mana_cost, split_type_line)
 from setdesigner.mse.script import run
 from setdesigner.mse.script.builtins.tags import strip_tags
 
@@ -48,6 +48,25 @@ def test_face_frame_override_picks_stylesheet() -> None:
     project = oracle_project()
     card = Card(id="x", frame="old", faces=[Face(name="A")])
     assert card_to_mse(card, project.info)[0].stylesheet == "magic-old"
+
+
+def test_loyalty_abilities_split() -> None:
+    text = "+1: Draw a card.\n−2: Shock.\nStatic text\n-X: Boom.\n0: Rest."
+    assert loyalty_abilities(text) == [("+1", "Draw a card."), ("-2", "Shock."), ("", "Static text"),
+                                       ("-X", "Boom."), ("0", "Rest.")]
+
+
+def test_planeswalker_gets_its_frame_and_ability_costs() -> None:
+    project = oracle_project()
+    card = Card(id="pw", frame="8th", faces=[Face(name="Ember", type_line="Legendary Planeswalker — Ember",
+                                                  rules_text="+1: Draw a card.\n−3: Shock.", loyalty="4")])
+    mse = card_to_mse(card, project.info)[0]
+    assert mse.stylesheet == "magic-new-planeswalker"
+    assert mse.values["loyalty cost 1"] == "+1" and mse.values["loyalty cost 2"] == "-3"
+    assert mse.values["rule text"] == "Draw a card.\nShock."
+    assert mse.values["loyalty"] == "4"
+    creature = Card(id="c", faces=[Face(name="Bear", type_line="Creature — Planeswalker Hunter")])
+    assert "planeswalker" not in card_to_mse(creature, project.info)[0].stylesheet
 
 
 # -------------------------------------------------------------- environment

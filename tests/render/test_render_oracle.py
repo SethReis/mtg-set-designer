@@ -15,11 +15,18 @@ pytestmark = pytest.mark.skipif(not PACKAGES.is_dir(), reason="resources/mse_pac
 
 MAX_OUTSIDE_TEXT = 2.5          # mean channel difference (0-255) outside text boxes
 MAX_INK_OFFSET = 4              # pixels, first/last inked row of each text box
+KNOWN_DIFFERENCES = {
+    # MSE paints see-through areas as a checkerboard (here: no art, seen through the
+    # planeswalker frame's translucent text box); ours leaves them transparent
+    "ajani-goldmane": "MSE draws transparency as a checkerboard",
+}
 
 
 @pytest.mark.parametrize("case", CASES, ids=[f"{c['file']}: {c['expr']}" for c in CASES])
 def test_card_matches_mse(case) -> None:
     result = compare_case(case)
+    if result.uid in KNOWN_DIFFERENCES and result.outside_text > MAX_OUTSIDE_TEXT:
+        pytest.xfail(KNOWN_DIFFERENCES[result.uid])
     assert result.outside_text <= MAX_OUTSIDE_TEXT, f"{result.uid}: {result.outside_text:.2f}"
     for region in result.text_regions:
         ours, theirs = region["ours"], region["theirs"]

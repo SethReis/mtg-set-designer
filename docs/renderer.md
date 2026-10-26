@@ -21,6 +21,12 @@ in the background, invisible to users.
 - **Print:** `render_set` loads the whole set once and renders every face.
 - **Set symbol:** MSE only draws its own `.mse-symbol` files, so it gets an empty symbol and our
   rarity symbol is drawn on top.
+- **Fonts:** MSE only uses fonts Windows knows, and the Magic fonts (Matrix, MPlantin, Beleren,
+  ...) are not normally installed. Without them it silently substitutes others (Arial in the 8th
+  Edition frame). So `register_fonts` adds `resources/fonts/` for this Windows session before
+  MSE starts. Nothing is installed, and the fonts are removed again when Python exits.
+- **Planeswalkers** use the frame's planeswalker stylesheet (`mse/frames.py`). Their rules
+  text lines `+1: ...` become MSE's loyalty cost fields (`mapping.loyalty_abilities`).
 - **Crashes / hangs:** the process is restarted and the render retried once (tested).
 - **Fallback:** if MSE is missing or fails, `CardRenderer` uses our own renderer (below) and
   says so in `last_backend` / `warnings`. MSE is found at `$SETDESIGNER_MSE`, else

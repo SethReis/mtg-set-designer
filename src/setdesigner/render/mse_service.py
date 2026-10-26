@@ -53,6 +53,27 @@ def find_mse() -> Path | None:
     return next((p for p in MSE_CANDIDATES if p.is_file()), None)
 
 
+FONTS = REPO / "resources" / "fonts"
+_registered_fonts: list[str] = []
+
+
+def register_fonts(folder: Path = FONTS) -> int:
+    """Make the templates' fonts (Matrix, MPlantin, Beleren, ...) available to MSE, which
+    only uses fonts Windows knows. They are added for this Windows session only (nothing
+    is installed or written to the registry) and removed again when Python exits.
+    Returns how many font files were added."""
+    if os.name != "nt" or _registered_fonts or not folder.is_dir():
+        return 0
+    import atexit
+    import ctypes
+    gdi32 = ctypes.windll.gdi32
+    for path in sorted(folder.rglob("*")):
+        if path.suffix.lower() in (".ttf", ".otf") and gdi32.AddFontResourceW(str(path)):
+            _registered_fonts.append(str(path))
+    atexit.register(lambda: [gdi32.RemoveFontResourceW(p) for p in _registered_fonts])
+    return len(_registered_fonts)
+
+
 class MSEProcess:
     """One running `magicseteditor.com --cli --raw`, answering one command at a time.
     (Raw mode: each answer is a status line, a line count, then that many lines.)"""
@@ -66,6 +87,7 @@ class MSEProcess:
     def start(self) -> None:
         self.close()
         self.lines = queue.Queue()
+        register_fonts()
         flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
         try:
             self.proc = subprocess.Popen([str(self.exe), "--cli", "--quiet", "--raw"],

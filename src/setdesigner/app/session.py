@@ -22,11 +22,13 @@ from PIL import Image
 
 from ..model import (Card, Face, Rarity, SetInfo, SetProject, Status, delete_card, load_project,
                      new_card_id, save_card, save_info, save_project)
+from ..mse.mapping import join_type_line, split_type_line
 
 AUTOSAVE_DELAY = 0.5                    # seconds after the last edit
 
 FACE_FIELDS = {"name", "mana_cost", "type_line", "rules_text", "flavor_text", "power",
                "toughness", "loyalty", "artist"}
+TYPE_PARTS = {"types", "subtypes"}      # the two halves of type_line, edited separately
 CARD_FIELDS = {"rarity", "collector_number", "frame", "status", "notes"}
 OPTIONAL = {"power", "toughness", "loyalty"}            # "" means "not set"
 
@@ -121,8 +123,13 @@ class SetSession:
     # ------------------------------------------------------------ editing
 
     def update(self, card: Card, field: str, value: object, face: int = 0) -> None:
-        """Change one field and schedule saving. Face fields apply to `face`."""
-        if field in FACE_FIELDS:
+        """Change one field and schedule saving. Face fields apply to `face`.
+        "types" / "subtypes" set one side of the type line's dash (see join_type_line)."""
+        if field in TYPE_PARTS:
+            types, subtypes = split_type_line(card.faces[face].type_line)
+            parts = {"types": types, "subtypes": subtypes, field: "" if value is None else str(value)}
+            card.faces[face].type_line = join_type_line(parts["types"], parts["subtypes"])
+        elif field in FACE_FIELDS:
             if field in OPTIONAL:                          # "" or None = not set
                 value = (str(value).strip() or None) if value is not None else None
             else:

@@ -66,6 +66,18 @@ def test_fields_are_converted(session) -> None:
         session.update(card, "nonsense", 1)
 
 
+def test_types_and_subtypes_edit_the_type_line(session) -> None:
+    card = session.new_card()
+    session.update(card, "types", "Creature")
+    assert card.faces[0].type_line == "Creature"               # no dash yet
+    session.update(card, "subtypes", "Elf Druid")
+    assert card.faces[0].type_line == "Creature — Elf Druid"
+    session.update(card, "types", "Legendary Creature ")
+    assert card.faces[0].type_line == "Legendary Creature — Elf Druid"
+    session.update(card, "subtypes", "")
+    assert card.faces[0].type_line == "Legendary Creature"
+
+
 def test_duplicate_and_delete(session) -> None:
     card = session.new_card("Shock")
     session.update(card, "rules_text", "Shock deals 2 damage to any target.")

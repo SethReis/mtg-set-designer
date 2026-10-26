@@ -230,7 +230,7 @@
  {
   "expr": "for each c in set.cards do [c.shape]",
   "status": "ok",
-  "output": "[\"normal\",\"normal\",\"normal\",\"normal\",\"normal\",\"normal\",\"normal\",\"normal\"]",
+  "output": "[\"normal\",\"normal\",\"normal\",\"normal\",\"normal\",\"planeswalker\",\"normal\",\"normal\"]",
   "project": "oracle_project"
  },
  {

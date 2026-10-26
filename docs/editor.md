@@ -37,6 +37,17 @@ The NiceGUI modules in `src/setdesigner/ui/` only arrange widgets and call into 
   - The caret position reaches Python with every keyup and click. QInput doesn't pass
     native `input` events on. Tab's own keyup is skipped, because it would report the
     caret from before the accepted suggestion.
+- **Type line.** Edited as two fields, Types and Subtypes (`session.update(card, "types", ...)`).
+  The card still stores one `type_line`. The "—" is added only when both are filled, so
+  nobody has to type it.
+- **Planeswalkers.** Write one ability per line, with its cost: `+1: Draw a card.`,
+  `−2: ...`. A planeswalker type line switches the card to that frame's planeswalker
+  version (see `mse/frames.py`), and the costs go to MSE's loyalty cost fields.
+- **Spelling.** In the desktop window, right-click a text field for spelling suggestions.
+  pywebview turns WebView2's right-click menu off, so `ui/native_window.py` turns it back on
+  for text fields only.
+- **Layout.** The page is exactly the window's height. The list, form and preview each
+  scroll on their own.
 - **Keyboard.** Ctrl+N new card, Ctrl+D duplicate, Ctrl+F search.
 
 ## Testing

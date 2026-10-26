@@ -14,6 +14,8 @@ field scripts (run by setdesigner.mse.objects) derive the rest.
     flavor_text              flavor text
     power / toughness        power / toughness
     loyalty                  loyalty
+    rules_text "+1: Draw."   loyalty cost 1 "+1", rule text "Draw."  (planeswalkers:
+                             one ability per line, see loyalty_abilities)
     color_indicator          indicator  (multiple choice: "blue, red")
     art_path                 image
     artist                   illustrator
@@ -63,6 +65,13 @@ def split_type_line(type_line: str) -> tuple[str, str]:
     return type_line.strip(), ""
 
 
+def join_type_line(types: str, subtypes: str) -> str:
+    """("Legendary Creature", "Elf Druid") -> "Legendary Creature — Elf Druid"; the dash
+    only appears when both parts are given."""
+    types, subtypes = types.strip(), subtypes.strip()
+    return f"{types} — {subtypes}" if types and subtypes else types or subtypes
+
+
 def mse_color_indicator(indicator: str) -> str:
     """"U" / "blue" / "red, green" -> MSE's multiple choice "blue" / "red, green"."""
     text = indicator.strip()
@@ -80,16 +89,47 @@ def mse_text(text: str) -> str:
     return tagged.replace("</sym><sym>", "")
 
 
+def is_planeswalker(face: Face) -> bool:
+    return "planeswalker" in split_type_line(face.type_line)[0].lower()
+
+
+LOYALTY_COST = re.compile(r"^\s*([+\-−–]?\s*(?:\d+|X))\s*:\s*(.*)$")
+MAX_LOYALTY_ABILITIES = 4          # the planeswalker frames have four cost boxes
+
+
+def loyalty_abilities(rules_text: str) -> list[tuple[str, str]]:
+    """Planeswalker rules text, one ability per line -> (cost, text) pairs.
+    "+1: Draw a card." -> ("+1", "Draw a card."); a line without a cost (a static
+    ability) gets cost "". Unicode minus signs become "-", which MSE expects."""
+    out = []
+    for line in rules_text.split("\n"):
+        match = LOYALTY_COST.match(line)
+        if match:
+            cost = re.sub(r"\s+", "", match.group(1)).replace("−", "-").replace("–", "-")
+            out.append((cost, match.group(2)))
+        else:
+            out.append(("", line))
+    return out
+
+
 def face_values(card: Card, face: Face, reminders: dict[str, bool] | None = None) -> dict[str, str]:
     """`reminders`: mechanic name -> show its reminder text on this card (see mechanics.py)."""
     from .mechanics import tag_reminders
     supertype, subtype = split_type_line(face.type_line)
+    rules_text = face.rules_text
+    costs: dict[str, str] = {}
+    if is_planeswalker(face):
+        abilities = loyalty_abilities(rules_text)
+        rules_text = "\n".join(text for _, text in abilities)
+        costs = {f"loyalty cost {i}": cost
+                 for i, (cost, _) in enumerate(abilities[:MAX_LOYALTY_ABILITIES], 1)}
     values = {
         "name": face.name,
         "casting cost": mse_mana_cost(face.mana_cost),
         "super type": supertype,
         "sub type": subtype,
-        "rule text": mse_text(tag_reminders(face.rules_text, reminders or {})),
+        "rule text": mse_text(tag_reminders(rules_text, reminders or {})),
+        **costs,
         "flavor text": mse_text(face.flavor_text),
         "power": face.power or "",
         "toughness": face.toughness or "",
@@ -121,7 +161,8 @@ def card_to_mse(card: Card, set_info: SetInfo,
     for index, face in card.iter_faces():
         out.append(MSECard(
             uid=face_uid(card, index),
-            stylesheet=stylesheet_package(card.frame_for(index, set_info.default_frame)),
+            stylesheet=stylesheet_package(card.frame_for(index, set_info.default_frame),
+                                          planeswalker=is_planeswalker(face)),
             values=face_values(card, face, reminders),
             notes=card.notes,
         ))

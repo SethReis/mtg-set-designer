@@ -17,7 +17,8 @@ REPO = Path(__file__).resolve().parent.parent
 PACKAGES_DIR = REPO / "resources" / "mse_packages"
 FONTS_DIR = REPO / "resources" / "fonts"
 
-KEEP_STYLES = {"magic-m15-altered", "magic-old", "magic-new", "magic-veryold", "magic-old-abu"}
+KEEP_STYLES = {"magic-m15-altered", "magic-old", "magic-new", "magic-veryold", "magic-old-abu",
+               "magic-m15-planeswalker", "magic-new-planeswalker", "magic-old-planeswalker"}
 KEEP_SUFFIXES = (".mse-game", ".mse-include", ".mse-symbol-font")
 
 

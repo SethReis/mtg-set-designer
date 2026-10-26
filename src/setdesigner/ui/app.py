@@ -68,6 +68,9 @@ def main(argv: list[str] | None = None) -> None:
     settings = os.environ.get("SETDESIGNER_SETTINGS")
     state = build(sets_root=os.environ.get("SETDESIGNER_SETS_DIR") or None,
                   settings_path=Path(settings) if settings else None)
+    if not browser:
+        from .native_window import window_started      # spelling suggestions (see there)
+        app.native.start_args["func"] = window_started
     ui.run(title="Set Designer", native=not browser, show=browser,
            window_size=None if browser else tuple(state.settings.window),
            reload=False, port=8765 if browser else None, favicon="🃏")
