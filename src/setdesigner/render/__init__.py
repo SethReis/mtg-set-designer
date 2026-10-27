@@ -24,7 +24,8 @@ from ..mse.environment import ScriptEnvironment
 from .draw import draw
 from .layout import CardLayout
 from .mse_layout import mse_layout
-from .mse_service import MSEError, MSERenderer, find_mse
+from ..mse.mapping import face_uid
+from .mse_service import MSEError, MSERenderer, find_mse, render_keys
 
 
 def card_layout(env: ScriptEnvironment, card: Card, face: int = 0) -> CardLayout:
@@ -65,6 +66,28 @@ class CardRenderer:
                 self.warnings.append(f"MSE could not render {card.id}: {e}; used the built-in renderer")
         self.last_backend = "builtin"
         return render_card(self.env, card, face)
+
+    def render_keys(self, cards: list[Card]) -> dict[str, str]:
+        """A key per card that changes whenever its picture would (for caching renders).
+        Includes which renderer draws, so built-in pictures are redone once MSE works."""
+        for card in cards:
+            if face_uid(card, 0) not in self.env.set.by_uid:    # new since the env was made
+                self.env.refresh_card(card)
+        backend = "mse" if self.mse is not None else "builtin"
+        return {cid: f"{backend}-{key}" for cid, key in render_keys(self.project, self.env, cards).items()}
+
+    def render_many(self, cards: list[Card]) -> dict[tuple[str, int], Image.Image]:
+        """Every face of several cards: {(card id, face index): image}."""
+        if self.mse is not None:
+            try:
+                images = self.mse.render_many(cards)
+                self.last_backend = "mse"
+                return images
+            except MSEError as e:
+                self.warnings.append(f"MSE could not render a batch: {e}; used the built-in renderer")
+        self.last_backend = "builtin"
+        return {(card.id, face): render_card(self.env, card, face)
+                for card in cards for face in range(len(card.faces))}
 
     def render_set(self, out_dir: Path) -> list[Path]:
         """Every face to PNG files (for printing)."""

@@ -13,6 +13,7 @@ pytestmark = pytest.mark.nicegui_main_file(MAIN)
 @pytest.fixture(autouse=True)
 def test_dir(tmp_path, monkeypatch) -> Path:
     monkeypatch.setenv("SETDESIGNER_TEST_DIR", str(tmp_path))
+    monkeypatch.setenv("SETDESIGNER_CACHE_DIR", str(tmp_path / "cache"))
     return tmp_path
 
 
@@ -29,7 +30,7 @@ async def create_set(user: User) -> None:
     await user.should_see("New card")
 
 
-async def test_create_set_opens_the_editor(user: User, test_dir: Path) -> None:
+async def test_create_set_opens_the_overview(user: User, test_dir: Path) -> None:
     await create_set(user)
     assert (test_dir / "sets" / "tst" / "set.json").is_file()
     await user.should_see("No cards yet")

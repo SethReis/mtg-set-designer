@@ -1,6 +1,7 @@
 # The card editor
 
-Stage one of the app: open or create a set and edit its cards with a live preview.
+Edit a set's cards with a live preview. Opened from the set overview (`overview.md`) by
+clicking a card; the back button returns there.
 Double-faced card editing and the problems panel come in a later stage.
 
 ## Where the code is

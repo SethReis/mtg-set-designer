@@ -33,7 +33,7 @@ from PIL import Image
 
 from ..model import Card, SetProject
 from ..mse.environment import ScriptEnvironment
-from ..mse.export_set import set_file_text, write_mse_set
+from ..mse.export_set import set_file_parts, set_file_text, write_mse_set
 from ..mse.mapping import face_uid
 
 REPO = Path(__file__).resolve().parents[3]
@@ -148,6 +148,27 @@ class MSEProcess:
         self.proc = None
 
 
+def preview_overrides(env: ScriptEnvironment, uids) -> tuple[dict, dict]:
+    """Set-wide values baked into a set holding only some cards, so they render as they
+    would in the whole set: the card numbers (worked out on the whole set)."""
+    numbers = {uid: {"custom card number": str(env.set.by_uid[uid].fields.get("card number"))}
+               for uid in uids}
+    return {"automatic card numbers": "no"}, numbers
+
+
+def render_keys(project: SetProject, env: ScriptEnvironment, cards: list[Card]) -> dict[str, str]:
+    """A key per card that changes whenever its picture would: a hash of exactly what a
+    preview set for it would contain (its fields, its number, the set info and keywords).
+    Works out the set file once for all the cards. Cards must be known to `env`."""
+    uids = {card.id: [face_uid(card, i) for i in range(len(card.faces))] for card in cards}
+    set_values, card_values = preview_overrides(env, [u for us in uids.values() for u in us])
+    header, blocks = set_file_parts(project, set_values, card_values)
+    symbol = Path(project.info.symbol_path) if project.info.symbol_path else None
+    stamp = f"{symbol.stat().st_mtime_ns}" if symbol is not None and symbol.is_file() else ""
+    return {cid: hashlib.sha1((header + stamp + "".join(blocks[u] for u in us)).encode("utf-8")).hexdigest()
+            for cid, us in uids.items()}
+
+
 class MSERenderer:
     """Renders our cards with real MSE (see the module docstring)."""
 
@@ -190,9 +211,38 @@ class MSERenderer:
     def preview_values(self, card: Card) -> tuple[set[str], dict, dict]:
         """The card's MSE uids, plus the set-wide values baked into a preview set."""
         uids = {face_uid(card, i) for i in range(len(card.faces))}
-        numbers = {uid: {"custom card number": str(self.env.set.by_uid[uid].fields.get("card number"))}
-                   for uid in uids}
-        return uids, {"automatic card numbers": "no"}, numbers
+        return (uids, *preview_overrides(self.env, uids))
+
+    def render_many(self, cards: list[Card]) -> dict[tuple[str, int], Image.Image]:
+        """Every face of several cards from one set load (faster than one by one: the
+        load costs about as much as rendering ten faces). Like the preview, set-wide values
+        are baked in, so each picture equals `render(card, face)`.
+        Returns {(card id, face index): image}."""
+        if not cards:
+            return {}
+        uids = {face_uid(card, i) for card in cards for i in range(len(card.faces))}
+        set_values, card_values = preview_overrides(self.env, uids)
+        options = dict(only_uids=uids, extra_set_values=set_values, extra_card_values=card_values)
+        path = self.workdir / "batch.mse-set"
+        for attempt in (1, 2):
+            try:
+                write_mse_set(self.project, path, blank_symbol=True, **options)
+                self._loaded = None
+                self._load(path, "batch")
+                order = [uid for uid in set_file_parts(self.project)[1] if uid in uids]  # file order
+                out = {}
+                for card in cards:
+                    for face in range(len(card.faces)):
+                        image = self._write_image(order.index(face_uid(card, face)))
+                        out[card.id, face] = self.add_symbol(image, card, face)
+                self._loaded = None
+                return out
+            except MSEError:
+                self._loaded = None
+                if attempt == 2 or self.process.alive:
+                    raise
+                self.process.start()
+        return {}
 
     def render(self, card: Card, face: int = 0) -> Image.Image:
         """One face, as MSE draws it, with our set symbol on top."""

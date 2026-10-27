@@ -116,3 +116,20 @@ def test_close_saves_pending_edits(tmp_path) -> None:
     s.update(card, "name", "Saved On Close")
     s.close()
     assert SetSession.open(tmp_path / "s").cards()[0].faces[0].name == "Saved On Close"
+
+
+def test_archetypes_create_update_delete(session) -> None:
+    ug = session.new_archetype("UG Ramp", "UG")
+    again = session.new_archetype("UG Ramp")
+    assert (ug.id, again.id) == ("ug-ramp", "ug-ramp-2")
+    session.update_archetype(ug, description="Big stuff", targets={"common": "8", "rare": 0})
+    saved = json.loads((session.folder / "archetypes.json").read_text(encoding="utf-8"))
+    assert saved[0]["targets"] == {"common": 8} and saved[0]["description"] == "Big stuff"
+
+    card = session.new_card()
+    session.update(card, "archetypes", [ug.id, again.id])
+    session.flush()
+    session.delete_archetype(ug)
+    assert card.archetypes == [again.id]
+    assert json.loads(card_file(session, card).read_text(encoding="utf-8"))["archetypes"] == [again.id]
+    assert [a.id for a in session.project.archetypes] == [again.id]

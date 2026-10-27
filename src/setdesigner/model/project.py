@@ -76,6 +76,10 @@ def delete_card(folder: Path, card_id: str) -> None:
     (Path(folder) / "cards" / f"{card_id}.json").unlink(missing_ok=True)
 
 
+def save_archetypes(folder: Path, archetypes: list[Archetype]) -> None:
+    _write_json(Path(folder) / "archetypes.json", [_dump(a) for a in archetypes])
+
+
 def save_info(folder: Path, info: SetInfo) -> None:
     _write_json(Path(folder) / "set.json", _dump(info))
 

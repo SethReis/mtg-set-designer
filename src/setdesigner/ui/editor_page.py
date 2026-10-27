@@ -1,4 +1,4 @@
-"""The card editor: card list | form | live preview."""
+"""The card editor: card list | form | live preview. Opened from the overview."""
 from __future__ import annotations
 
 import time
@@ -8,10 +8,8 @@ from nicegui import run, ui
 from ..app import text_input
 from ..model import Card, Rarity, Status
 from ..mse.mapping import split_type_line
+from .widgets import RARITY_LETTERS, color_pips, number_label
 
-COLOR_PIPS = {"W": "#f3eccb", "U": "#3b82c4", "B": "#3a3434", "R": "#d9472b", "G": "#2f8f4e"}
-RARITY_LETTERS = {Rarity.COMMON: "C", Rarity.UNCOMMON: "U", Rarity.RARE: "R",
-                  Rarity.MYTHIC: "M", Rarity.SPECIAL: "S"}
 PALETTE = ["W", "U", "B", "R", "G", "C", "X", "T", "Q", "1", "2", "3", "4", "5"]
 SYMBOL_STYLE = {"W": "background:#f3eccb;color:#222", "U": "background:#a9d0f0;color:#123",
                 "B": "background:#b8b0aa;color:#111", "R": "background:#f2a68f;color:#311",
@@ -19,16 +17,11 @@ SYMBOL_STYLE = {"W": "background:#f3eccb;color:#222", "U": "background:#a9d0f0;c
 PREVIEW_DELAY = 0.3                      # seconds after the last keystroke
 
 
-def number_label(card: Card) -> str:
-    n = card.collector_number
-    return n.zfill(3) if n.isdigit() else n or "—"
-
-
 def register(state) -> None:
     from .app import FRAME_LABELS
 
-    @ui.page("/set")
-    async def editor_page() -> None:
+    @ui.page("/set/card/{card_id}")
+    async def editor_page(card_id: str) -> None:
         session = state.session
         if session is None:
             ui.navigate.to("/")
@@ -36,7 +29,7 @@ def register(state) -> None:
 
         cards = session.cards()
         view = {
-            "card": cards[0] if cards else None,
+            "card": next((c for c in cards if c.id == card_id), cards[0] if cards else None),
             "query": "",
             "caret": {},                  # field -> caret position
             "focus": "rules_text",        # field the symbol palette inserts into
@@ -47,8 +40,8 @@ def register(state) -> None:
 
         # ------------------------------------------------------------ header
         with ui.header().classes("items-center bg-slate-800 py-2"):
-            ui.button(icon="arrow_back", on_click=lambda: (state.close(), ui.navigate.to("/"))) \
-                .props("flat round color=white").tooltip("Back to sets")
+            ui.button(icon="arrow_back", on_click=lambda: (session.flush(), ui.navigate.to("/set"))) \
+                .props("flat round color=white").tooltip("Back to the set overview").mark("back")
             ui.label(f"{session.project.info.name}").classes("text-lg font-semibold")
             ui.label(session.project.info.code).classes("text-sm opacity-70")
             ui.space()
@@ -207,10 +200,7 @@ def register(state) -> None:
                                 + ("bg-blue-100" if active else "hover:bg-gray-100"))
                             with row:
                                 ui.label(number_label(card)).classes("text-xs text-gray-500 w-8")
-                                for color in card.color_identity or "":
-                                    ui.element("span").style(
-                                        f"width:9px;height:9px;border-radius:50%;"
-                                        f"background:{COLOR_PIPS[color]};border:1px solid #888")
+                                color_pips(card)
                                 ui.label(card.faces[0].name or "(no name)").classes("grow truncate")
                                 ui.label(RARITY_LETTERS[card.rarity]).classes("text-xs text-gray-500")
                                 with ui.button(icon="more_vert").props("flat round dense size=sm") \
@@ -273,6 +263,12 @@ def register(state) -> None:
                             ui.select({s.value: s.value.title() for s in Status}, value=card.status.value,
                                       label="Status", on_change=lambda e: changed("status", e.value)) \
                                 .classes("w-36")
+                        if session.project.archetypes:
+                            known = {a.id: a.name for a in session.project.archetypes}
+                            ui.select(known, multiple=True, label="Archetypes",
+                                      value=[a for a in card.archetypes if a in known],
+                                      on_change=lambda e: changed("archetypes", e.value or [])) \
+                                .props("use-chips").classes("w-full")
                         ui.textarea("Notes", value=card.notes,
                                     on_change=lambda e: changed("notes", e.value)) \
                             .props("autogrow").classes("w-full")

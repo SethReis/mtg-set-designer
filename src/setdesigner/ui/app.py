@@ -12,12 +12,26 @@ from pathlib import Path
 
 from nicegui import app, ui
 
+from ..app.overview import Filters
 from ..app.session import SetSession
 from ..app.settings import Settings
 
 REPO = Path(__file__).resolve().parents[3]
 FRAME_LABELS = {"m15": "Modern (M15)", "8th": "8th Edition (2003)", "old": "Classic (1997)",
                 "4th": "4th Edition", "abu": "Alpha / Beta"}
+
+
+@dataclass
+class OverviewView:
+    """How the overview is set up; kept while a set is open (back from the editor)."""
+    mode: str = "rows"                      # "rows" or "matrix"
+    group_by: str = "color"                 # rows mode
+    rows: str = "color"                     # matrix mode
+    columns: str = "rarity"
+    sort: str = "number"
+    filters: Filters = field(default_factory=Filters)
+    cell: tuple[str, str, str, str] | None = None   # a matrix cell shown on its own
+    collapsed: set[str] = field(default_factory=set)
 
 
 @dataclass
@@ -28,11 +42,13 @@ class AppState:
     renderer_factory: object = None             # tests pass the built-in renderer
     session: SetSession | None = None
     settings: Settings = field(default_factory=Settings)
+    overview: OverviewView = field(default_factory=OverviewView)
 
     def open_session(self, session: SetSession) -> None:
         if self.session is not None:
             self.session.close()
         self.session = session
+        self.overview = OverviewView()
         self.settings.remember(session.folder, self.settings_path)
 
     def close(self) -> None:
@@ -47,13 +63,14 @@ STATE = AppState()
 def build(sets_root: Path | None = None, settings_path: Path | None = None,
           renderer_factory=None) -> AppState:
     """Register the pages. Returns the shared state (tests inspect it)."""
-    from . import editor_page, start_page
+    from . import editor_page, overview_page, start_page
     STATE.sets_root = Path(sets_root) if sets_root else REPO / "sets"
     STATE.settings_path = settings_path
     STATE.renderer_factory = renderer_factory
     STATE.settings = Settings.load(settings_path)
     STATE.session = None
     start_page.register(STATE)
+    overview_page.register(STATE)
     editor_page.register(STATE)
     app.on_shutdown(STATE.close)
     return STATE

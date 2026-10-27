@@ -44,6 +44,17 @@ def test_preview_equals_a_whole_set_render(renderer) -> None:
         assert diff.mean() < 0.05, card_id
 
 
+def test_batch_equals_single_renders(renderer) -> None:
+    """render_many (one load for many cards, for the overview) gives the preview's pictures."""
+    cards = [renderer.project.card(c) for c in ("grizzly-bears", "boros-guildmage", "delver")]
+    many = renderer.render_many(cards)
+    assert set(many) == {("grizzly-bears", 0), ("boros-guildmage", 0), ("delver", 0), ("delver", 1)}
+    for card in cards:
+        for face in range(len(card.faces)):
+            single = flatten(renderer.render(card, face))
+            assert np.abs(flatten(many[card.id, face]) - single).mean() < 0.01, (card.id, face)
+
+
 def test_our_symbol_is_drawn_in_the_rarity_box(renderer) -> None:
     card = renderer.project.card("steel-overseer")                     # rare: gold
     image = np.asarray(renderer.render(card).convert("RGB"), int)

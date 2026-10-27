@@ -21,10 +21,12 @@ python -m setdesigner --browser   # in a browser tab at http://localhost:8765 in
 ```
 
 The start page creates a new set folder (default `sets/<code>/`) or opens an
-existing one; recently opened sets are listed there. The editor has three
-columns: the card list, the card form and a live preview drawn by Magic Set
+existing one; recently opened sets are listed there. An open set lands on the
+overview: every card, grouped in rows or a matrix (color, rarity, archetype, ...)
+with counts against your targets (`docs/overview.md`). Clicking a card opens the
+editor: the card list, the card form and a live preview drawn by Magic Set
 Editor. Every change is saved automatically to `cards/<id>.json`, so there is
-no Save button. See `docs/editor.md`.
+no Save button (`docs/editor.md`).
 
 ## MSE packages
 

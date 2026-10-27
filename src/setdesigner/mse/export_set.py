@@ -32,12 +32,12 @@ BLANK_SYMBOL = "blank.mse-symbol"            # an empty MSE symbol, stored insid
 BLANK_SYMBOL_TEXT = f"mse_version: {MSE_VERSION}\n"
 
 
-def set_file_text(project: SetProject, only_uids: set[str] | None = None,
-                  extra_set_values: dict[str, str] | None = None,
-                  extra_card_values: dict[str, dict[str, str]] | None = None) -> str:
-    """The `set` file. `only_uids` keeps just those MSE cards (reminder policies and
-    other set-wide choices are still worked out on the whole project); the extra
-    values are added to / override the set's and individual cards' field values."""
+def set_file_parts(project: SetProject, extra_set_values: dict[str, str] | None = None,
+                   extra_card_values: dict[str, dict[str, str]] | None = None
+                   ) -> tuple[str, dict[str, str]]:
+    """The `set` file in pieces: its header (set info, keywords) and each MSE card's
+    block by uid, in file order. The extra values are added to / override the set's and
+    individual cards' field values."""
     info = project.info
     default_style = stylesheet_package(info.default_frame)
     lines = [f"mse_version: {MSE_VERSION}", f"game: {GAME}",
@@ -48,22 +48,32 @@ def set_file_text(project: SetProject, only_uids: set[str] | None = None,
         lines.append("keyword:")
         for key, value in mechanic_keyword(mechanic).items():
             lines += _entry(key, value, 1)
+    blocks: dict[str, str] = {}
     for card in project_to_mse(project):
-        if only_uids is not None and card.uid not in only_uids:
-            continue
         card.values = {**card.values, **(extra_card_values or {}).get(card.uid, {})}
-        lines.append("card:")
+        block = ["card:"]
         if card.stylesheet != default_style:
-            lines += _entry("stylesheet", stylesheet_name(card.stylesheet), 1)
-        lines += _entry("uid", card.uid, 1)
+            block += _entry("stylesheet", stylesheet_name(card.stylesheet), 1)
+        block += _entry("uid", card.uid, 1)
         if card.notes:
-            lines += _entry("notes", card.notes, 1)
+            block += _entry("notes", card.notes, 1)
         for i, (uid, relation) in enumerate(card.links, 1):
-            lines += _entry(f"linked card {i}", uid, 1)
-            lines += _entry(f"linked relation {i}", relation, 1)
+            block += _entry(f"linked card {i}", uid, 1)
+            block += _entry(f"linked relation {i}", relation, 1)
         for key, value in card.values.items():
-            lines += _entry(key, value, 1)
-    return "\n".join(lines) + "\n"
+            block += _entry(key, value, 1)
+        blocks[card.uid] = "\n".join(block) + "\n"
+    return "\n".join(lines) + "\n", blocks
+
+
+def set_file_text(project: SetProject, only_uids: set[str] | None = None,
+                  extra_set_values: dict[str, str] | None = None,
+                  extra_card_values: dict[str, dict[str, str]] | None = None) -> str:
+    """The `set` file. `only_uids` keeps just those MSE cards (reminder policies and
+    other set-wide choices are still worked out on the whole project); the extra
+    values are added to / override the set's and individual cards' field values."""
+    header, blocks = set_file_parts(project, extra_set_values, extra_card_values)
+    return header + "".join(b for uid, b in blocks.items() if only_uids is None or uid in only_uids)
 
 
 def write_mse_set(project: SetProject, path: Path, blank_symbol: bool = False, **options) -> Path:

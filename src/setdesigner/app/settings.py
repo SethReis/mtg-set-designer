@@ -1,4 +1,4 @@
-"""Per-user app settings: recently opened sets and the window size.
+"""Per-user app settings: recently opened sets, the window size, overview tiles.
 Stored as JSON in %APPDATA%/setdesigner/settings.json (or ~/.setdesigner elsewhere)."""
 from __future__ import annotations
 
@@ -20,6 +20,8 @@ def settings_path() -> Path:
 class Settings:
     recent: list[str] = field(default_factory=list)     # set folders, most recent first
     window: tuple[int, int] = (1400, 900)
+    tiles: str = "images"                               # overview: "images" or "compact"
+    tile_width: int = 180                               # overview tile width in pixels
 
     @classmethod
     def load(cls, path: Path | None = None) -> "Settings":
@@ -27,7 +29,8 @@ class Settings:
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
             return cls(recent=[str(p) for p in data.get("recent", [])][:MAX_RECENT],
-                       window=tuple(data.get("window", (1400, 900))))
+                       window=tuple(data.get("window", (1400, 900))),
+                       tiles=data.get("tiles", "images"), tile_width=int(data.get("tile_width", 180)))
         except (OSError, ValueError):
             return cls()
 
