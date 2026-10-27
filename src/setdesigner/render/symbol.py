@@ -38,6 +38,35 @@ VARIATIONS = {
 BASE_SIZE = 256                 # shapes are drawn at this size, then scaled
 
 
+def ink(img: Image.Image) -> Image.Image:
+    """Which pixels of an uploaded symbol are the symbol ("L", 255 = symbol).
+
+    Symbols come as black art with white outlines or details (a ready-made common symbol),
+    on a transparent, white or black background. The background is read from the
+    image's border:
+    - transparent: the dark opaque pixels are the symbol; white outlines and white inner
+      details are gaps, drawn in each rarity's outline color (white lines of a common
+      symbol become black on uncommon and up). An all-light symbol is taken as it is.
+    - opaque and light: the dark pixels are the symbol (white is background);
+    - opaque and dark: the light pixels are the symbol.
+    Greys in between are soft edges (anti-aliasing); near-background noise (JPEG) drops out.
+    """
+    rgba = np.asarray(img.convert("RGBA"), np.float64) / 255
+    alpha = rgba[..., 3]
+    lum = (0.299 * rgba[..., 0] + 0.587 * rgba[..., 1] + 0.114 * rgba[..., 2])
+    edge = np.concatenate([rgba[0], rgba[-1], rgba[:, 0], rgba[:, -1]])
+    if np.median(edge[:, 3]) < 0.5:                           # transparent background
+        dark = alpha * (1 - lum)
+        # hardly any clearly dark pixels among the opaque ones: a light symbol, keep it all
+        value = dark if (dark > 0.5).sum() > 0.05 * (alpha > 0.5).sum() else alpha
+    else:
+        edge_lum = 0.299 * edge[:, 0] + 0.587 * edge[:, 1] + 0.114 * edge[:, 2]
+        value = (1 - lum) if np.median(edge_lum) >= 0.5 else lum
+        value = value * alpha
+    value = np.clip((value - 0.25) / 0.5, 0, 1)                 # firm up edges, drop noise
+    return Image.fromarray((value * 255).astype(np.uint8), "L")
+
+
 @lru_cache(maxsize=32)
 def _shape(path: str, mtime: float) -> Image.Image:
     """The symbol's alpha shape ("L"), trimmed to its content, at BASE_SIZE."""
@@ -52,11 +81,8 @@ def _shape(path: str, mtime: float) -> Image.Image:
         img = Image.open(io.BytesIO(png))
     else:
         img = Image.open(p)
-    img = img.convert("RGBA")
-    alpha = img.getchannel("A")
-    if alpha.getextrema() == (255, 255):           # no transparency: dark pixels are the shape
-        alpha = Image.eval(img.convert("L"), lambda v: 255 - v)
-    box = alpha.getbbox() or (0, 0, alpha.width, alpha.height)
+    alpha = ink(img.convert("RGBA"))
+    box = alpha.point(lambda v: 255 if v > 24 else 0).getbbox() or (0, 0, alpha.width, alpha.height)
     alpha = alpha.crop(box)
     scale = BASE_SIZE / max(alpha.size)
     return alpha.resize((max(1, round(alpha.width * scale)), max(1, round(alpha.height * scale))),
@@ -79,6 +105,20 @@ def symbol_image(path: str | None, variation: str, size: int | None = None) -> I
     return _symbol_image(path, mtime, variation, size).copy()
 
 
+def _dilate(shape: Image.Image, radius: int) -> Image.Image:
+    """Grow a shape by `radius` pixels in every direction with a round brush, so the
+    outline keeps corners and holes round (a square max filter squares them off)."""
+    a = np.asarray(shape, np.uint8)
+    padded = np.pad(a, radius)
+    out = a.copy()
+    h, w = a.shape
+    for dy in range(-radius, radius + 1):
+        for dx in range(-radius, radius + 1):
+            if dx * dx + dy * dy <= radius * radius:
+                np.maximum(out, padded[radius + dy:radius + dy + h, radius + dx:radius + dx + w], out=out)
+    return Image.fromarray(out, "L")
+
+
 @lru_cache(maxsize=128)
 def _symbol_image(path: str | None, mtime: float, variation: str, size: int | None) -> Image.Image:
     shape = _shape(path, mtime) if path else _default_shape()
@@ -93,7 +133,7 @@ def _symbol_image(path: str | None, mtime: float, variation: str, size: int | No
     fill = (np.array(light) * (1 - t) + np.array(dark) * t).astype(np.uint8)
     out = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
     if outline is not None:
-        grown = alpha.filter(ImageFilter.MaxFilter(2 * (pad // 2) + 1))
+        grown = _dilate(alpha, pad // 2)
         ring = Image.new("RGBA", canvas_size, (*outline, 255))
         ring.putalpha(grown)
         out.alpha_composite(ring)

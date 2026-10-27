@@ -48,11 +48,15 @@ The box's shape depends on the frame (M15's art box is 316 × 231, 8th Edition's
 Use the **Set** button in the overview header for set-wide settings: name, code, default
 frame, default artist, copyright line, and cards wanted per rarity (the targets in "18 / 20").
 It also holds the symbol:
-- drop or choose a **PNG with a transparent background**; it is copied to
-  `assets/symbol.png`;
-- only its shape is used: it's filled with each rarity's colors and outlined
-  (`render/symbol.py`), and the panel previews common, uncommon, rare and mythic, enlarged
-  and at card size;
+- drop or choose an image; it is copied to `assets/symbol.png`;
+- a **black-and-white symbol** works as it is, including a ready-made common symbol (black
+  with a white outline). `render/symbol.ink` reads the background from the image's border:
+  - on transparent or white, the dark parts are the symbol;
+  - on black, the light parts are;
+  - white outlines and inner details become gaps, drawn in each rarity's outline color, so
+    a common symbol's white lines turn black on uncommon and up.
+- only the shape is used: it's filled with each rarity's colors and outlined, and the panel
+  previews common, uncommon, rare and mythic, enlarged and at card size;
 - **SVG** symbols need the optional `cairosvg` package plus the Cairo library, which aren't
   installed. The panel says so if you add one; use a PNG.
 - **Small-size advice** (`app/symbol_check.py`): at card size (about 20 px tall) the symbol
