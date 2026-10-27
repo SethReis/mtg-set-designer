@@ -20,7 +20,8 @@ def settings_path() -> Path:
 class Settings:
     recent: list[str] = field(default_factory=list)     # set folders, most recent first
     window: tuple[int, int] = (1400, 900)
-    tiles: str = "images"                               # overview: "images" or "compact"
+    layout: str = "grid"                                # overview: "grid" or "stacks"
+    tiles: str = "images"                               # overview: "images" or "text"
     tile_width: int = 180                               # overview tile width in pixels
 
     @classmethod
@@ -28,9 +29,12 @@ class Settings:
         path = path or settings_path()
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
+            tiles = data.get("tiles", "images")
             return cls(recent=[str(p) for p in data.get("recent", [])][:MAX_RECENT],
                        window=tuple(data.get("window", (1400, 900))),
-                       tiles=data.get("tiles", "images"), tile_width=int(data.get("tile_width", 180)))
+                       layout=data.get("layout", "grid"),
+                       tiles="text" if tiles == "compact" else tiles,    # its old name
+                       tile_width=int(data.get("tile_width", 180)))
         except (OSError, ValueError):
             return cls()
 

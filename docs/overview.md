@@ -22,9 +22,15 @@ unchanged.
   filter is active, because the counts are then partial.
 - **Filters:** text (name, type, rules), status, rarity, color. **Sort:** collector number,
   name, mana value.
-- **Tiles:** *Images* shows the real MSE render. *Compact* shows text: name, cost, type,
-  rules, P/T, rarity, number, a status dot and a border in the card's color. Choose a
-  size with the slider; the tile mode and size are remembered between sessions.
+- **Layout:** *Grid* places tiles side by side. *Stacks* overlaps them so only each name
+  bar shows; hovering a card slides the cards below it down to reveal it fully. In Rows
+  mode each group is a column (long groups split into several stacks), and in the matrix
+  each cell is one stack.
+- **Show:** *Images* shows the real MSE render. *Text* shows the name, cost, type, rules,
+  P/T, rarity, number, a status dot and a border in the card's color. The text tile is
+  also the starting point for the planned printer-friendly print mode (HANDOFF.md,
+  "Printing"). Choose a size with the slider; the layout, what is shown and the size are
+  all remembered between sessions.
 - **Archetypes** (header button): name, colors, description and targets per rarity, saved
   as you type. Deleting an archetype removes its tag from cards. You tag cards in the
   editor's Archetypes field.

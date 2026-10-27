@@ -1,6 +1,6 @@
 """The overview's grouping, matrix, filters, sorting and targets."""
 from setdesigner.app.overview import (FACTORS, Filters, apply, card_type, color_key, group,
-                                      mana_value, matrix, sort, target)
+                                      mana_value, matrix, sort, stacks, target)
 from setdesigner.model import Archetype, Card, Face, Rarity, SetInfo, SetProject, Status
 
 
@@ -86,3 +86,12 @@ def test_targets() -> None:
     assert target(p, FACTORS["rarity"], "uncommon", FACTORS["archetype"], "ug") == 3
     assert target(p, FACTORS["color"], "G", FACTORS["rarity"], "common") is None
     assert target(p, FACTORS["color"], "G") is None
+
+
+def test_stacks_split_evenly() -> None:
+    cards = [card(f"c{i}") for i in range(25)]
+    assert [len(s) for s in stacks(cards, 12)] == [9, 8, 8]
+    assert [len(s) for s in stacks(cards[:12], 12)] == [12]
+    assert [len(s) for s in stacks(cards[:13], 12)] == [7, 6]
+    assert stacks([], 12) == []
+    assert [c.id for s in stacks(cards, 12) for c in s] == [c.id for c in cards]   # order kept

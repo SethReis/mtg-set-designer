@@ -168,6 +168,24 @@ def matrix(cards: list[Card], rows: Factor, columns: Factor, project: SetProject
     return out
 
 
+STACK_MAX = 12                   # cards per stack before a group splits into more stacks
+
+
+def stacks(cards: list[Card], max_len: int = STACK_MAX) -> list[list[Card]]:
+    """Split a group into stacks of at most max_len cards, as evenly as possible
+    (25 cards, at most 12 each -> 9 + 8 + 8, not 12 + 12 + 1)."""
+    if not cards:
+        return []
+    count = -(-len(cards) // max_len)              # stacks needed (rounded up)
+    size, extra = divmod(len(cards), count)
+    out, start = [], 0
+    for i in range(count):
+        end = start + size + (1 if i < extra else 0)
+        out.append(cards[start:end])
+        start = end
+    return out
+
+
 # ------------------------------------------------------------------ filters, sorting
 
 @dataclass

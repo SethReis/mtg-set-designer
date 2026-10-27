@@ -15,6 +15,20 @@ RARITY_LETTERS = {Rarity.COMMON: "C", Rarity.UNCOMMON: "U", Rarity.RARE: "R",
 STATUS_DOTS = {Status.IDEA: "#cbd5e1", Status.DRAFT: "#facc15", Status.PLAYTESTED: "#60a5fa",
                Status.FINAL: "#22c55e"}
 CARD_RATIO = 523 / 375                   # height / width of an M15 card
+PEEK = 0.12                              # share of a stacked card left showing: its name bar
+
+# Stacks: each card after the first is pulled up over the one before it, so only name bars
+# show. Hovering a card pushes the next one (and so everything below) down to reveal it.
+# A stack sets --card-h (tile height); PEEK is the part of each card that stays visible.
+STACK_CSS = f"""
+.card-stack {{ display: flex; flex-direction: column; width: max-content; }}
+.card-stack > .stack-card {{ border-radius: 6px; box-shadow: 0 -1px 4px rgba(0, 0, 0, .35); }}
+.card-stack > .stack-card + .stack-card {{
+    margin-top: calc(var(--card-h) * {PEEK - 1:.3f});
+    transition: margin-top .15s ease;
+}}
+.card-stack > .stack-card:hover + .stack-card {{ margin-top: 0; }}
+"""
 
 
 def responsive_grid(min_px: int, gap: int = 12, columns: str | None = None) -> ui.element:

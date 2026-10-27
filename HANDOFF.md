@@ -45,6 +45,7 @@ testable modules.
 - A card's faces are emitted consecutively (front, then back); pairs may split across rows.
 - Sorting operates on cards, then expands to faces.
 - Options: paper size, grid (e.g. 3x3), bleed + crop marks, DPI, sort order, single spacing value, optional face/collector-number labels.
+- **Printer-friendly mode (planned, user request):** when printing, offer *Rendered* (the real MSE card images) or *Printer-friendly*, styled like playtest cards. It drops the art and the card frame, replaces mana and other symbols with plain characters (e.g. `{2}{W}` → `2W`, `{T}` → `T`), and uses thin borders, to save ink. The overview's text tiles (`ui/widgets.compact_tile`) are a starting point for this layout.
 - Card size **varies by template** (e.g. the 4th Edition style is 337x469 @134.98dpi; most are 375x523 @150dpi). The renderer should output at physical size and the print engine scale to **63x88mm**.
 
 **Feature ideas agreed**

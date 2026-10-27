@@ -7,7 +7,7 @@ from nicegui import app, ui
 
 from ..app import overview as ov
 from ..model import Card, Rarity, Status
-from .widgets import CARD_RATIO, COLOR_PIPS, compact_tile, grid_cells, responsive_grid
+from .widgets import CARD_RATIO, COLOR_PIPS, STACK_CSS, compact_tile, grid_cells, responsive_grid
 
 THUMB_POLL = 0.5                         # seconds between checks for newly rendered pictures
 COLOR_CHOICES = {k: v for k, v in ov.COLOR_LABELS.items()}
@@ -34,6 +34,7 @@ def register(state) -> None:
             ui.navigate.to("/")
             return
         view, settings = state.overview, state.settings
+        ui.add_css(STACK_CSS)
         worker = session.thumbnails
         tiles: dict[str, list] = {}              # card id -> its placeholder containers
         seen = {"version": -1}
@@ -99,7 +100,10 @@ def register(state) -> None:
                 factor_selects()
             ui.select({k: label for k, (label, _) in ov.SORTS.items()}, value=view.sort, label="Sort",
                       on_change=lambda e: set_view(sort=e.value)).classes("w-full")
-            ui.toggle({"images": "Images", "compact": "Compact"}, value=settings.tiles,
+            ui.toggle({"grid": "Grid", "stacks": "Stacks"}, value=settings.layout,
+                      on_change=lambda e: set_setting(layout=e.value)) \
+                .props("no-caps spread").classes("w-full").tooltip("Stacks overlap the cards: hover one to see it")
+            ui.toggle({"images": "Images", "text": "Text"}, value=settings.tiles,
                       on_change=lambda e: set_setting(tiles=e.value)) \
                 .props("no-caps spread").classes("w-full")
             with ui.column().classes("w-full gap-0"):
@@ -132,14 +136,23 @@ def register(state) -> None:
             else:
                 compact_tile(card, width)
 
-        def tile(card: Card, width: int) -> None:
-            box = ui.element("div").classes("cursor-pointer hover:shadow-lg transition-shadow rounded") \
-                .on("click", lambda c=card: open_card(c)).tooltip(card.faces[0].name) \
-                .mark(f"tile-{card.id}")
+        def tile(card: Card, width: int, stacked: bool = False) -> None:
+            box = ui.element("div").classes("cursor-pointer") \
+                .on("click", lambda c=card: open_card(c)).mark(f"tile-{card.id}")
+            if stacked:
+                box.classes("stack-card")                # see STACK_CSS
+            else:
+                box.classes("hover:shadow-lg transition-shadow rounded").tooltip(card.faces[0].name)
             box.card, box.width = card, width
             tiles.setdefault(card.id, []).append(box)
             with box:
                 picture(card, width)
+
+        def stack(cards: list[Card], width: int) -> None:
+            with ui.element("div").classes("card-stack").mark("stack") \
+                    .style(f"--card-h:{round(width * CARD_RATIO)}px"):
+                for card in cards:
+                    tile(card, width, stacked=True)
 
         def update_tiles() -> None:
             """Swap text tiles for pictures that have been rendered meanwhile."""
@@ -202,6 +215,7 @@ def register(state) -> None:
                     ui.label("(one matrix cell)").classes("text-sm text-gray-500")
             factor = ov.FACTORS[view.group_by]
             width = settings.tile_width
+            groups = []                                      # (group, its target, collapse key)
             for g in ov.group(cards, factor, session.project):
                 if view.cell is not None:                    # just the cell's group
                     rows, r, cols, c = view.cell
@@ -210,7 +224,11 @@ def register(state) -> None:
                     wanted = target(ov.FACTORS[rows], r, ov.FACTORS[cols], c)
                 else:
                     wanted = target(factor, g.key)
-                key = f"{factor.name}:{g.key}"
+                groups.append((g, wanted, f"{factor.name}:{g.key}"))
+            if settings.layout == "stacks":
+                stacked_groups(groups, width)
+                return
+            for g, wanted, key in groups:
                 with ui.expansion(heading(g.label, len(g.cards), wanted), value=key not in view.collapsed) \
                         .classes("w-full").props("dense header-class=text-base font-semibold") as section:
                     section.on_value_change(lambda e, k=key: view.collapsed.discard(k) if e.value
@@ -223,6 +241,29 @@ def register(state) -> None:
                             "justify-content:space-between;gap:12px"):
                         for card in g.cards:
                             tile(card, width)
+
+        def stacked_groups(groups, width: int) -> None:
+            """Stacks layout: each group is a column of stacks, the columns flowing across."""
+            def toggle(key: str) -> None:
+                view.collapsed.symmetric_difference_update({key})
+                content.refresh()
+
+            with ui.row().classes("w-full gap-x-8 gap-y-4 items-start"):
+                for g, wanted, key in groups:
+                    open_ = key not in view.collapsed
+                    with ui.column().classes("gap-2"):
+                        with ui.row().classes("items-center gap-1 cursor-pointer no-wrap") \
+                                .on("click", lambda k=key: toggle(k)):
+                            ui.icon("expand_more" if open_ else "chevron_right").classes("text-gray-500")
+                            ui.label(heading(g.label, len(g.cards), wanted)) \
+                                .classes("text-base font-semibold whitespace-nowrap")
+                        if not open_:
+                            continue
+                        if not g.cards:
+                            ui.label("No cards").classes("text-sm text-gray-400 ml-6")
+                        with ui.row().classes("gap-3 no-wrap items-start"):
+                            for cards_in_stack in ov.stacks(g.cards):
+                                stack(cards_in_stack, width)
 
         def matrix_view(cards: list[Card]) -> None:
             rows, cols = ov.FACTORS[view.rows], ov.FACTORS[view.columns]
@@ -272,9 +313,13 @@ def register(state) -> None:
                                     .props("flat dense no-caps size=sm"
                                            + (" text-color=orange-9" if short else " text-color=grey-7")) \
                                     .tooltip("Show just these cards")
-                                with ui.row().classes("gap-2 flex-wrap"):
-                                    for card in in_cell:
-                                        tile(card, width)
+                                if settings.layout == "stacks":
+                                    if in_cell:
+                                        stack(in_cell, width)
+                                else:
+                                    with ui.row().classes("gap-2 flex-wrap"):
+                                        for card in in_cell:
+                                            tile(card, width)
 
         with ui.scroll_area().classes("w-full grow"):
             content()

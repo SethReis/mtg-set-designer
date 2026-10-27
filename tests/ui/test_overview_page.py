@@ -36,7 +36,7 @@ async def open_set_with_cards(user: User):
     angel = session.new_card("Serra Angel")
     session.update(angel, "mana_cost", "{3}{W}{W}")
     session.update(angel, "rarity", "uncommon")
-    state().settings.tiles = "compact"            # no rendering needed in these tests
+    state().settings.tiles = "text"               # no rendering needed in these tests
     await user.open("/set")
     return session, bear, angel
 
@@ -96,3 +96,23 @@ async def test_archetype_groups(user: User) -> None:
     select(user, "Group by", "archetype")
     await user.should_see("UG Ramp · 1 / 5")
     await user.should_see("No archetype · 1")
+
+
+def choose(user: User, option: str, value: str) -> None:
+    """Pick a toggle button (the toggle containing `option`)."""
+    element = next(iter(user.find(kind=ui.toggle, content=option).elements))
+    element.value = value
+
+
+async def test_stacks_in_rows_and_matrix(user: User) -> None:
+    _, bear, _ = await open_set_with_cards(user)
+    choose(user, "Stacks", "stacks")
+    await user.should_see(marker="stack")
+    await user.should_see("White · 1")                 # group headings above the stacks
+    choose(user, "Matrix", "matrix")
+    await user.should_see("Columns")
+    await user.should_see(marker="stack")
+    choose(user, "Matrix", "rows")
+    await user.should_see("Group by")
+    user.find(marker=f"tile-{bear.id}").click()        # stacked cards still open the editor
+    await user.should_see("Rules text")
