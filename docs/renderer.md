@@ -27,6 +27,14 @@ in the background, invisible to users.
   MSE starts. Nothing is installed, and the fonts are removed again when Python exits.
 - **Planeswalkers** use the frame's planeswalker stylesheet (`mse/frames.py`). Their rules
   text lines `+1: ...` become MSE's loyalty cost fields (`mapping.loyalty_abilities`).
+- **Universes Beyond** is not its own template: it's M15 Main with the styling option
+  `frames: universes beyond`. Frames like this are listed in `mse/frames.FRAME_STYLING`.
+  - Each card carries its styling options (`MSECard.styling`). The set file writes them the
+    way MSE does, as `has_styling: true` plus a `styling_data:` block.
+  - Our script environment gives such cards their own `styling` object, so the built-in
+    renderer agrees with MSE.
+  - Planeswalker templates have no UB option, so a UB planeswalker uses the regular M15
+    planeswalker frame.
 - **Crashes / hangs:** the process is restarted and the render retried once (tested).
 - **Fallback:** if MSE is missing or fails, `CardRenderer` uses our own renderer (below) and
   says so in `last_backend` / `warnings`. MSE is found at `$SETDESIGNER_MSE`, else

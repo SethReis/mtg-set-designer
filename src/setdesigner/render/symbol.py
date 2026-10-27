@@ -23,18 +23,36 @@ from PIL import Image, ImageDraw, ImageFilter
 from ..mse.script import images as I
 from ..mse.script.values import ScriptError
 
-# variation -> (light color, dark color, outline color); a gradient runs light -> dark
+# variation -> (gradient stops, outline color). The fill runs diagonally from the top left
+# (0) to the bottom right (1) through these (position, color) stops. Metallic rarities
+# have a bright band across the middle, the sheen of printed symbols.
+_SILVER = [(0.0, (120, 134, 150)), (0.38, (214, 223, 233)), (0.5, (250, 252, 255)),
+           (0.6, (196, 207, 219)), (1.0, (84, 97, 112))]
+_GOLD = [(0.0, (156, 112, 30)), (0.38, (232, 196, 102)), (0.5, (255, 241, 186)),
+         (0.6, (214, 168, 70)), (1.0, (120, 82, 18))]
+_MYTHIC = [(0.0, (196, 52, 18)), (0.38, (245, 140, 45)), (0.5, (255, 214, 120)),
+           (0.6, (236, 112, 34)), (1.0, (160, 34, 12))]
+_PURPLE = [(0.0, (112, 48, 140)), (0.38, (196, 140, 220)), (0.5, (240, 214, 250)),
+           (0.6, (170, 110, 200)), (1.0, (82, 30, 108))]
+_BRONZE = [(0.0, (140, 82, 36)), (0.38, (220, 162, 102)), (0.5, (250, 222, 180)),
+           (0.6, (196, 132, 74)), (1.0, (104, 58, 22))]
 VARIATIONS = {
-    "common": ((20, 20, 20), (0, 0, 0), (255, 255, 255)),
-    "invertedcommon": ((255, 255, 255), (230, 230, 230), (0, 0, 0)),
-    "uncommon": ((225, 232, 240), (110, 125, 140), (0, 0, 0)),
-    "rare": ((240, 215, 130), (150, 115, 40), (0, 0, 0)),
-    "mythic rare": ((255, 180, 70), (200, 50, 25), (0, 0, 0)),
-    "mythic": ((255, 180, 70), (200, 50, 25), (0, 0, 0)),
-    "special": ((215, 160, 230), (110, 50, 140), (0, 0, 0)),
-    "masterpiece": ((240, 190, 120), (150, 90, 40), (0, 0, 0)),
-    "watermark": ((128, 128, 128), (128, 128, 128), None),
+    "common": ([(0.0, (24, 24, 24)), (1.0, (0, 0, 0))], (255, 255, 255)),
+    "invertedcommon": ([(0.0, (255, 255, 255)), (1.0, (230, 230, 230))], (0, 0, 0)),
+    "uncommon": (_SILVER, (0, 0, 0)),
+    "rare": (_GOLD, (0, 0, 0)),
+    "mythic rare": (_MYTHIC, (0, 0, 0)),
+    "mythic": (_MYTHIC, (0, 0, 0)),
+    "special": (_PURPLE, (0, 0, 0)),
+    "masterpiece": (_BRONZE, (0, 0, 0)),
+    "watermark": ([(0.0, (128, 128, 128)), (1.0, (128, 128, 128))], None),
 }
+
+
+def _gradient(stops, t: np.ndarray) -> np.ndarray:
+    """Colors for positions t (any shape) along the gradient: shape + (3,)."""
+    positions = [p for p, _ in stops]
+    return np.stack([np.interp(t, positions, [c[i] for _, c in stops]) for i in range(3)], axis=-1)
 BASE_SIZE = 256                 # shapes are drawn at this size, then scaled
 
 
@@ -122,15 +140,15 @@ def _dilate(shape: Image.Image, radius: int) -> Image.Image:
 @lru_cache(maxsize=128)
 def _symbol_image(path: str | None, mtime: float, variation: str, size: int | None) -> Image.Image:
     shape = _shape(path, mtime) if path else _default_shape()
-    light, dark, outline = VARIATIONS.get(variation, VARIATIONS["common"])
+    stops, outline = VARIATIONS.get(variation, VARIATIONS["common"])
     pad = BASE_SIZE // 12
     canvas_size = (shape.width + 2 * pad, shape.height + 2 * pad)
     alpha = Image.new("L", canvas_size, 0)
     alpha.paste(shape, (pad, pad))
-    # fill: diagonal gradient from light (top left) to dark (bottom right)
+    # fill: a diagonal gradient (top left -> bottom right) across the symbol itself
     h, w = canvas_size[1], canvas_size[0]
-    t = (np.add.outer(np.arange(h), np.arange(w)) / max(1, h + w - 2))[..., None]
-    fill = (np.array(light) * (1 - t) + np.array(dark) * t).astype(np.uint8)
+    t = np.add.outer(np.arange(h), np.arange(w)) / max(1, h + w - 2)
+    fill = np.clip(_gradient(stops, t), 0, 255).astype(np.uint8)
     out = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
     if outline is not None:
         grown = _dilate(alpha, pad // 2)

@@ -17,8 +17,8 @@ from ..app.session import SetSession
 from ..app.settings import Settings
 
 REPO = Path(__file__).resolve().parents[3]
-FRAME_LABELS = {"m15": "Modern (M15)", "8th": "8th Edition (2003)", "old": "Classic (1997)",
-                "4th": "4th Edition", "abu": "Alpha / Beta"}
+FRAME_LABELS = {"m15": "Modern (M15)", "ub": "Universes Beyond (M15)", "8th": "8th Edition (2003)",
+                "old": "Classic (1997)", "4th": "4th Edition", "abu": "Alpha / Beta"}
 
 
 @dataclass

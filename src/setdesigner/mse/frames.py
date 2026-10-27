@@ -3,6 +3,7 @@ from __future__ import annotations
 
 FRAMES: dict[str, str] = {
     "m15": "magic-m15-altered",     # M15 Main (modern frame, DFC support via magic-modules)
+    "ub": "magic-m15-altered",      # Universes Beyond: M15 Main with its "frames" styling option
     "8th": "magic-new",             # 8th Edition frame (2003)
     "old": "magic-old",             # "Old Main": before 8th Edition (1997 style)
     "4th": "magic-veryold",         # 4th Edition style
@@ -12,12 +13,23 @@ FRAMES: dict[str, str] = {
 # pre-8th frames never had planeswalkers; they use the closest one, "old".
 PLANESWALKER_FRAMES: dict[str, str] = {
     "m15": "magic-m15-planeswalker",
+    "ub": "magic-m15-planeswalker",                 # no Universes Beyond planeswalker frame
     "8th": "magic-new-planeswalker",
     "old": "magic-old-planeswalker",
     "4th": "magic-old-planeswalker",
     "abu": "magic-old-planeswalker",
 }
+# Frames that are a stylesheet plus styling options (MSE's per-card "styling data")
+FRAME_STYLING: dict[str, dict[str, str]] = {
+    "ub": {"frames": "universes beyond"},
+}
 GAME = "magic"
+
+
+def frame_styling(frame: str, planeswalker: bool = False) -> dict[str, str]:
+    """The styling options a frame sets on a card (none for planeswalkers: their
+    stylesheets don't have these options)."""
+    return {} if planeswalker else dict(FRAME_STYLING.get(frame, {}))
 
 
 def stylesheet_package(frame: str, planeswalker: bool = False) -> str:

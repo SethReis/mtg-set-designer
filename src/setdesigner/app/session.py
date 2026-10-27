@@ -290,10 +290,12 @@ class SetSession:
         return self._art_boxes[key]
 
     def _stylesheet(self, card: Card, face: int) -> str:
-        from ..mse.frames import stylesheet_package
+        """A key for the face's frame: its stylesheet plus any styling options it sets."""
+        from ..mse.frames import frame_styling, stylesheet_package
         from ..mse.mapping import is_planeswalker
-        return stylesheet_package(card.frame_for(face, self.project.info.default_frame),
-                                  planeswalker=is_planeswalker(card.faces[face]))
+        frame = card.frame_for(face, self.project.info.default_frame)
+        planeswalker = is_planeswalker(card.faces[face])
+        return f"{stylesheet_package(frame, planeswalker=planeswalker)} {frame_styling(frame, planeswalker)}"
 
     @property
     def thumbnails(self):

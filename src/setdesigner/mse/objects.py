@@ -177,6 +177,10 @@ class CardObject(ScriptObject):
         self.stylesheet = env.stylesheet(self.style)
         self.fields = FieldValues(env.card_field_defs, mse_card.values, self._evaluate,
                                   f"card {mse_card.uid}")
+        # a card with its own styling options (e.g. the Universes Beyond frame) sees those;
+        # every other card shares its stylesheet's defaults
+        styling = getattr(mse_card, "styling", None)
+        self.styling = StylingObject(env, self.style, styling) if styling else env.styling(self.style)
         _, extra_defs = env.style_field_defs(self.style)
         self.extra_card = ExtraCardObject(self, extra_defs)
 
@@ -195,7 +199,7 @@ class CardObject(ScriptObject):
     def bindings(self, value: object) -> dict[str, object]:
         """The variables a script about this card runs with."""
         return {"card": self, "value": value, "set": self.env.set,
-                "styling": self.env.styling(self.style), "extra_card": self.extra_card,
+                "styling": self.styling, "extra_card": self.extra_card,
                 "stylesheet": self.stylesheet,
                 "last_change": ""}              # what the user just edited; no live editor here
 
@@ -213,7 +217,7 @@ class CardObject(ScriptObject):
         if key == "stylesheet":
             return self.stylesheet
         if key == "styling":
-            return self.env.styling(self.style)
+            return self.styling
         if key.startswith(("linked card ", "linked relation ")):
             number = key.rsplit(" ", 1)[1]
             if number.isdigit() and 1 <= int(number) <= MAX_LINKS:

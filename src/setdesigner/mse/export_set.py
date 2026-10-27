@@ -54,6 +54,11 @@ def set_file_parts(project: SetProject, extra_set_values: dict[str, str] | None 
         block = ["card:"]
         if card.stylesheet != default_style:
             block += _entry("stylesheet", stylesheet_name(card.stylesheet), 1)
+        if card.styling:                                    # this card's own styling options
+            block += _entry("has styling", "true", 1)
+            block.append("\tstyling_data:")
+            for key, value in card.styling.items():
+                block += _entry(key, value, 2)
         block += _entry("uid", card.uid, 1)
         if card.notes:
             block += _entry("notes", card.notes, 1)

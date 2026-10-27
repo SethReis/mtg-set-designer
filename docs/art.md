@@ -57,6 +57,9 @@ It also holds the symbol:
     a common symbol's white lines turn black on uncommon and up.
 - only the shape is used: it's filled with each rarity's colors and outlined, and the panel
   previews common, uncommon, rare and mythic, enlarged and at card size;
+- silver, gold, mythic and the other metallic fills are diagonal gradients with a bright
+  band across the middle, for the sheen of printed symbols. The colors are the stops in
+  `render/symbol.VARIATIONS`;
 - **SVG** symbols need the optional `cairosvg` package plus the Cairo library, which aren't
   installed. The panel says so if you add one; use a PNG.
 - **Small-size advice** (`app/symbol_check.py`): at card size (about 20 px tall) the symbol

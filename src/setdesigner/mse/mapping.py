@@ -33,7 +33,7 @@ from typing import Callable
 from ..model import ArtCrop, Card, Face, Rarity, SetInfo
 from ..model.card import COLOR_NAMES
 from ..model.layouts import LAYOUTS
-from .frames import stylesheet_package
+from .frames import frame_styling, stylesheet_package
 
 TYPE_SEPARATORS = (" — ", " - ", " -- ")
 LETTER_TO_COLOR = {letter: name for name, letter in COLOR_NAMES.items()}
@@ -59,6 +59,9 @@ class MSECard:
     # MSE only reads art packed inside the set file, cropped to the frame's art box, so the
     # renderer prepares it (and fills in the "image" value) from this
     art: ArtRef | None = None
+    # styling options for this card only (MSE's "styling data"), e.g. the Universes Beyond
+    # frame is M15 with frames: universes beyond
+    styling: dict[str, str] = field(default_factory=dict)
 
 
 def face_uid(card: Card, face_index: int) -> str:
@@ -175,13 +178,14 @@ def card_to_mse(card: Card, set_info: SetInfo, reminders: dict[str, bool] | None
     out = []
     for index, face in card.iter_faces():
         art_path = (resolve(face.art_path) if resolve else Path(face.art_path)) if face.art_path else None
+        frame, planeswalker = card.frame_for(index, set_info.default_frame), is_planeswalker(face)
         out.append(MSECard(
             uid=face_uid(card, index),
-            stylesheet=stylesheet_package(card.frame_for(index, set_info.default_frame),
-                                          planeswalker=is_planeswalker(face)),
+            stylesheet=stylesheet_package(frame, planeswalker=planeswalker),
             values=face_values(card, face, reminders),
             notes=card.notes,
             art=ArtRef(art_path, face.art_crop) if art_path is not None else None,
+            styling=frame_styling(frame, planeswalker=planeswalker),
         ))
     relations = LAYOUTS[card.layout].mse_relations
     if relations and len(out) == 2:

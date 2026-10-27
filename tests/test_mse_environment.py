@@ -125,3 +125,29 @@ def test_other_frames_use_their_own_scripts() -> None:
     assert bears.style == "magic-old"
     assert bears.fields.get("cmc") == "2"
     assert env.load_reports["magic-old"].failures == []
+
+
+def test_universes_beyond_is_m15_with_its_styling_option() -> None:
+    from setdesigner.mse.export_set import set_file_text
+    project = oracle_project()
+    card = project.card("grizzly-bears")
+    card.frame = "ub"
+    mse = card_to_mse(card, project.info)[0]
+    assert mse.stylesheet == "magic-m15-altered" and mse.styling == {"frames": "universes beyond"}
+    text = set_file_text(project, only_uids={card.id})
+    assert "\thas_styling: true\n\tstyling_data:\n\t\tframes: universes beyond\n" in text
+    walker = Card(id="pw", frame="ub", faces=[Face(name="W", type_line="Legendary Planeswalker — W")])
+    assert card_to_mse(walker, project.info)[0].styling == {}      # no UB planeswalker frame
+
+
+@needs_packages
+def test_universes_beyond_styling_reaches_the_scripts() -> None:
+    from setdesigner.mse.environment import ScriptEnvironment
+    project = oracle_project()
+    card = project.card("grizzly-bears")
+    card.frame = "ub"
+    env = ScriptEnvironment(project, PACKAGES)
+    obj = env.card_object(card)
+    assert "universes beyond" in str(obj.styling.fields.get("frames"))
+    other = env.card_object(project.card("boros-guildmage"))
+    assert "universes beyond" not in str(other.styling.fields.get("frames"))
