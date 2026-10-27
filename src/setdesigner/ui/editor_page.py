@@ -8,7 +8,7 @@ from nicegui import run, ui
 from ..app import text_input
 from ..model import Card, Rarity, Status
 from ..mse.mapping import split_type_line
-from .widgets import RARITY_LETTERS, color_pips, number_label
+from .widgets import RARITY_LETTERS, color_pips, number_label, responsive_grid
 
 PALETTE = ["W", "U", "B", "R", "G", "C", "X", "T", "Q", "1", "2", "3", "4", "5"]
 SYMBOL_STYLE = {"W": "background:#f3eccb;color:#222", "U": "background:#a9d0f0;color:#123",
@@ -225,44 +225,46 @@ def register(state) -> None:
                             ui.label(f"This is a {card.layout.value} card; editing its other face "
                                      "comes in a later version. Showing the front face.") \
                                 .classes("text-sm text-amber-700")
-                        with ui.row().classes("w-full no-wrap gap-2"):
+                        # field rows are grids: they use the column's width and wrap when narrow
+                        with responsive_grid(160, columns="minmax(0, 2fr) minmax(140px, 1fr)"):
                             ui.input("Name", value=face.name,
-                                     on_change=lambda e: changed("name", e.value)).classes("grow")
-                            cost = text_field("mana_cost", "Mana cost", face.mana_cost, "w-48")
+                                     on_change=lambda e: changed("name", e.value)).classes("w-full")
+                            with ui.column().classes("w-full gap-0"):
+                                cost = text_field("mana_cost", "Mana cost", face.mana_cost, "w-full")
                         symbol_palette("mana_cost", cost, costs_only=True)
                         # two fields so nobody has to type the "—" (added when both are filled)
                         types, subtypes = split_type_line(face.type_line)
-                        with ui.row().classes("w-full no-wrap gap-4"):
+                        with responsive_grid(200, gap=16):
                             ui.input("Types", value=types, placeholder="Legendary Creature",
-                                     on_change=lambda e: changed("types", e.value)).classes("grow")
+                                     on_change=lambda e: changed("types", e.value)).classes("w-full")
                             ui.input("Subtypes", value=subtypes, placeholder="Elf Druid",
-                                     on_change=lambda e: changed("subtypes", e.value)).classes("grow")
+                                     on_change=lambda e: changed("subtypes", e.value)).classes("w-full")
                         symbol_palette("rules_text", None)
                         text_field("rules_text", "Rules text", face.rules_text, "w-full", textarea=True)
                         ui.textarea("Flavor text", value=face.flavor_text,
                                     on_change=lambda e: changed("flavor_text", e.value)) \
                             .props("autogrow").classes("w-full")
-                        with ui.row().classes("w-full gap-2 items-end"):
+                        with responsive_grid(110):
                             ui.input("Power", value=face.power or "",
-                                     on_change=lambda e: changed("power", e.value)).classes("w-20")
+                                     on_change=lambda e: changed("power", e.value)).classes("w-full")
                             ui.input("Toughness", value=face.toughness or "",
-                                     on_change=lambda e: changed("toughness", e.value)).classes("w-20")
+                                     on_change=lambda e: changed("toughness", e.value)).classes("w-full")
                             ui.input("Loyalty", value=face.loyalty or "",
-                                     on_change=lambda e: changed("loyalty", e.value)).classes("w-20")
+                                     on_change=lambda e: changed("loyalty", e.value)).classes("w-full")
                             ui.select({r.value: r.value.title() for r in Rarity}, value=card.rarity.value,
                                       label="Rarity", on_change=lambda e: changed("rarity", e.value)) \
-                                .classes("w-32")
+                                .classes("w-full")
                             ui.input("Number", value=card.collector_number,
-                                     on_change=lambda e: changed("collector_number", e.value)).classes("w-20")
-                        with ui.row().classes("w-full gap-2"):
+                                     on_change=lambda e: changed("collector_number", e.value)).classes("w-full")
+                        with responsive_grid(180):
                             ui.select({"": "Set default", **FRAME_LABELS}, value=card.frame or "",
                                       label="Frame", on_change=lambda e: changed("frame", e.value)) \
-                                .classes("w-48")
+                                .classes("w-full")
                             ui.input("Artist", value=face.artist,
-                                     on_change=lambda e: changed("artist", e.value)).classes("grow")
+                                     on_change=lambda e: changed("artist", e.value)).classes("w-full")
                             ui.select({s.value: s.value.title() for s in Status}, value=card.status.value,
                                       label="Status", on_change=lambda e: changed("status", e.value)) \
-                                .classes("w-36")
+                                .classes("w-full")
                         if session.project.archetypes:
                             known = {a.id: a.name for a in session.project.archetypes}
                             ui.select(known, multiple=True, label="Archetypes",

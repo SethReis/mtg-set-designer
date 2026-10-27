@@ -17,6 +17,21 @@ STATUS_DOTS = {Status.IDEA: "#cbd5e1", Status.DRAFT: "#facc15", Status.PLAYTESTE
 CARD_RATIO = 523 / 375                   # height / width of an M15 card
 
 
+def responsive_grid(min_px: int, gap: int = 12, columns: str | None = None) -> ui.element:
+    """A full-width grid whose children stretch to fill the row and wrap onto more rows
+    as the window narrows (each at least `min_px` wide). `columns` replaces the default
+    `repeat(auto-fit, minmax(min_px, 1fr))` template."""
+    template = columns or f"repeat(auto-fit, minmax({min_px}px, 1fr))"
+    return ui.element("div").classes("w-full items-center") \
+        .style(f"display:grid;grid-template-columns:{template};gap:{gap}px")
+
+
+def grid_cells() -> ui.element:
+    """A wrapper whose children act as cells of the surrounding grid (display: contents),
+    e.g. for a refreshable group of controls."""
+    return ui.element("div").style("display:contents")
+
+
 def number_label(card: Card) -> str:
     n = card.collector_number
     return n.zfill(3) if n.isdigit() else n or "—"

@@ -7,7 +7,7 @@ from nicegui import app, ui
 
 from ..app import overview as ov
 from ..model import Card, Rarity, Status
-from .widgets import CARD_RATIO, COLOR_PIPS, compact_tile
+from .widgets import CARD_RATIO, COLOR_PIPS, compact_tile, grid_cells, responsive_grid
 
 THUMB_POLL = 0.5                         # seconds between checks for newly rendered pictures
 COLOR_CHOICES = {k: v for k, v in ov.COLOR_LABELS.items()}
@@ -76,49 +76,51 @@ def register(state) -> None:
                 setattr(view.filters, key, value)
             content.refresh()
 
-        with ui.row().classes("w-full items-center gap-3 flex-wrap"):
-
-            @ui.refreshable
-            def factor_selects() -> None:
-                # rebuilt with the content, so they show changes made elsewhere (a matrix cell
-                # click switches to rows) without firing their own change handlers
-                ui.toggle({"rows": "Rows", "matrix": "Matrix"}, value=view.mode,
-                          on_change=lambda e: set_view(mode=e.value, cell=None)).props("dense no-caps")
-                if view.mode == "rows":
-                    ui.select(factor_names, value=view.group_by, label="Group by",
-                              on_change=lambda e: set_view(group_by=e.value, cell=None)).classes("w-36")
-                else:
-                    ui.select(factor_names, value=view.rows, label="Rows",
-                              on_change=lambda e: set_view(rows=e.value)).classes("w-32")
-                    ui.select(factor_names, value=view.columns, label="Columns",
-                              on_change=lambda e: set_view(columns=e.value)).classes("w-32")
-            factor_selects()
+        # one grid for every control: they stretch across the window and wrap onto more
+        # rows as it narrows
+        with responsive_grid(140).classes("pb-1"):
+            with grid_cells():
+                @ui.refreshable
+                def factor_selects() -> None:
+                    # rebuilt with the content, so they show changes made elsewhere (a matrix
+                    # cell click switches to rows) without firing their own change handlers
+                    ui.toggle({"rows": "Rows", "matrix": "Matrix"}, value=view.mode,
+                              on_change=lambda e: set_view(mode=e.value, cell=None)) \
+                        .props("no-caps spread").classes("w-full")
+                    if view.mode == "rows":
+                        ui.select(factor_names, value=view.group_by, label="Group by",
+                                  on_change=lambda e: set_view(group_by=e.value, cell=None)) \
+                            .classes("w-full")
+                    else:
+                        ui.select(factor_names, value=view.rows, label="Rows",
+                                  on_change=lambda e: set_view(rows=e.value)).classes("w-full")
+                        ui.select(factor_names, value=view.columns, label="Columns",
+                                  on_change=lambda e: set_view(columns=e.value)).classes("w-full")
+                factor_selects()
             ui.select({k: label for k, (label, _) in ov.SORTS.items()}, value=view.sort, label="Sort",
-                      on_change=lambda e: set_view(sort=e.value)).classes("w-40")
-            ui.separator().props("vertical")
+                      on_change=lambda e: set_view(sort=e.value)).classes("w-full")
             ui.toggle({"images": "Images", "compact": "Compact"}, value=settings.tiles,
-                      on_change=lambda e: set_setting(tiles=e.value)).props("dense no-caps")
-            with ui.row().classes("items-center gap-1"):
-                ui.icon("photo_size_select_small").classes("text-gray-500")
+                      on_change=lambda e: set_setting(tiles=e.value)) \
+                .props("no-caps spread").classes("w-full")
+            with ui.column().classes("w-full gap-0"):
+                ui.label("Card size").classes("text-xs text-gray-500")
                 ui.slider(min=100, max=300, step=20, value=settings.tile_width) \
-                    .on("change", lambda e: set_setting(tile_width=int(e.args))).classes("w-28") \
+                    .on("change", lambda e: set_setting(tile_width=int(e.args))).classes("w-full") \
                     .props("dense")
-
-        with ui.row().classes("w-full items-center gap-3 flex-wrap"):
             ui.input(placeholder="Search name, type, rules", value=view.filters.text) \
-                .props("dense outlined clearable").classes("w-64") \
+                .props("dense outlined clearable").classes("w-full").style("grid-column:span 2") \
                 .on_value_change(lambda e: set_filter(text=e.value or ""))
             ui.select({s.value: s.value.title() for s in Status}, multiple=True, label="Status",
                       value=sorted(view.filters.statuses),
                       on_change=lambda e: set_filter(statuses=set(e.value or []))) \
-                .props("dense use-chips clearable").classes("min-w-[140px]")
+                .props("dense use-chips clearable").classes("w-full")
             ui.select({r.value: r.value.title() for r in Rarity}, multiple=True, label="Rarity",
                       value=sorted(view.filters.rarities),
                       on_change=lambda e: set_filter(rarities=set(e.value or []))) \
-                .props("dense use-chips clearable").classes("min-w-[140px]")
+                .props("dense use-chips clearable").classes("w-full")
             ui.select(COLOR_CHOICES, multiple=True, label="Color", value=sorted(view.filters.colors),
                       on_change=lambda e: set_filter(colors=set(e.value or []))) \
-                .props("dense use-chips clearable").classes("min-w-[140px]")
+                .props("dense use-chips clearable").classes("w-full")
 
         # ------------------------------------------------------------ tiles
         def picture(card: Card, width: int) -> None:
@@ -215,19 +217,32 @@ def register(state) -> None:
                                             else view.collapsed.add(k))
                     if not g.cards:
                         ui.label("No cards").classes("text-sm text-gray-400 ml-2")
-                    with ui.row().classes("gap-3 flex-wrap"):
+                    # the same columns in every section, spread across the window
+                    with ui.element("div").classes("w-full pr-2").style(
+                            f"display:grid;grid-template-columns:repeat(auto-fill,{width}px);"
+                            "justify-content:space-between;gap:12px"):
                         for card in g.cards:
                             tile(card, width)
 
         def matrix_view(cards: list[Card]) -> None:
             rows, cols = ov.FACTORS[view.rows], ov.FACTORS[view.columns]
             m = ov.matrix(cards, rows, cols, session.project)
-            width = max(56, settings.tile_width // 2)
+            width = settings.tile_width
+            row_header = 170
 
             def open_cell(r: str, c: str) -> None:
                 set_view(mode="rows", group_by=view.rows, cell=(view.rows, r, view.columns, c))
 
-            with ui.element("table").classes("border-collapse"):
+            # full width; the browser gives busy columns more room than empty ones. Every
+            # column fits at least one tile: below that the table scrolls sideways instead
+            # of squashing
+            min_width = row_header + len(m.columns) * (width + 24)
+            with ui.element("table").classes("border-collapse w-full") \
+                    .style(f"min-width:{min_width}px"):
+                with ui.element("colgroup"):
+                    ui.element("col").style(f"width:{row_header}px")
+                    for _ in m.columns:
+                        ui.element("col")
                 with ui.element("tr"):
                     ui.element("th").classes("sticky top-0 left-0 z-20 bg-gray-100")
                     for c, label in m.columns:
@@ -241,23 +256,23 @@ def register(state) -> None:
                                                       "text-left align-top font-semibold border"):
                             n = sum(len(m.cell(r, c)) for c, _ in m.columns)
                             pip = COLOR_PIPS.get(r) if rows.name == "color" else None
-                            with ui.row().classes("items-center gap-1 no-wrap"):
+                            with ui.row().classes("items-center gap-1"):
                                 if pip:
                                     ui.element("span").style(f"width:10px;height:10px;border-radius:50%;"
                                                              f"background:{pip};border:1px solid #888")
-                                ui.label(heading(row_label, n, target(rows, r))) \
-                                    .classes("whitespace-nowrap")
+                                ui.label(heading(row_label, n, target(rows, r)))
                         for c, _ in m.columns:
                             in_cell = m.cell(r, c)
                             wanted = target(rows, r, cols, c)
                             short = wanted is not None and len(in_cell) < wanted
-                            with ui.element("td").classes("align-top border p-1"):
+                            with ui.element("td").classes("align-top border p-1") \
+                                    .style(f"min-width:{width + 24}px"):
                                 ui.button(f"{len(in_cell)}" + (f" / {wanted}" if wanted is not None else ""),
                                           on_click=lambda r=r, c=c: open_cell(r, c)) \
                                     .props("flat dense no-caps size=sm"
                                            + (" text-color=orange-9" if short else " text-color=grey-7")) \
                                     .tooltip("Show just these cards")
-                                with ui.row().classes("gap-1 flex-wrap").style(f"max-width:{4 * (width + 4)}px"):
+                                with ui.row().classes("gap-2 flex-wrap"):
                                     for card in in_cell:
                                         tile(card, width)
 
