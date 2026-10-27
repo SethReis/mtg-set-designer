@@ -23,7 +23,7 @@ from ..model import Card, SetProject
 from ..mse.environment import ScriptEnvironment
 from .draw import draw
 from .layout import CardLayout
-from .mse_layout import mse_layout
+from .mse_layout import MSELayoutBuilder, mse_layout
 from ..mse.mapping import face_uid
 from .mse_service import MSEError, MSERenderer, find_mse, render_keys
 
@@ -75,6 +75,13 @@ class CardRenderer:
                 self.env.refresh_card(card)
         backend = "mse" if self.mse is not None else "builtin"
         return {cid: f"{backend}-{key}" for cid, key in render_keys(self.project, self.env, cards).items()}
+
+    def art_box(self, card: Card, face: int = 0) -> tuple[float, float] | None:
+        """(width, height) of the face's art box in its frame (None if it has none)."""
+        builder = MSELayoutBuilder(self.env, self.env.card_object(card, face))
+        entry = builder.entry("image")
+        box = builder.box(entry) if entry is not None else None
+        return (box.width, box.height) if box is not None and box.width > 0 and box.height > 0 else None
 
     def render_many(self, cards: list[Card]) -> dict[tuple[str, int], Image.Image]:
         """Every face of several cards: {(card id, face index): image}."""

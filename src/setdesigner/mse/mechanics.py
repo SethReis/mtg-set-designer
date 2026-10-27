@@ -88,4 +88,4 @@ def project_to_mse(project: SetProject) -> list[MSECard]:
     """All MSE cards of a project, in card order, with reminder policies applied."""
     choices = reminder_choices(project)
     return [mse_card for card in project.cards
-            for mse_card in card_to_mse(card, project.info, choices[card.id])]
+            for mse_card in card_to_mse(card, project.info, choices[card.id], project.resolve)]

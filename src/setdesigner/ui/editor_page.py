@@ -8,6 +8,8 @@ from nicegui import run, ui
 from ..app import text_input
 from ..model import Card, Rarity, Status
 from ..mse.mapping import split_type_line
+from .art_editor import art_editor
+from .uploads import add_art_script, set_paste_target
 from .widgets import RARITY_LETTERS, color_pips, number_label, responsive_grid
 
 PALETTE = ["W", "U", "B", "R", "G", "C", "X", "T", "Q", "1", "2", "3", "4", "5"]
@@ -36,7 +38,10 @@ def register(state) -> None:
             "preview_due": 0.0,
             "generation": 0,
             "inputs": {},                 # field -> element (cost, rules)
+            "art": None,                  # the Art section's refreshable
+            "art_version": session.art_version,
         }
+        add_art_script()                  # drop / paste images as card art (see uploads.py)
 
         # ------------------------------------------------------------ header
         with ui.header().classes("items-center bg-slate-800 py-2"):
@@ -53,7 +58,16 @@ def register(state) -> None:
             view["card"] = card
             card_list.refresh()
             card_form.refresh()
+            art_target(card)
             schedule_preview(now=True)
+
+        def art_target(card: Card | None) -> None:
+            """Pasted images and images dropped on the preview go to this card."""
+            set_paste_target(card.id if card else None)
+            if card is not None:
+                preview.props(f'data-art-card="{card.id}"')
+            else:
+                preview.props(remove="data-art-card")
 
         def new_card() -> None:
             select(session.new_card())
@@ -241,6 +255,7 @@ def register(state) -> None:
                                      on_change=lambda e: changed("subtypes", e.value)).classes("w-full")
                         symbol_palette("rules_text", None)
                         text_field("rules_text", "Rules text", face.rules_text, "w-full", textarea=True)
+                        view["art"] = art_editor(session, card, schedule_preview)
                         ui.textarea("Flavor text", value=face.flavor_text,
                                     on_change=lambda e: changed("flavor_text", e.value)) \
                             .props("autogrow").classes("w-full")
@@ -286,6 +301,15 @@ def register(state) -> None:
         async def tick() -> None:
             saved.text = "Saving…" if session.unsaved else "All changes saved"
             session.flush_due()
+            if session.art_notice is not None:           # from a dropped or pasted file
+                kind, message = session.art_notice
+                session.art_notice = None
+                ui.notify(message, type=kind)
+            if session.art_version != view["art_version"]:
+                view["art_version"] = session.art_version
+                if view["art"] is not None:
+                    view["art"].refresh()
+                schedule_preview(now=True)
             due = view["preview_due"]
             if due and time.monotonic() >= due and view["card"] is not None:
                 view["preview_due"] = 0.0
@@ -305,6 +329,7 @@ def register(state) -> None:
                 preview_note.text = ""
 
         ui.timer(0.1, tick)
+        art_target(view["card"])
         schedule_preview(now=True)
 
         # ------------------------------------------------------ keyboard

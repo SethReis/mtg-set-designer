@@ -20,8 +20,9 @@ from typing import Callable
 
 from PIL import Image
 
-from ..model import (Archetype, Card, Face, Rarity, SetInfo, SetProject, Status, delete_card,
-                     load_project, new_card_id, save_archetypes, save_card, save_info, save_project)
+from ..model import (Archetype, ArtCrop, Card, Face, Rarity, SetInfo, SetProject, Status,
+                     delete_card, load_project, new_card_id, save_archetypes, save_card, save_info,
+                     save_project)
 from ..model.project import slug
 from ..mse.mapping import join_type_line, split_type_line
 from .overview import matches_text, number_key
@@ -31,6 +32,7 @@ AUTOSAVE_DELAY = 0.5                    # seconds after the last edit
 FACE_FIELDS = {"name", "mana_cost", "type_line", "rules_text", "flavor_text", "power",
                "toughness", "loyalty", "artist"}
 TYPE_PARTS = {"types", "subtypes"}      # the two halves of type_line, edited separately
+ART_FIELDS = {"art_path", "art_crop"}
 CARD_FIELDS = {"rarity", "collector_number", "frame", "status", "notes", "archetypes"}
 OPTIONAL = {"power", "toughness", "loyalty"}            # "" means "not set"
 
@@ -51,6 +53,9 @@ class SetSession:
         self._renderer_lock = threading.Lock()
         self._pending: dict[str, float] = {}     # card id -> time of last edit
         self._edited: set[str] = set()           # edited since the renderer last saw them
+        self._art_boxes: dict[str, tuple[float, float]] = {}   # stylesheet -> art box size
+        self.art_version = 0                     # goes up when art is added or removed
+        self.art_notice: tuple[str, str] | None = None   # (kind, message) for the page to show
         self._thumbnails = None
 
     # ------------------------------------------------------------ opening
@@ -127,6 +132,10 @@ class SetSession:
             types, subtypes = split_type_line(card.faces[face].type_line)
             parts = {"types": types, "subtypes": subtypes, field: "" if value is None else str(value)}
             card.faces[face].type_line = join_type_line(parts["types"], parts["subtypes"])
+        elif field in ART_FIELDS:                          # set by app.assets / the crop editor
+            if field == "art_crop" and value is not None and not isinstance(value, ArtCrop):
+                value = ArtCrop.model_validate(value)
+            setattr(card.faces[face], field, value or None)
         elif field in FACE_FIELDS:
             if field in OPTIONAL:                          # "" or None = not set
                 value = (str(value).strip() or None) if value is not None else None
@@ -181,9 +190,17 @@ class SetSession:
                 save_card(self.folder, card)
 
     def update_info(self, **values: object) -> None:
+        """Change set-wide fields (name, code, default frame, symbol, rarity slots, ...).
+        They affect every card, so the renderer starts over with the new values."""
         for key, value in values.items():
+            if key == "rarity_slots":
+                value = {Rarity(r): int(n) for r, n in (value or {}).items() if n}
             setattr(self.project.info, key, value)
         save_info(self.folder, self.project.info)
+        with self._renderer_lock:
+            if self._renderer is not None:
+                self._renderer.close()
+                self._renderer = None
 
     # ------------------------------------------------------------- saving
 
@@ -252,6 +269,31 @@ class SetSession:
             if card is not None:
                 renderer.card_changed(card)
             self._edited.discard(card_id)
+
+    def art_box(self, card: Card, face: int = 0) -> tuple[float, float] | None:
+        """The (width, height) of the face's art box in its frame, if known yet
+        (see find_art_box; frames are looked up once)."""
+        return self._art_boxes.get(self._stylesheet(card, face))
+
+    def find_art_box(self, card: Card, face: int = 0) -> tuple[float, float] | None:
+        """Look up the art box (needs the renderer, so call it off the UI thread)."""
+        key = self._stylesheet(card, face)
+        if key not in self._art_boxes:
+            def find(renderer):
+                renderer.card_changed(card)
+                self._edited.discard(card.id)
+                return renderer.art_box(card, face)
+            box = self.using_renderer(find)
+            if box is None:
+                return None
+            self._art_boxes[key] = box
+        return self._art_boxes[key]
+
+    def _stylesheet(self, card: Card, face: int) -> str:
+        from ..mse.frames import stylesheet_package
+        from ..mse.mapping import is_planeswalker
+        return stylesheet_package(card.frame_for(face, self.project.info.default_frame),
+                                  planeswalker=is_planeswalker(card.faces[face]))
 
     @property
     def thumbnails(self):

@@ -28,6 +28,9 @@ class SetProject(BaseModel):
     info: SetInfo
     mechanics: list[Mechanic] = Field(default_factory=list)
     archetypes: list[Archetype] = Field(default_factory=list)
+    # where the set lives (set by load_project / save_project; not saved): paths inside
+    # the set, such as art and the symbol, are stored relative to it
+    folder: Path | None = Field(default=None, exclude=True)
     cards: list[Card] = Field(default_factory=list)
 
     def card(self, card_id: str) -> Card:
@@ -38,6 +41,16 @@ class SetProject(BaseModel):
         for card in self.cards:
             for index, face in card.iter_faces():
                 yield card, index, face
+
+    def resolve(self, path: str | None) -> Path | None:
+        """A path stored in the set (relative to its folder, e.g. "assets/art/bear.png")
+        as a full path. Absolute paths are kept; None or "" give None."""
+        if not path:
+            return None
+        p = Path(path)
+        if p.is_absolute() or self.folder is None:
+            return p
+        return self.folder / p
 
 
 def _write_json(path: Path, data: object) -> None:
@@ -53,6 +66,7 @@ def _dump(model: BaseModel) -> dict:
 
 def save_project(project: SetProject, folder: Path) -> None:
     folder = Path(folder)
+    project.folder = folder
     _write_json(folder / "set.json", _dump(project.info))
     _write_json(folder / "mechanics.json", [_dump(m) for m in project.mechanics])
     _write_json(folder / "archetypes.json", [_dump(a) for a in project.archetypes])
@@ -116,4 +130,5 @@ def load_project(folder: Path) -> SetProject:
         mechanics=[Mechanic.model_validate(m) for m in _read_json(folder / "mechanics.json", [])],
         archetypes=[Archetype.model_validate(a) for a in _read_json(folder / "archetypes.json", [])],
         cards=cards,
+        folder=folder,
     )

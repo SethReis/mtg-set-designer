@@ -44,6 +44,15 @@ COLORS = "WUBRG"
 COLOR_NAMES = {"white": "W", "blue": "U", "black": "B", "red": "R", "green": "G"}
 
 
+class ArtCrop(BaseModel):
+    """Which part of the art shows in the frame's art box (see setdesigner.app.art).
+    x, y: where the crop's centre sits in the image (0-1); zoom >= 1, relative to the
+    largest crop of the box's shape that fits the image."""
+    x: float = 0.5
+    y: float = 0.5
+    zoom: float = 1.0
+
+
 class Face(BaseModel):
     name: str
     role: FaceRole = FaceRole.FRONT
@@ -55,7 +64,8 @@ class Face(BaseModel):
     power: str | None = None
     toughness: str | None = None
     loyalty: str | None = None
-    art_path: str | None = None
+    art_path: str | None = None         # relative to the set folder: "assets/art/<card>.png"
+    art_crop: ArtCrop | None = None     # None: centred, filling the art box
     artist: str = ""
     frame: str | None = None            # overrides the card's frame for this face
 

@@ -4,7 +4,7 @@ import json
 import pytest
 
 from setdesigner.app.session import AUTOSAVE_DELAY, SessionError, SetSession
-from setdesigner.model import Mechanic
+from setdesigner.model import Mechanic, Rarity
 
 
 def builtin(project):
@@ -133,3 +133,11 @@ def test_archetypes_create_update_delete(session) -> None:
     assert card.archetypes == [again.id]
     assert json.loads(card_file(session, card).read_text(encoding="utf-8"))["archetypes"] == [again.id]
     assert [a.id for a in session.project.archetypes] == [again.id]
+
+
+def test_set_info_changes_restart_the_renderer(session) -> None:
+    card = session.new_card()
+    m15 = session.render(card)
+    session.update_info(default_frame="8th", rarity_slots={"common": "20", "rare": 0})
+    assert session.project.info.rarity_slots == {Rarity.COMMON: 20}
+    assert session.render(card).tobytes() != m15.tobytes()        # drawn in the new frame

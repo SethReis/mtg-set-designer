@@ -116,3 +116,17 @@ async def test_stacks_in_rows_and_matrix(user: User) -> None:
     await user.should_see("Group by")
     user.find(marker=f"tile-{bear.id}").click()        # stacked cards still open the editor
     await user.should_see("Rules text")
+
+
+async def test_set_settings_panel_saves(user: User) -> None:
+    session, _, _ = await open_set_with_cards(user)
+    user.find(content="Set", kind=ui.button).click()
+    await user.should_see("Set settings")
+    await user.should_see("Set symbol")
+    code = user.find("Code")
+    code.clear().type("NEW").trigger("blur")
+    assert session.project.info.code == "NEW"
+    slot = next(iter(user.find(kind=ui.number, content="Common").elements))
+    slot.value = 12
+    user.find(kind=ui.number, content="Common").trigger("blur")
+    assert session.project.info.rarity_slots[Rarity.COMMON] == 12

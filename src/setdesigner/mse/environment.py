@@ -48,7 +48,7 @@ class ScriptEnvironment:
         self._keyword_db: KeywordDatabase | None = None
         self.load_reports: dict[str, LoadReport] = {}
 
-        self.set = SetObject(self, set_values(project.info))
+        self.set = SetObject(self, set_values(project.info, project.resolve))
         for mse_card in project_to_mse(project):
             obj = CardObject(self, mse_card)
             self.set.cards.append(obj)

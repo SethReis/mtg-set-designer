@@ -20,6 +20,7 @@ If MSE crashes or hangs, the process is restarted and the render retried once.
 from __future__ import annotations
 
 import hashlib
+import io
 import os
 import queue
 import shutil
@@ -156,16 +157,57 @@ def preview_overrides(env: ScriptEnvironment, uids) -> tuple[dict, dict]:
     return {"automatic card numbers": "no"}, numbers
 
 
+def file_stamp(path: Path | None) -> str:
+    """Changes when the file does (for change detection)."""
+    if path is None or not path.is_file():
+        return ""
+    st = path.stat()
+    return f"{path}:{st.st_mtime_ns}:{st.st_size}"
+
+
+def art_stamp(env: ScriptEnvironment, uid: str) -> str:
+    """A face's art file and crop, for change detection (the set file only names it)."""
+    art = env.set.by_uid[uid].mse.art
+    return "" if art is None else file_stamp(art.path) + (art.crop.model_dump_json() if art.crop else "")
+
+
+def art_files(env: ScriptEnvironment, uids) -> tuple[dict[str, bytes], dict[str, dict[str, str]]]:
+    """The cropped art of these MSE cards, packed into a set for MSE: {file name: PNG} and
+    each card's "image" value. Art is cropped to the frame's art box, at twice its size."""
+    from ..app.art import crop_art
+    from .mse_layout import MSELayoutBuilder
+    files, values = {}, {}
+    for uid in uids:
+        obj = env.set.by_uid[uid]
+        art = obj.mse.art
+        if art is None or not art.path.is_file():
+            continue
+        builder = MSELayoutBuilder(env, obj)
+        entry = builder.entry("image")
+        box = builder.box(entry) if entry is not None else None
+        if box is None or box.width <= 0 or box.height <= 0:
+            continue
+        with Image.open(art.path) as img:
+            picture = crop_art(img.convert("RGB"), (round(box.width * 2), round(box.height * 2)), art.crop)
+        out = io.BytesIO()
+        picture.save(out, "PNG")
+        name = f"art-{uid.replace('/', '-')}.png"
+        files[name] = out.getvalue()
+        values[uid] = {"image": name}
+    return files, values
+
+
 def render_keys(project: SetProject, env: ScriptEnvironment, cards: list[Card]) -> dict[str, str]:
     """A key per card that changes whenever its picture would: a hash of exactly what a
-    preview set for it would contain (its fields, its number, the set info and keywords).
-    Works out the set file once for all the cards. Cards must be known to `env`."""
+    preview set for it would contain (its fields, its number, the set info and keywords),
+    plus the set symbol and art files. Works out the set file once for all the cards.
+    Cards must be known to `env`."""
     uids = {card.id: [face_uid(card, i) for i in range(len(card.faces))] for card in cards}
     set_values, card_values = preview_overrides(env, [u for us in uids.values() for u in us])
     header, blocks = set_file_parts(project, set_values, card_values)
-    symbol = Path(project.info.symbol_path) if project.info.symbol_path else None
-    stamp = f"{symbol.stat().st_mtime_ns}" if symbol is not None and symbol.is_file() else ""
-    return {cid: hashlib.sha1((header + stamp + "".join(blocks[u] for u in us)).encode("utf-8")).hexdigest()
+    stamp = file_stamp(project.resolve(project.info.symbol_path))
+    return {cid: hashlib.sha1((header + stamp + "".join(blocks[u] + art_stamp(env, u) for u in us))
+                              .encode("utf-8")).hexdigest()
             for cid, us in uids.items()}
 
 
@@ -222,11 +264,14 @@ class MSERenderer:
             return {}
         uids = {face_uid(card, i) for card in cards for i in range(len(card.faces))}
         set_values, card_values = preview_overrides(self.env, uids)
+        files, art_values = art_files(self.env, uids)
+        for uid, values in art_values.items():
+            card_values[uid].update(values)
         options = dict(only_uids=uids, extra_set_values=set_values, extra_card_values=card_values)
         path = self.workdir / "batch.mse-set"
         for attempt in (1, 2):
             try:
-                write_mse_set(self.project, path, blank_symbol=True, **options)
+                write_mse_set(self.project, path, blank_symbol=True, files=files, **options)
                 self._loaded = None
                 self._load(path, "batch")
                 order = [uid for uid in set_file_parts(self.project)[1] if uid in uids]  # file order
@@ -247,13 +292,17 @@ class MSERenderer:
     def render(self, card: Card, face: int = 0) -> Image.Image:
         """One face, as MSE draws it, with our set symbol on top."""
         uids, set_values, card_values = self.preview_values(card)
+        art = "".join(art_stamp(self.env, uid) for uid in sorted(uids))
         options = dict(only_uids=uids, extra_set_values=set_values, extra_card_values=card_values)
-        digest = hashlib.sha1(set_file_text(self.project, **options).encode("utf-8")).hexdigest()
+        digest = hashlib.sha1((set_file_text(self.project, **options) + art).encode("utf-8")).hexdigest()
         path = self.workdir / "preview.mse-set"
         for attempt in (1, 2):
             try:
                 if self._loaded != (str(path), digest):       # unchanged card: no reload
-                    write_mse_set(self.project, path, blank_symbol=True, **options)
+                    files, art_values = art_files(self.env, uids)
+                    for uid, values in art_values.items():
+                        card_values[uid].update(values)
+                    write_mse_set(self.project, path, blank_symbol=True, files=files, **options)
                 self._load(path, digest)
                 image = self._write_image(face)
                 break

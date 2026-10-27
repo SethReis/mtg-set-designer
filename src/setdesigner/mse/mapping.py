@@ -17,7 +17,8 @@ field scripts (run by setdesigner.mse.objects) derive the rest.
     rules_text "+1: Draw."   loyalty cost 1 "+1", rule text "Draw."  (planeswalkers:
                              one ability per line, see loyalty_abilities)
     color_indicator          indicator  (multiple choice: "blue, red")
-    art_path                 image
+    art_path + art_crop      image  (the cropped art, packed into the set by the renderer:
+                             see MSECard.art)
     artist                   illustrator
     card.rarity              rarity
     card.notes               notes (a card property, not a field)
@@ -26,8 +27,10 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Callable
 
-from ..model import Card, Face, Rarity, SetInfo
+from ..model import ArtCrop, Card, Face, Rarity, SetInfo
 from ..model.card import COLOR_NAMES
 from ..model.layouts import LAYOUTS
 from .frames import stylesheet_package
@@ -39,6 +42,13 @@ MSE_RARITY = {Rarity.COMMON: "common", Rarity.UNCOMMON: "uncommon", Rarity.RARE:
 
 
 @dataclass
+class ArtRef:
+    """A face's art: the file (full path) and which part of it shows."""
+    path: Path
+    crop: ArtCrop | None = None
+
+
+@dataclass
 class MSECard:
     """One MSE card (= one face of our card)."""
     uid: str
@@ -46,6 +56,9 @@ class MSECard:
     values: dict[str, str]                  # field name -> raw value
     notes: str = ""
     links: list[tuple[str, str]] = field(default_factory=list)   # (linked uid, its relation)
+    # MSE only reads art packed inside the set file, cropped to the frame's art box, so the
+    # renderer prepares it (and fills in the "image" value) from this
+    art: ArtRef | None = None
 
 
 def face_uid(card: Card, face_index: int) -> str:
@@ -136,7 +149,6 @@ def face_values(card: Card, face: Face, reminders: dict[str, bool] | None = None
         "loyalty": face.loyalty or "",
         "rarity": MSE_RARITY[card.rarity],
         "indicator": mse_color_indicator(face.color_indicator),
-        "image": face.art_path or "",
         "illustrator": face.artist,
     }
     # Leave empty optional values unset so MSE's defaults apply (e.g. illustrator
@@ -144,27 +156,32 @@ def face_values(card: Card, face: Face, reminders: dict[str, bool] | None = None
     return {k: v for k, v in values.items() if v != "" or k in ("name", "casting cost", "rule text")}
 
 
-def set_values(info: SetInfo) -> dict[str, str]:
-    """Set fields we know, as MSE set field values (unset ones keep MSE's defaults)."""
+def set_values(info: SetInfo, resolve: Callable[[str], Path | None] | None = None) -> dict[str, str]:
+    """Set fields we know, as MSE set field values (unset ones keep MSE's defaults).
+    `resolve` turns the set's relative symbol path into a full one (SetProject.resolve)."""
+    symbol = resolve(info.symbol_path) if resolve and info.symbol_path else info.symbol_path
     values = {"title": info.name, "set code": info.code, "artist": info.artist,
               "copyright": info.copyright, "card language": info.language,
-              "symbol": info.symbol_path or ""}
+              "symbol": str(symbol or "")}
     return {k: v for k, v in values.items() if v}
 
 
-def card_to_mse(card: Card, set_info: SetInfo,
-                reminders: dict[str, bool] | None = None) -> list[MSECard]:
+def card_to_mse(card: Card, set_info: SetInfo, reminders: dict[str, bool] | None = None,
+                resolve: Callable[[str], Path | None] | None = None) -> list[MSECard]:
     """The MSE cards for one of our cards (one per face), linked if multi-faced.
     `reminders` are this card's reminder-text choices per mechanic name
-    (mechanics.reminder_choices); use mechanics.project_to_mse for a whole project."""
+    (mechanics.reminder_choices); use mechanics.project_to_mse for a whole project.
+    `resolve` turns relative art paths into full ones (SetProject.resolve)."""
     out = []
     for index, face in card.iter_faces():
+        art_path = (resolve(face.art_path) if resolve else Path(face.art_path)) if face.art_path else None
         out.append(MSECard(
             uid=face_uid(card, index),
             stylesheet=stylesheet_package(card.frame_for(index, set_info.default_frame),
                                           planeswalker=is_planeswalker(face)),
             values=face_values(card, face, reminders),
             notes=card.notes,
+            art=ArtRef(art_path, face.art_crop) if art_path is not None else None,
         ))
     relations = LAYOUTS[card.layout].mse_relations
     if relations and len(out) == 2:

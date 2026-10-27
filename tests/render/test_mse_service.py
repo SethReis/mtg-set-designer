@@ -12,7 +12,7 @@ from PIL import Image
 from fixtures.keyword_project import keyword_project
 from fixtures.oracle_project import oracle_project
 from render_compare import ORACLE, flatten
-from setdesigner.render import CardRenderer, find_mse
+from setdesigner.render import CardRenderer, find_mse, render_card
 from setdesigner.render.mse_layout import MSELayoutBuilder
 
 pytestmark = pytest.mark.skipif(find_mse() is None, reason="Magic Set Editor not available")
@@ -53,6 +53,35 @@ def test_batch_equals_single_renders(renderer) -> None:
         for face in range(len(card.faces)):
             single = flatten(renderer.render(card, face))
             assert np.abs(flatten(many[card.id, face]) - single).mean() < 0.01, (card.id, face)
+
+
+def test_art_is_packed_cropped_and_follows_the_crop(tmp_path) -> None:
+    """MSE draws our art (packed into the set, cropped to the art box) like the built-in
+    renderer does, and a different crop gives a different picture."""
+    from setdesigner.model import ArtCrop
+    art = tmp_path / "art.png"
+    picture = Image.new("RGB", (1200, 800), (40, 40, 160))
+    picture.paste((220, 30, 30), (0, 0, 600, 800))            # left half red, right half blue
+    picture.save(art)
+    project = oracle_project()
+    bears = project.card("grizzly-bears")
+    bears.faces[0].art_path = str(art)
+    with CardRenderer(project) as r:
+        r.card_changed(bears)
+        centred = flatten(r.render(bears))
+        assert r.last_backend == "mse"
+        w, h = r.art_box(bears)
+        builtin = flatten(render_card(r.env, bears))
+        bears.faces[0].art_crop = ArtCrop(x=0.0, y=0.5, zoom=2)     # zoom into the red side
+        r.card_changed(bears)
+        left = flatten(r.render(bears))
+        assert np.abs(left - centred).mean() > 5
+        many = flatten(r.render_many([bears])[bears.id, 0])
+        assert np.abs(many - left).mean() < 0.01
+    # the middle of the art box: MSE agrees with the built-in renderer on the centred crop
+    y, x0 = 150, 187
+    assert np.abs(centred[y, x0 - 40:x0 + 40] - builtin[y, x0 - 40:x0 + 40]).mean() < 12
+    assert left[y, x0][0] > 150 and left[y, x0][2] < 100       # red after zooming left
 
 
 def test_our_symbol_is_drawn_in_the_rarity_box(renderer) -> None:

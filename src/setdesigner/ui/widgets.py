@@ -1,7 +1,9 @@
 """Small pieces shared by the overview and the editor."""
 from __future__ import annotations
 
-from nicegui import ui
+from pathlib import Path
+
+from nicegui import app, ui
 
 from ..app.overview import color_key
 from ..model import Card, Rarity, Status
@@ -29,6 +31,24 @@ STACK_CSS = f"""
 }}
 .card-stack > .stack-card:hover + .stack-card {{ margin-top: 0; }}
 """
+
+
+_served: dict[str, str] = {}             # local folder -> URL it is served at
+
+
+def served_url(folder: Path, path: Path) -> str:
+    """A URL for a file in a local folder (card pictures, a set's assets). Each folder is
+    served once; a `?v=` stamp makes the browser reload a file that was replaced."""
+    import hashlib
+    key = str(Path(folder).resolve())
+    if key not in _served:
+        Path(folder).mkdir(parents=True, exist_ok=True)
+        url = f"/files/{hashlib.sha1(key.encode('utf-8')).hexdigest()[:12]}"
+        app.add_static_files(url, folder)
+        _served[key] = url
+    relative = Path(path).resolve().relative_to(key).as_posix()
+    stamp = Path(path).stat().st_mtime_ns if Path(path).is_file() else 0
+    return f"{_served[key]}/{relative}?v={stamp}"
 
 
 def responsive_grid(min_px: int, gap: int = 12, columns: str | None = None) -> ui.element:

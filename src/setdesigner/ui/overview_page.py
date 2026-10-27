@@ -1,28 +1,21 @@
 """The set overview (home of an open set): every card, grouped in rows or in a matrix."""
 from __future__ import annotations
 
-import hashlib
-
-from nicegui import app, ui
+from nicegui import ui
 
 from ..app import overview as ov
 from ..model import Card, Rarity, Status
-from .widgets import CARD_RATIO, COLOR_PIPS, STACK_CSS, compact_tile, grid_cells, responsive_grid
+from .uploads import add_art_script, set_paste_target
+from .widgets import (CARD_RATIO, COLOR_PIPS, STACK_CSS, compact_tile, grid_cells, responsive_grid,
+                      served_url)
 
 THUMB_POLL = 0.5                         # seconds between checks for newly rendered pictures
 COLOR_CHOICES = {k: v for k, v in ov.COLOR_LABELS.items()}
-_served: dict[str, str] = {}             # thumbnail folder -> URL it is served at
 
 
 def thumbnail_url(folder, path) -> str:
     """Pictures are served straight from the cache folder."""
-    key = str(folder)
-    if key not in _served:
-        folder.mkdir(parents=True, exist_ok=True)
-        url = f"/thumbs/{hashlib.sha1(key.encode('utf-8')).hexdigest()[:12]}"
-        app.add_static_files(url, folder)
-        _served[key] = url
-    return f"{_served[key]}/{path.name}"
+    return served_url(folder, path)
 
 
 def register(state) -> None:
@@ -35,6 +28,9 @@ def register(state) -> None:
             return
         view, settings = state.overview, state.settings
         ui.add_css(STACK_CSS)
+        add_art_script()                         # drop an image on a card: its art
+        set_paste_target(None)                   # no single card to paste into here
+        art_seen = {"version": session.art_version}
         worker = session.thumbnails
         tiles: dict[str, list] = {}              # card id -> its placeholder containers
         seen = {"version": -1}
@@ -54,6 +50,8 @@ def register(state) -> None:
             count = ui.label().classes("text-sm opacity-70 ml-2")
             ui.space()
             status = ui.label().classes("text-sm opacity-70")
+            ui.button("Set", icon="settings", on_click=lambda: settings_dialog()) \
+                .props("flat no-caps color=white").tooltip("Name, frame, symbol, rarity targets")
             ui.button("Archetypes", icon="hub", on_click=lambda: archetype_dialog()) \
                 .props("flat no-caps color=white")
             ui.button("New card", icon="add", on_click=new_card).props("flat no-caps color=white")
@@ -138,7 +136,8 @@ def register(state) -> None:
 
         def tile(card: Card, width: int, stacked: bool = False) -> None:
             box = ui.element("div").classes("cursor-pointer") \
-                .on("click", lambda c=card: open_card(c)).mark(f"tile-{card.id}")
+                .on("click", lambda c=card: open_card(c)).mark(f"tile-{card.id}") \
+                .props(f'data-art-card="{card.id}"')            # drop an image: the card's art
             if stacked:
                 box.classes("stack-card")                # see STACK_CSS
             else:
@@ -331,6 +330,13 @@ def register(state) -> None:
         # ------------------------------------------------------------ timers
         def tick() -> None:
             session.flush_due()
+            if session.art_notice is not None:           # from a dropped file
+                kind, message = session.art_notice
+                session.art_notice = None
+                ui.notify(message, type=kind)
+            if session.art_version != art_seen["version"]:
+                art_seen["version"] = session.art_version
+                content.refresh()                        # redraws pictures of changed cards
             update_tiles()
             waiting = settings.tiles == "images" and any(worker.get(b[0].card) is None
                                                          for b in tiles.values() if b)
@@ -342,3 +348,9 @@ def register(state) -> None:
         def archetype_dialog() -> None:
             from .archetypes import archetype_manager
             archetype_manager(session, on_close=content.refresh)
+
+        def settings_dialog() -> None:
+            from .app import FRAME_LABELS
+            from .set_settings import set_settings
+            # the header, targets and every card picture may change: rebuild the page
+            set_settings(session, FRAME_LABELS, on_close=lambda: ui.navigate.to("/set"))

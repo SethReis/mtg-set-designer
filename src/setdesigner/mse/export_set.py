@@ -42,7 +42,7 @@ def set_file_parts(project: SetProject, extra_set_values: dict[str, str] | None 
     default_style = stylesheet_package(info.default_frame)
     lines = [f"mse_version: {MSE_VERSION}", f"game: {GAME}",
              f"stylesheet: {stylesheet_name(default_style)}", "set_info:"]
-    for key, value in {**set_values(info), **(extra_set_values or {})}.items():
+    for key, value in {**set_values(info, project.resolve), **(extra_set_values or {})}.items():
         lines += _entry(key, value, 1)
     for mechanic in project.mechanics:          # the set's own keywords
         lines.append("keyword:")
@@ -76,9 +76,11 @@ def set_file_text(project: SetProject, only_uids: set[str] | None = None,
     return header + "".join(b for uid, b in blocks.items() if only_uids is None or uid in only_uids)
 
 
-def write_mse_set(project: SetProject, path: Path, blank_symbol: bool = False, **options) -> Path:
+def write_mse_set(project: SetProject, path: Path, blank_symbol: bool = False,
+                  files: dict[str, bytes] | None = None, **options) -> Path:
     """Write a .mse-set. `blank_symbol` gives MSE an empty set symbol, so it draws no
-    rarity symbol (we draw our own over its render). Other options: see set_file_text."""
+    rarity symbol (we draw our own over its render). `files` are packed in next to the
+    set file (MSE reads card art from there). Other options: see set_file_text."""
     path = Path(path)
     if blank_symbol:
         options["extra_set_values"] = {"symbol": BLANK_SYMBOL, **options.get("extra_set_values", {})}
@@ -88,4 +90,6 @@ def write_mse_set(project: SetProject, path: Path, blank_symbol: bool = False, *
         z.writestr("set", set_file_text(project, **options))
         if blank_symbol:
             z.writestr(BLANK_SYMBOL, BLANK_SYMBOL_TEXT)
+        for name, data in (files or {}).items():
+            z.writestr(name, data)
     return path

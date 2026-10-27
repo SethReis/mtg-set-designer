@@ -335,6 +335,14 @@ class MSELayoutBuilder:
 
     def art_image(self, entry: EntryStyle, box: Box) -> Image.Image | None:
         size = (max(1, round(box.width)), max(1, round(box.height)))
+        art = getattr(self.card.mse, "art", None) if entry.field == "image" else None
+        if art is not None:                          # our card's art, with its crop
+            from ..app.art import crop_art
+            try:
+                with Image.open(art.path) as img:
+                    return crop_art(img.convert("RGBA"), size, art.crop)
+            except OSError as e:
+                self.warnings.append(f"{entry.field}: art {art.path}: {e}")
         path = to_str(self.value(entry) or "")
         if path:
             try:
