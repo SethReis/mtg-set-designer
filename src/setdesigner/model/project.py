@@ -90,6 +90,10 @@ def delete_card(folder: Path, card_id: str) -> None:
     (Path(folder) / "cards" / f"{card_id}.json").unlink(missing_ok=True)
 
 
+def save_mechanics(folder: Path, mechanics: list[Mechanic]) -> None:
+    _write_json(Path(folder) / "mechanics.json", [_dump(m) for m in mechanics])
+
+
 def save_archetypes(folder: Path, archetypes: list[Archetype]) -> None:
     _write_json(Path(folder) / "archetypes.json", [_dump(a) for a in archetypes])
 

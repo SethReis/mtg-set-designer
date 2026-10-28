@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class MechanicKind(str, Enum):
@@ -28,3 +28,6 @@ class Mechanic(BaseModel):
     reminder_text: str = ""             # may use {param} placeholders
     design_intent: str = ""
     reminder_policy: ReminderPolicy = ReminderPolicy.COMMONS_ONLY
+    # other word forms that count as this mechanic ("Wanted", "Wants" for "Want"): used to
+    # find, count and rename it on cards. Reminder text goes on the name itself only.
+    forms: list[str] = Field(default_factory=list)

@@ -84,6 +84,26 @@ def test_art_is_packed_cropped_and_follows_the_crop(tmp_path) -> None:
     assert left[y, x0][0] > 150 and left[y, x0][2] < 100       # red after zooming left
 
 
+def test_mechanic_reminder_text_and_card_override() -> None:
+    """A set mechanic's reminder text is drawn by MSE; hiding it on the card gives the
+    same picture as no mechanic at all."""
+    from setdesigner.model import Mechanic, MechanicKind
+    project = oracle_project()
+    bears = project.card("grizzly-bears")
+    bears.faces[0].rules_text = "When this creature enters, want target creature."
+    with CardRenderer(project) as r:
+        plain = flatten(r.render(bears))
+    project.mechanics = [Mechanic(id="want", name="Want", kind=MechanicKind.KEYWORD_ACTION,
+                                  reminder_text="Put a bounty counter on it.")]
+    with CardRenderer(project) as r:
+        shown = flatten(r.render(bears))
+        bears.reminders["want"] = False
+        r.card_changed(bears)
+        hidden = flatten(r.render(bears))
+    assert np.abs(shown - plain).mean() > 0.5          # reminder text added (common: shown)
+    assert np.abs(hidden - plain).mean() < 0.05
+
+
 def test_our_symbol_is_drawn_in_the_rarity_box(renderer) -> None:
     card = renderer.project.card("steel-overseer")                     # rare: gold
     image = np.asarray(renderer.render(card).convert("RGB"), int)

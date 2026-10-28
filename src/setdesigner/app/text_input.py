@@ -35,12 +35,15 @@ def symbol_suggestions(prefix: str) -> list[Suggestion]:
                        len(prefix) + 1, f"{{{s}}}") for s in matches[:24]]
 
 
+PARAMETER_PLACEHOLDERS = {"cost": "{1}", "mana": "{1}", "number": "1", "name": "NAME"}
+
+
 def mechanic_insert(mechanic: Mechanic) -> tuple[str, int]:
     """Text for a mechanic and how far back the caret goes (into its parameter)."""
     if not mechanic.parameter:
         return mechanic.name, 0
-    placeholder = "{1}" if mechanic.parameter == "cost" else "1" if mechanic.parameter == "number" else ""
-    return f"{mechanic.name} {placeholder}", 0
+    placeholder = PARAMETER_PLACEHOLDERS.get(mechanic.parameter, "")
+    return f"{mechanic.name} {placeholder}".rstrip() + ("" if placeholder else " "), 0
 
 
 def suggestions(text: str, caret: int, mechanics: list[Mechanic] = ()) -> list[Suggestion]:

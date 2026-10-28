@@ -95,3 +95,14 @@ def test_stacks_split_evenly() -> None:
     assert [len(s) for s in stacks(cards[:13], 12)] == [7, 6]
     assert stacks([], 12) == []
     assert [c.id for s in stacks(cards, 12) for c in s] == [c.id for c in cards]   # order kept
+
+
+def test_mechanic_groups() -> None:
+    from setdesigner.model import Mechanic
+    want = Mechanic(id="want", name="Want", forms=["Wanted"])
+    hunter = card("hunter")
+    hunter.faces[0].rules_text = "Tap a wanted creature."
+    p = project(hunter, BEAR)
+    p.mechanics = [want]
+    groups = {g.key: [c.id for c in g.cards] for g in group(p.cards, FACTORS["mechanic"], p)}
+    assert groups == {"want": ["hunter"], "-": ["bear"]}

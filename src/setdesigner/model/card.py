@@ -91,7 +91,9 @@ class Card(BaseModel):
     frame: str | None = None            # card default; None = the set's default frame
     sheet: str | None = None            # bonus sheet name; None = main set
     archetypes: list[str] = Field(default_factory=list)
-    mechanics: list[str] = Field(default_factory=list)   # derived/cached
+    mechanics: list[str] = Field(default_factory=list)   # derived: ids of mechanics it uses
+    # reminder text on this card, overriding the mechanic's policy: mechanic id -> show?
+    reminders: dict[str, bool] = Field(default_factory=dict)
     status: Status = Status.IDEA
     notes: str = ""
 

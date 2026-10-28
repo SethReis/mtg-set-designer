@@ -42,8 +42,16 @@ def mechanic_keyword(mechanic: Mechanic) -> dict[str, str]:
             "mode": MODES[mechanic.kind]}
 
 
+def words_pattern(mechanic: Mechanic) -> re.Pattern:
+    """The mechanic's name or any of its word forms, as whole words, longest first."""
+    words = sorted({mechanic.name, *mechanic.forms} - {""}, key=len, reverse=True)
+    return re.compile(r"(?<![\w])(?:" + "|".join(re.escape(w) for w in words) + r")(?![\w])",
+                      re.IGNORECASE)
+
+
 def uses(card: Card, mechanic: Mechanic) -> bool:
-    pattern = name_pattern(mechanic.name)
+    """Whether the card mentions the mechanic (its name or one of its word forms)."""
+    pattern = words_pattern(mechanic)
     return any(pattern.search(face.rules_text) for face in card.faces)
 
 
@@ -53,7 +61,8 @@ def _collector_order(card: Card) -> tuple:
 
 
 def reminder_choices(project: SetProject) -> dict[str, dict[str, bool]]:
-    """card id -> {mechanic name: show reminder?} for every mechanic the card uses."""
+    """card id -> {mechanic name: show reminder?} for every mechanic the card uses.
+    A card's own override (Card.reminders) wins over the mechanic's policy."""
     choices: dict[str, dict[str, bool]] = {card.id: {} for card in project.cards}
     ordered = sorted(project.cards, key=_collector_order)
     for mechanic in project.mechanics:
@@ -62,7 +71,11 @@ def reminder_choices(project: SetProject) -> dict[str, dict[str, bool]]:
             if not uses(card, mechanic):
                 continue
             policy = mechanic.reminder_policy
-            if policy == ReminderPolicy.ALWAYS:
+            if mechanic.id in card.reminders:       # the card's own choice wins
+                show = card.reminders[mechanic.id]
+                if policy == ReminderPolicy.FIRST_PER_COLOR:
+                    seen_colors |= set(card.color_identity or "C")
+            elif policy == ReminderPolicy.ALWAYS:
                 show = True
             elif policy == ReminderPolicy.NEVER:
                 show = False

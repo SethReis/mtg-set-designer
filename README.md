@@ -28,6 +28,7 @@ editor: the card list, the card form and a live preview drawn by Magic Set
 Editor. Every change is saved automatically to `cards/<id>.json`, so there is
 no Save button (`docs/editor.md`). Card art (pick, drop or paste, then crop) and
 the set symbol (Set button in the overview) are covered in `docs/art.md`.
+Mechanics (keywords with reminder text, word forms, renaming) are in `docs/mechanics.md`.
 
 ## MSE packages
 

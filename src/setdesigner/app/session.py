@@ -20,11 +20,13 @@ from typing import Callable
 
 from PIL import Image
 
-from ..model import (Archetype, ArtCrop, Card, Face, Rarity, SetInfo, SetProject, Status,
-                     delete_card, load_project, new_card_id, save_archetypes, save_card, save_info,
+from ..model import (Archetype, ArtCrop, Card, Face, Mechanic, MechanicKind, Rarity,
+                     ReminderPolicy, SetInfo, SetProject, Status, delete_card, load_project,
+                     new_card_id, save_archetypes, save_card, save_info, save_mechanics,
                      save_project)
 from ..model.project import slug
 from ..mse.mapping import join_type_line, split_type_line
+from .mechanics import mechanic_ids
 from .overview import matches_text, number_key
 
 AUTOSAVE_DELAY = 0.5                    # seconds after the last edit
@@ -154,6 +156,12 @@ class SetSession:
             setattr(card, field, value)
         else:
             raise SessionError(f"Unknown field {field!r}")
+        if field in ("rules_text", "name"):             # which mechanics it uses may change
+            card.mechanics = mechanic_ids(self.project, card)
+        self._changed(card)
+
+    def _changed(self, card: Card) -> None:
+        """Schedule saving a card and tell the renderer and the overview pictures."""
         self._pending[card.id] = time.monotonic()
         self._edited.add(card.id)
         if self._thumbnails is not None:
@@ -197,10 +205,80 @@ class SetSession:
                 value = {Rarity(r): int(n) for r, n in (value or {}).items() if n}
             setattr(self.project.info, key, value)
         save_info(self.folder, self.project.info)
+        self._restart_renderer()
+
+    def _restart_renderer(self) -> None:
+        """Set-wide things changed (set info, mechanics): start the renderer afresh."""
         with self._renderer_lock:
             if self._renderer is not None:
                 self._renderer.close()
                 self._renderer = None
+
+    # ---------------------------------------------------------- mechanics
+
+    def new_mechanic(self, name: str = "New mechanic") -> Mechanic:
+        taken = {m.id for m in self.project.mechanics}
+        base = slug(name)
+        mid, n = base, 2
+        while mid in taken:
+            mid, n = f"{base}-{n}", n + 1
+        mechanic = Mechanic(id=mid, name=name)
+        self.project.mechanics.append(mechanic)
+        self._mechanics_changed()
+        return mechanic
+
+    def update_mechanic(self, mechanic: Mechanic, **values: object) -> None:
+        """Change a mechanic's definition (not its name: see rename_mechanic)."""
+        for key, value in values.items():
+            if key == "kind":
+                value = MechanicKind(value)
+            elif key == "reminder_policy":
+                value = ReminderPolicy(value)
+            elif key == "parameter":
+                value = value or None
+            elif key == "forms":
+                value = [f.strip() for f in value or [] if f.strip()]
+            setattr(mechanic, key, value)
+        self._mechanics_changed()
+
+    def rename_mechanic(self, mechanic: Mechanic, new_name: str, update_cards: bool) -> list:
+        """Rename a mechanic (and its word forms); with update_cards, also in card text.
+        Returns the card changes made (empty if cards were left alone)."""
+        from .mechanics import new_forms_after_rename, rename_plan
+        changes = rename_plan(self.project, mechanic, new_name) if update_cards else []
+        for change in changes:
+            change.card.faces[change.face].rules_text = change.after
+            self._changed(change.card)
+        mechanic.forms = new_forms_after_rename(mechanic, new_name)
+        mechanic.name = new_name
+        self._mechanics_changed()
+        return changes
+
+    def delete_mechanic(self, mechanic: Mechanic) -> None:
+        """Remove a mechanic. Card text stays; per-card reminder choices for it go."""
+        self.project.mechanics = [m for m in self.project.mechanics if m.id != mechanic.id]
+        for card in self.project.cards:
+            if mechanic.id in card.reminders:
+                card.reminders.pop(mechanic.id)
+                self._changed(card)
+        self._mechanics_changed()
+
+    def set_reminder(self, card: Card, mechanic: Mechanic, show: bool | None) -> None:
+        """Show or hide a mechanic's reminder text on one card; None follows the policy."""
+        if show is None:
+            card.reminders.pop(mechanic.id, None)
+        else:
+            card.reminders[mechanic.id] = show
+        self._changed(card)        # re-rendering the card works its reminder choices out again
+
+    def _mechanics_changed(self) -> None:
+        save_mechanics(self.folder, self.project.mechanics)
+        for card in self.project.cards:             # what each card uses may have changed
+            ids = mechanic_ids(self.project, card)
+            if ids != card.mechanics:
+                card.mechanics = ids
+                self._changed(card)
+        self._restart_renderer()
 
     # ------------------------------------------------------------- saving
 

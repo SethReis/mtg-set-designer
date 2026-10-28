@@ -9,6 +9,7 @@ from ..app import text_input
 from ..model import Card, Rarity, Status
 from ..mse.mapping import split_type_line
 from .art_editor import art_editor
+from .mechanics_page import POLICY_LABELS
 from .uploads import add_art_script, set_paste_target
 from .widgets import RARITY_LETTERS, color_pips, number_label, responsive_grid
 
@@ -39,6 +40,7 @@ def register(state) -> None:
             "generation": 0,
             "inputs": {},                 # field -> element (cost, rules)
             "art": None,                  # the Art section's refreshable
+            "mechanics": None,            # the "Mechanics" row's refreshable
             "art_version": session.art_version,
         }
         add_art_script()                  # drop / paste images as card art (see uploads.py)
@@ -90,10 +92,38 @@ def register(state) -> None:
             card = view["card"]
             if card is None:
                 return
+            used = list(card.mechanics)
             session.update(card, field, value)
             if field in ("name", "collector_number", "rarity", "mana_cost"):
                 card_list.refresh()
+            if card.mechanics != used and view["mechanics"] is not None:
+                view["mechanics"].refresh()                 # a mechanic appeared or went
             schedule_preview()
+
+        def mechanics_row(card: Card):
+            """One chip per mechanic on the card, each with its reminder-text choice."""
+            @ui.refreshable
+            def row() -> None:
+                used = [m for m in session.project.mechanics if m.id in card.mechanics]
+                if not used:
+                    return
+                with ui.row().classes("w-full items-center gap-3"):
+                    ui.label("Mechanics").classes("text-xs text-gray-500")
+                    for mechanic in used:
+                        current = card.reminders.get(mechanic.id)
+                        options = {"policy": f"{mechanic.name}: reminder as policy "
+                                             f"({POLICY_LABELS[mechanic.reminder_policy.value].lower()})",
+                                   "show": f"{mechanic.name}: show reminder",
+                                   "hide": f"{mechanic.name}: hide reminder"}
+                        value = "policy" if current is None else "show" if current else "hide"
+
+                        def choose(e, m=mechanic) -> None:
+                            session.set_reminder(card, m, None if e.value == "policy" else e.value == "show")
+                            schedule_preview(now=True)
+                        ui.select(options, value=value, on_change=choose) \
+                            .props("dense options-dense outlined").classes("min-w-[260px]")
+            row()
+            return row
 
         def schedule_preview(now: bool = False) -> None:
             view["preview_due"] = time.monotonic() + (0 if now else PREVIEW_DELAY)
@@ -255,6 +285,7 @@ def register(state) -> None:
                                      on_change=lambda e: changed("subtypes", e.value)).classes("w-full")
                         symbol_palette("rules_text", None)
                         text_field("rules_text", "Rules text", face.rules_text, "w-full", textarea=True)
+                        view["mechanics"] = mechanics_row(card)
                         view["art"] = art_editor(session, card, schedule_preview)
                         ui.textarea("Flavor text", value=face.flavor_text,
                                     on_change=lambda e: changed("flavor_text", e.value)) \

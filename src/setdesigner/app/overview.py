@@ -29,6 +29,7 @@ TYPE_ORDER = ["Creature", "Instant", "Sorcery", "Artifact", "Enchantment", "Plan
 OTHER_TYPE = "Other"
 MANA_VALUES = ["0", "1", "2", "3", "4", "5", "6", "7+"]
 NO_ARCHETYPE = ""
+NO_MECHANIC = "-"                # a group key no mechanic id can have
 
 
 # ------------------------------------------------------------------ card facts
@@ -95,6 +96,13 @@ class Factor:
     options: Callable[[SetProject], list[tuple[str, str]]]    # (key, label) in display order
 
 
+def _mechanic_keys(card: Card, project: SetProject) -> list[str]:
+    from ..mse.mechanics import words_pattern
+    keys = [m.id for m in project.mechanics
+            if any(words_pattern(m).search(face.rules_text) for face in card.faces)]
+    return keys or [NO_MECHANIC]
+
+
 def _archetype_keys(card: Card, project: SetProject) -> list[str]:
     known = {a.id for a in project.archetypes}
     keys = [a for a in card.archetypes if a in known]
@@ -108,6 +116,8 @@ FACTORS: dict[str, Factor] = {
                      lambda p: [(r.value, r.value.title()) for r in Rarity]),
     "archetype": Factor("archetype", "Archetype", lambda c: [],   # needs the project: see keys()
                         lambda p: [(a.id, a.name) for a in p.archetypes] + [(NO_ARCHETYPE, "No archetype")]),
+    "mechanic": Factor("mechanic", "Mechanic", lambda c: [],      # needs the project: see keys()
+                       lambda p: [(m.id, m.name) for m in p.mechanics] + [(NO_MECHANIC, "No mechanic")]),
     "type": Factor("type", "Card type", lambda c: [card_type(c)],
                    lambda p: [(t, t) for t in TYPE_ORDER] + [(OTHER_TYPE, OTHER_TYPE)]),
     "mana_value": Factor("mana_value", "Mana value", lambda c: [mana_value_key(c)],
@@ -116,12 +126,14 @@ FACTORS: dict[str, Factor] = {
                      lambda p: [(s.value, s.value.title()) for s in Status]),
 }
 # shown only when a card is in them (nobody needs an empty "Other" or "No archetype")
-HIDE_WHEN_EMPTY = {OTHER_TYPE, NO_ARCHETYPE}
+HIDE_WHEN_EMPTY = {OTHER_TYPE, NO_ARCHETYPE, NO_MECHANIC}
 
 
 def keys(card: Card, factor: Factor, project: SetProject) -> list[str]:
     if factor.name == "archetype":
         return _archetype_keys(card, project)
+    if factor.name == "mechanic":
+        return _mechanic_keys(card, project)
     return factor.keys_of(card)
 
 

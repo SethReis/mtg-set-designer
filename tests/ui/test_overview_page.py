@@ -130,3 +130,30 @@ async def test_set_settings_panel_saves(user: User) -> None:
     slot.value = 12
     user.find(kind=ui.number, content="Common").trigger("blur")
     assert session.project.info.rarity_slots[Rarity.COMMON] == 12
+
+
+async def test_mechanics_page_create_rename_and_editor_reminders(user: User) -> None:
+    session, bear, _ = await open_set_with_cards(user)
+    session.update(bear, "rules_text", "Want target creature.")
+    user.find(content="Mechanics", kind=ui.button).click()
+    await user.should_see("No mechanics yet.")
+    user.find("New mechanic").click()
+    await user.should_see("Reminder text")
+    mechanic = session.project.mechanics[0]
+    user.find("Name").clear().type("Want").trigger("blur")
+    await user.should_see("Used on 1 card")
+    assert mechanic.name == "Want" and bear.mechanics == [mechanic.id]
+
+    user.find("Name").clear().type("Hunt").trigger("blur")
+    await user.should_see("Update 1 card")                    # the rename dialog
+    user.find("Update 1 card").click()
+    await user.should_see("Updated 1 card face")
+    assert bear.faces[0].rules_text == "Hunt target creature."
+    await user.open("/set/mechanics")                          # opening with a mechanic there
+    await user.should_see("Used on 1 card")
+
+    await user.open(f"/set/card/{bear.id}")
+    await user.should_see("Hunt: reminder as policy (on commons only)")
+    select = next(iter(user.find(content="Hunt: reminder as policy").elements))
+    select.value = "hide"
+    assert bear.reminders == {mechanic.id: False}
