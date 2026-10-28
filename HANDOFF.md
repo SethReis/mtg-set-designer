@@ -7,8 +7,9 @@ Read this first. Everything under "Settled decisions" was agreed with the user; 
 ## 1. Goal and context
 
 A **personal, local desktop app** for designing custom MTG **sets** (not just single cards), for the
-user and friends to draft together. Private; never distributed publicly or sold, so bundling MSE
-(Magic Set Editor) style packs in a private repo is acceptable (keep `CREDITS.md`, keep repo private).
+user and friends to draft together. Never sold. The **code is public** on GitHub (GPL v2, the same
+license as MSE); **MSE templates, fonts, MSE-rendered images and the user's own sets are not**.
+They are git-ignored, and `tools/sync_packages.py` fills `resources/` from each user's own MSE install.
 
 Why: existing card-maker tools feel dated and clunky (creating mechanics, uploading a set symbol,
 checking formatting). No set-level tools exist. The app's primary object is the **set**; a card is a
@@ -27,7 +28,7 @@ testable modules.
 - **One renderer for both live preview and print export** (guarantees preview = print). Cards are rendered in Python, not HTML/CSS; HTML/CSS is only for the interface.
 
 **Templates**
-- Support **Magic Set Editor templates only**, bundled in the repo (no template library UI required; optional for friends dropping in extra packs).
+- Support **Magic Set Editor templates only**, copied from the user's own MSE install into `resources/` (git-ignored; no template library UI required; friends can drop in extra packs).
 - Frames wanted: **modern M15** plus **old-border** frames (e.g. retro-style cards like Innistrad Remastered retro / Brothers' War retro artifacts).
 - Each template gets a **compatibility report** (parse what we can, warn loudly on unsupported features, never fail silently).
 - Frame is a **set-level default with per-card (and per-face) override**; bonus sheets are named card groups with their own frame.
@@ -192,7 +193,7 @@ Not yet written: schema layer (typed Style/TextBox/ImageLayer/SymbolFont, mergin
 - Which retro style corresponds to which real-world frame (1993 / 1997 / 2003) is inferred from names and descriptions only. "Old Main" = "Before 8th edition", "8th Main" = 8th Edition frame. Confirm against rendered output and the Innistrad Remastered / Brothers' War retro references.
 - The `magicseteditor.com` CLI image-generation flag is from memory; check `--help`.
 - Multi-face print "labels" and exact M15 field-to-model mapping were discussed but not designed in detail.
-- No licensing review beyond "private repo shared directly with friends"; fonts and community frames have varied licenses.
+- Licensing: our code is GPL v2. MSE is GPL v2 and runs as a separate program. Community frames and fonts have varied licenses (several fonts are commercial), so they are never committed. History was rewritten on publishing to remove them from old commits.
 
 ## 8. Immediate next steps
 

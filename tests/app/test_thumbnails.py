@@ -1,9 +1,15 @@
 """Overview pictures: cache keys, the cache, the background worker (built-in renderer)."""
+from pathlib import Path
+
 import pytest
 from PIL import Image
 
 from setdesigner.app.session import SetSession
 from setdesigner.app.thumbnails import WIDTH, ThumbnailCache
+
+PACKAGES = Path(__file__).resolve().parents[2] / "resources" / "mse_packages"
+# drawing cards needs the MSE templates (tools/sync_packages.py fills resources/)
+needs_packages = pytest.mark.skipif(not PACKAGES.is_dir(), reason="resources/mse_packages not populated")
 
 
 def builtin(project):
@@ -23,6 +29,7 @@ def keys(session, cards):
     return session.using_renderer(lambda r: (session.refresh_edited(r), r.render_keys(cards))[1])
 
 
+@needs_packages
 def test_keys_change_only_when_the_card_does(session) -> None:
     a, b = session.new_card("Alpha"), session.new_card("Beta")
     first = keys(session, [a, b])
@@ -46,6 +53,7 @@ def test_cache_replaces_old_pictures(tmp_path) -> None:
         assert img.width == WIDTH
 
 
+@needs_packages
 def test_worker_fills_the_cache_and_redraws_edited_cards(session) -> None:
     cards = [session.new_card(f"Card {i}") for i in range(3)]
     worker = session.thumbnails
@@ -63,6 +71,7 @@ def test_worker_fills_the_cache_and_redraws_edited_cards(session) -> None:
     assert not first[cards[0].id].exists()                # old picture removed
 
 
+@needs_packages
 def test_render_many_matches_single_renders(session) -> None:
     cards = [session.new_card("One"), session.new_card("Two")]
     session.update(cards[1], "rules_text", "Flying")

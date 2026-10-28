@@ -1,5 +1,6 @@
 """Importing art and the set symbol into a set folder (built-in renderer, no MSE)."""
 import io
+from pathlib import Path
 
 import pytest
 from PIL import Image
@@ -8,6 +9,10 @@ from setdesigner.app.assets import AssetError, import_art, import_symbol, remove
 from setdesigner.app.session import SetSession
 from setdesigner.model import ArtCrop, load_project
 from setdesigner.ui.uploads import receive_art
+
+PACKAGES = Path(__file__).resolve().parents[2] / "resources" / "mse_packages"
+# drawing cards needs the MSE templates (tools/sync_packages.py fills resources/)
+needs_packages = pytest.mark.skipif(not PACKAGES.is_dir(), reason="resources/mse_packages not populated")
 
 
 def builtin(project):
@@ -87,6 +92,7 @@ def test_upload_route_logic(session) -> None:
     assert receive_art(None, card.id, b"", "x.png")[0] == 409
 
 
+@needs_packages
 def test_art_shows_and_keys_change(session) -> None:
     card = session.new_card("Bear")
     session.update(card, "types", "Creature")

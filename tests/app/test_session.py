@@ -1,10 +1,15 @@
 """SetSession: the editor's behaviour without UI (uses the built-in renderer, so no MSE)."""
 import json
+from pathlib import Path
 
 import pytest
 
 from setdesigner.app.session import AUTOSAVE_DELAY, SessionError, SetSession
 from setdesigner.model import Mechanic, Rarity
+
+PACKAGES = Path(__file__).resolve().parents[2] / "resources" / "mse_packages"
+# drawing cards needs the MSE templates (tools/sync_packages.py fills resources/)
+needs_packages = pytest.mark.skipif(not PACKAGES.is_dir(), reason="resources/mse_packages not populated")
 
 
 def builtin(project):
@@ -99,6 +104,7 @@ def test_search_and_order(session) -> None:
     assert [c.id for c in session.search("SHO")] == ["shock"]
 
 
+@needs_packages
 def test_render_follows_edits(session) -> None:
     card = session.new_card("Grizzly Bears")
     session.update(card, "mana_cost", "{1}{G}")
@@ -135,6 +141,7 @@ def test_archetypes_create_update_delete(session) -> None:
     assert [a.id for a in session.project.archetypes] == [again.id]
 
 
+@needs_packages
 def test_set_info_changes_restart_the_renderer(session) -> None:
     card = session.new_card()
     m15 = session.render(card)

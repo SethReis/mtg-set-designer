@@ -12,3 +12,12 @@ mse_sample.zip
 
 # Rendered output (tools/render_cards.py)
 out/
+
+# Not ours to publish: MSE templates and fonts (fill them with tools/sync_packages.py),
+# cards rendered by real MSE (re-record with tools/mse_oracle.py)
+resources/mse_packages/
+resources/fonts/
+tests/script/oracle/images/
+
+# Your own sets stay on your machine
+sets/

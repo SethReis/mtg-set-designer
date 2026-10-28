@@ -5,8 +5,10 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "setdesigner"
 version = "0.1.0"
-description = "Set-first designer for custom Magic: The Gathering sets (private, personal use)"
+description = "Set-first designer for custom Magic: The Gathering sets (unofficial fan tool)"
 requires-python = ">=3.11"
+license = "GPL-2.0-only"
+authors = [{ name = "Seth Reis" }]
 dependencies = [
     "nicegui",
     "pywebview",        # nicegui's native mode: the app's own desktop window
