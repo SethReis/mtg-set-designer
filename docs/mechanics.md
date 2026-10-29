@@ -26,8 +26,13 @@ lists those cards with the matching sentences highlighted and counts them by col
 rarity. The overview can group by **Mechanic** too, e.g. as a mechanic × rarity matrix.
 `Card.mechanics` keeps the ids up to date whenever rules text or mechanics change.
 
-Reminder text is drawn after the **name** only, as on real cards. "Want target creature
-(…)" gets it; "a Wanted creature" doesn't.
+Reminder text goes after the **first mention** on a card, whether that's the name or a
+word form: "Want target creature (…)", and "if that creature is Wanted (…)" on a card that
+never says "Want". Later mentions on the same card get none.
+- Word forms are registered as MSE keywords of their own, with the same reminder text
+  (`mse/mechanics.mechanic_keywords`).
+- This only applies to mechanics without a parameter, because a form like "Wanted" has no
+  value to fill in.
 
 ## Renaming
 

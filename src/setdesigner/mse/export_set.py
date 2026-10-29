@@ -12,7 +12,7 @@ from pathlib import Path
 from ..model import SetProject
 from .frames import GAME, stylesheet_name, stylesheet_package
 from .mapping import set_values
-from .mechanics import mechanic_keyword, project_to_mse
+from .mechanics import mechanic_keywords, project_to_mse
 
 MSE_VERSION = "2.6.0"
 
@@ -44,10 +44,11 @@ def set_file_parts(project: SetProject, extra_set_values: dict[str, str] | None 
              f"stylesheet: {stylesheet_name(default_style)}", "set_info:"]
     for key, value in {**set_values(info, project.resolve), **(extra_set_values or {})}.items():
         lines += _entry(key, value, 1)
-    for mechanic in project.mechanics:          # the set's own keywords
-        lines.append("keyword:")
-        for key, value in mechanic_keyword(mechanic).items():
-            lines += _entry(key, value, 1)
+    for mechanic in project.mechanics:          # the set's own keywords (and word forms)
+        for keyword in mechanic_keywords(mechanic):
+            lines.append("keyword:")
+            for key, value in keyword.items():
+                lines += _entry(key, value, 1)
     blocks: dict[str, str] = {}
     for card in project_to_mse(project):
         card.values = {**card.values, **(extra_card_values or {}).get(card.uid, {})}

@@ -7,9 +7,15 @@ A Mechanic becomes one of the set's own MSE keywords:
     reminder  = the reminder text, with {cost} / {param} written as {param1}
     mode      = custom (keyword), pseudo (ability word), action (keyword action)
 
+Its word forms ("Wanted" for "Want") become keywords too, with the same reminder text,
+so a card that only says "Wanted" can still show it (mechanics without a parameter only:
+a form has no value to fill in).
+
 Reminder policies become MSE's own per-occurrence switches: a <kw-1> (show) or <kw-0>
-(hide) tag around the mechanic's name in the rules text. MSE's keyword expansion
-honors these, so the result is exactly what MSE would draw.
+(hide) tag around each mention of the mechanic (its name or a form) in the rules text.
+Only the first mention on a card gets the card's choice; later ones are hidden, as on
+real cards. MSE's keyword expansion honors these, so the result is exactly what MSE
+would draw.
     always           -> show
     never            -> hide
     commons_only     -> show on commons
@@ -42,11 +48,26 @@ def mechanic_keyword(mechanic: Mechanic) -> dict[str, str]:
             "mode": MODES[mechanic.kind]}
 
 
-def words_pattern(mechanic: Mechanic) -> re.Pattern:
-    """The mechanic's name or any of its word forms, as whole words, longest first."""
-    words = sorted({mechanic.name, *mechanic.forms} - {""}, key=len, reverse=True)
+def mechanic_keywords(mechanic: Mechanic) -> list[dict[str, str]]:
+    """All MSE keywords for a mechanic: its name, plus each word form when it has no
+    parameter (so "Wanted" expands to the same reminder text as "Want")."""
+    out = [mechanic_keyword(mechanic)]
+    if not mechanic.parameter:
+        for form in mechanic.forms:
+            if form.strip() and form.lower() != mechanic.name.lower():
+                out.append({**out[0], "keyword": form, "match": form})
+    return out
+
+
+def _words_regex(words) -> re.Pattern:
+    words = sorted(set(words) - {""}, key=len, reverse=True)
     return re.compile(r"(?<![\w])(?:" + "|".join(re.escape(w) for w in words) + r")(?![\w])",
                       re.IGNORECASE)
+
+
+def words_pattern(mechanic: Mechanic) -> re.Pattern:
+    """The mechanic's name or any of its word forms, as whole words, longest first."""
+    return _words_regex([mechanic.name, *mechanic.forms])
 
 
 def uses(card: Card, mechanic: Mechanic) -> bool:
@@ -89,16 +110,24 @@ def reminder_choices(project: SetProject) -> dict[str, dict[str, bool]]:
     return choices
 
 
-def tag_reminders(text: str, choices: dict[str, bool]) -> str:
-    """Put <kw-1>/<kw-0> around each mention of a mechanic, per its choice."""
+def tag_reminders(text: str, choices: dict[str, bool],
+                  forms: dict[str, list[str]] | None = None) -> str:
+    """Put <kw-1>/<kw-0> around each mention of a mechanic (its name or a word form from
+    `forms`): the first mention gets the card's choice, later ones are hidden."""
     for name, show in choices.items():
-        letter = "1" if show else "0"
-        text = name_pattern(name).sub(lambda m: f"<kw-{letter}>{m.group(0)}</kw-{letter}>", text)
+        first = [True]
+
+        def tag(m: re.Match) -> str:
+            letter = "1" if show and first[0] else "0"
+            first[0] = False
+            return f"<kw-{letter}>{m.group(0)}</kw-{letter}>"
+        text = _words_regex([name, *(forms or {}).get(name, [])]).sub(tag, text)
     return text
 
 
 def project_to_mse(project: SetProject) -> list[MSECard]:
     """All MSE cards of a project, in card order, with reminder policies applied."""
     choices = reminder_choices(project)
+    forms = {m.name: [f for f in m.forms if f.strip()] for m in project.mechanics if not m.parameter}
     return [mse_card for card in project.cards
-            for mse_card in card_to_mse(card, project.info, choices[card.id], project.resolve)]
+            for mse_card in card_to_mse(card, project.info, choices[card.id], project.resolve, forms)]
