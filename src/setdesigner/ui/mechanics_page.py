@@ -18,7 +18,7 @@ from .widgets import COLOR_PIPS, RARITY_LETTERS, number_label
 
 KIND_LABELS = {MechanicKind.KEYWORD.value: "Keyword (Flying, Cycling {2})",
                MechanicKind.ABILITY_WORD.value: "Ability word (Landfall — …)",
-               MechanicKind.KEYWORD_ACTION.value: "Keyword action (Scry 2, Want)"}
+               MechanicKind.KEYWORD_ACTION.value: "Keyword action (Scry 2, Surveil 1)"}
 POLICY_LABELS = {ReminderPolicy.ALWAYS.value: "Always",
                  ReminderPolicy.COMMONS_ONLY.value: "On commons only",
                  ReminderPolicy.FIRST_PER_COLOR.value: "First card of each color",

@@ -8,7 +8,7 @@ from it, never stored on cards. Open the **Mechanics** page from the overview he
 | Field | Meaning |
 | --- | --- |
 | Name | "Want", "Bloodpact", "Landfall" |
-| Kind | keyword (Flying, Cycling {2}), ability word (Landfall — …) or keyword action (Scry 2, Want) |
+| Kind | keyword (Flying, Cycling {2}), ability word (Landfall — …) or keyword action (Scry 2, Surveil 1) |
 | Parameter | none, or MSE's cost / mana / number / name / action, e.g. "Cycling {2}" |
 | Reminder text | shown in parentheses after the mechanic; `{cost}` (or `{param}`) stands for the parameter's value |
 | Show reminder text | always, on commons only, on the first card of each color, or never |
