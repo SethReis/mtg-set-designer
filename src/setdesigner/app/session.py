@@ -20,7 +20,7 @@ from typing import Callable
 
 from PIL import Image
 
-from ..model import (AbilityTemplate, Archetype, ArtCrop, Card, Cycle, CycleTemplate, Face,
+from ..model import (AbilityTemplate, Archetype, ArtCrop, Card, CheckSetting, Cycle, CycleTemplate, Face,
                      Mechanic, MechanicKind, Rarity, ReminderPolicy, SetInfo, SetProject, Status,
                      delete_card, load_project, new_card_id, save_archetypes, save_card,
                      save_cycles, save_info, save_mechanics, save_project)
@@ -211,6 +211,21 @@ class SetSession:
             setattr(self.project.info, key, value)
         save_info(self.folder, self.project.info)
         self._restart_renderer()
+
+    def set_health_check(self, check_id: str, enabled: bool, threshold: float | None) -> None:
+        """Tune one set-health check (app.health.checks); None threshold = its default.
+        Only the health page reads these, so the renderer keeps running."""
+        self.project.info.health[check_id] = CheckSetting(enabled=enabled, threshold=threshold)
+        save_info(self.folder, self.project.info)
+
+    def set_role(self, card: Card, role: str, value: bool | None) -> None:
+        """Correct a card's set-health role: True adds it, False removes a detected one,
+        None goes back to what's detected from the rules text."""
+        if value is None:
+            card.role_overrides.pop(role, None)
+        else:
+            card.role_overrides[role] = value
+        self._pending[card.id] = time.monotonic()       # saved; nothing to redraw
 
     def _restart_renderer(self) -> None:
         """Set-wide things changed (set info, mechanics): start the renderer afresh."""

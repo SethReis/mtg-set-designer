@@ -4,6 +4,7 @@ from __future__ import annotations
 from nicegui import ui
 
 from ..app import overview as ov
+from ..app.health.checks import run_checks
 from ..model import Card, Rarity, Status
 from .uploads import add_art_script, set_paste_target
 from .widgets import (CARD_RATIO, COLOR_PIPS, STACK_CSS, compact_tile, grid_cells, responsive_grid,
@@ -58,6 +59,9 @@ def register(state) -> None:
                 .props("flat no-caps color=white")
             ui.button("Archetypes", icon="hub", on_click=lambda: archetype_dialog()) \
                 .props("flat no-caps color=white")
+            health = ui.button(on_click=lambda: ui.navigate.to("/set/health")) \
+                .props("rounded dense unelevated no-caps").classes("px-3").mark("health") \
+                .tooltip("Set health: curves, roles per color, mechanics, complexity")
             ui.button("New card", icon="add", on_click=new_card).props("flat no-caps color=white")
 
         # ------------------------------------------------------------ toolbar
@@ -197,6 +201,9 @@ def register(state) -> None:
                 cards = cell_cards(cards)
             count.text = f"{len(cards)} of {len(project.cards)} cards" \
                 if len(cards) != len(project.cards) else f"{len(project.cards)} cards"
+            found = run_checks(project)
+            health.text = f"{len(found)} warning{'s' * (len(found) != 1)}" if found else "Healthy"
+            health.props(f"color={'amber-7' if found else 'green-7'} icon={'warning' if found else 'favorite'}")
             if settings.tiles == "images":
                 worker.request(cards)
             if not project.cards:

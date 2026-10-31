@@ -6,6 +6,7 @@ import time
 from nicegui import run, ui
 
 from ..app import ability_words, text_input
+from ..app.health.roles import ROLES, detected_roles
 from ..model import Card, MechanicKind, Rarity, Status
 from ..mse.mapping import split_type_line
 from .art_editor import art_editor
@@ -41,6 +42,7 @@ def register(state) -> None:
             "inputs": {},                 # field -> element (cost, rules)
             "art": None,                  # the Art section's refreshable
             "mechanics": None,            # the "Mechanics" row's refreshable
+            "roles": None,                # the "Roles" row's refreshable
             "art_version": session.art_version,
         }
         add_art_script()                  # drop / paste images as card art (see uploads.py)
@@ -101,6 +103,8 @@ def register(state) -> None:
             if view["mechanics"] is not None and (card.mechanics != used
                                                   or (field == "rules_text" and ability_word)):
                 view["mechanics"].refresh()     # a mechanic appeared or went, or a variant check
+            if field in ("rules_text", "name", "types") and view["roles"] is not None:
+                view["roles"].refresh()         # detection reads the text and the types
             schedule_preview()
 
         def mechanics_row(card: Card):
@@ -135,6 +139,40 @@ def register(state) -> None:
                             schedule_preview(now=True)
                         ui.select(options, value=value, on_change=choose) \
                             .props("dense options-dense outlined").classes("min-w-[260px]")
+            row()
+            return row
+
+        def roles_row(card: Card):
+            """The card's set-health roles (app/health/roles.py): detected ones, ones added
+            by hand (marked), detected ones removed by hand (struck through, click to restore)."""
+            @ui.refreshable
+            def row() -> None:
+                detected = detected_roles(card)
+                overrides = card.role_overrides
+
+                def set_role(rid: str, value) -> None:
+                    session.set_role(card, rid, value)
+                    row.refresh()
+                with ui.row().classes("w-full items-center gap-1").mark("roles"):
+                    ui.label("Roles").classes("text-xs text-gray-500 mr-2") \
+                        .tooltip("What the card does in the set, for the Health page")
+                    for rid, role in ROLES.items():
+                        found, override = rid in detected, overrides.get(rid)
+                        if found and override is False:
+                            ui.chip(role.label, icon="undo", on_click=lambda r=rid: set_role(r, None)) \
+                                .props("dense outline clickable").classes("text-xs line-through opacity-60") \
+                                .tooltip("Removed by hand; click to restore")
+                        elif found or override:
+                            ui.chip(role.label, removable=True, icon=None if found else "person",
+                                    on_value_change=lambda e, r=rid, f=found: set_role(r, False if f else None)) \
+                                .props("dense").classes("text-xs") \
+                                .tooltip("Detected from the rules text" if found else "Added by hand")
+                    missing = [rid for rid in ROLES if rid not in detected and not overrides.get(rid)]
+                    if missing:
+                        with ui.button(icon="add").props("flat dense round size=sm").tooltip("Add a role"):
+                            with ui.menu():
+                                for rid in missing:
+                                    ui.menu_item(ROLES[rid].label, on_click=lambda r=rid: set_role(r, True))
             row()
             return row
 
@@ -317,6 +355,7 @@ def register(state) -> None:
                         symbol_palette("rules_text", None)
                         text_field("rules_text", "Rules text", face.rules_text, "w-full", textarea=True)
                         view["mechanics"] = mechanics_row(card)
+                        view["roles"] = roles_row(card)
                         view["art"] = art_editor(session, card, schedule_preview)
                         ui.textarea("Flavor text", value=face.flavor_text,
                                     on_change=lambda e: changed("flavor_text", e.value)) \

@@ -218,3 +218,30 @@ async def test_cycles_page_generate_recreate_and_update(user: User) -> None:
     user.find("Update 5 cards").click()
     await user.should_see("Updated 5 cards")
     assert all(session.card(m.card_id).faces[0].type_line == "Enchantment" for m in cycle.members)
+
+
+async def test_health_page_warnings_tuning_chip_and_roles(user: User) -> None:
+    from setdesigner.app.health.roles import roles
+    session, bear, angel = await open_set_with_cards(user)
+    session.update(bear, "rules_text", "Fight target creature an opponent controls. Draw a card.")
+    await user.open("/set")
+    await user.should_see("warnings")                            # the header chip
+    user.find(marker="health").click()
+    await user.should_see("Set health")
+    await user.should_see("White has 0 common two-drop creatures (wanted ≥ 2)")
+    await user.should_see("Roles per color")
+
+    user.find("Tune checks").click()
+    await user.should_see("Leave a number empty for the default.")
+    next(iter(user.find(marker="threshold-two_drops").elements)).value = 0
+    user.find(kind=ui.button, content="Save").click()
+    await user.should_not_see("common two-drop creatures (wanted")
+    assert session.project.info.health["two_drops"].threshold == 0
+
+    await user.open(f"/set/card/{bear.id}")
+    await user.should_see("Roles")
+    assert "removal" in roles(bear)
+    chip = next(e for e in user.find(kind=ui.chip, content="Removal").elements)
+    chip.value = False                                          # the chip's remove button
+    assert bear.role_overrides == {"removal": False}
+    await user.should_see("Removed by hand; click to restore")

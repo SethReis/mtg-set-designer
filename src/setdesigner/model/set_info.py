@@ -6,6 +6,13 @@ from pydantic import BaseModel, Field
 from .card import Rarity
 
 
+class CheckSetting(BaseModel):
+    """One set-health check's settings (see setdesigner.app.health.checks); None threshold
+    = the check's default."""
+    enabled: bool = True
+    threshold: float | None = None
+
+
 class SetInfo(BaseModel):
     name: str
     code: str
@@ -15,3 +22,4 @@ class SetInfo(BaseModel):
     copyright: str = ""
     language: str = "English"
     rarity_slots: dict[Rarity, int] = Field(default_factory=dict)
+    health: dict[str, CheckSetting] = Field(default_factory=dict)   # check id -> settings

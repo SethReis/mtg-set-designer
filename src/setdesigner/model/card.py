@@ -97,6 +97,9 @@ class Card(BaseModel):
     status: Status = Status.IDEA
     notes: str = ""
     cycle: str | None = None            # the id of the cycle it was generated for, if any
+    # set-health roles (removal, card draw, ...) beyond what's detected from the rules text:
+    # role id -> True (add) / False (the detector was wrong; remove)
+    role_overrides: dict[str, bool] = Field(default_factory=dict)
 
     def iter_faces(self) -> Iterator[tuple[int, Face]]:
         return iter(enumerate(self.faces))

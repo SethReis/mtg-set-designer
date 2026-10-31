@@ -55,6 +55,9 @@ an existing one; recently opened sets are listed there.
   `docs/mechanics.md`.
 - **Cycles:** families of cards across colors (dual lands, Dragonstorm-style cycles),
   generated from one template and kept in step, are in `docs/cycles.md`.
+- **Set health:** warnings ("Blue has no common removal"), the mana curve, roles per color,
+  mechanic spread and complexity, on their own page and as a chip in the overview header,
+  are in `docs/health.md`.
 
 ## Tests and tools
 
