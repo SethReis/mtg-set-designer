@@ -178,3 +178,43 @@ async def test_ability_word_variants_and_phrase_update(user: User) -> None:
     await user.should_see("Updated 1 card face")
     assert bear.faces[0].rules_text == ("Settled — When this creature dies, if you control lands of four types, "
                                         "draw a card.")
+
+
+async def saved(check, tries: int = 40) -> None:
+    """Wait for a background save (e.g. after a field's blur) to land."""
+    import asyncio
+    for _ in range(tries):
+        if check():
+            return
+        await asyncio.sleep(0.05)
+    raise AssertionError("not saved")
+
+
+async def test_cycles_page_generate_recreate_and_update(user: User) -> None:
+    session, _, _ = await open_set_with_cards(user)
+    user.find(content="Cycles", kind=ui.button).click()
+    await user.should_see("No cycles yet.")
+    user.find("New cycle").click()
+    await user.should_see("Shared template")
+    cycle = session.project.cycles[0]
+    user.find(kind=ui.input, content="Name").clear().type("{Color} Dragonstorm").trigger("blur")
+    await user.should_see("Create 5 cards")
+    await saved(lambda: cycle.template.name)                   # the blur handler runs in the background
+    user.find("Create 5 cards").click()
+    await user.should_see("Created 5 cards")
+    names = [session.card(m.card_id).faces[0].name for m in cycle.members]
+    assert names == ["White Dragonstorm", "Blue Dragonstorm", "Black Dragonstorm", "Red Dragonstorm",
+                     "Green Dragonstorm"]
+
+    session.delete(session.card(cycle.members[2].card_id))
+    await user.open("/set/cycles")
+    await user.should_see("Members · 4 of 5 made")
+    user.find("Create 1 card").click()
+    await user.should_see("Created 1 card")
+    assert session.card(cycle.members[2].card_id).faces[0].name == "Black Dragonstorm"
+
+    user.find(kind=ui.input, content="Type line").type("Enchantment").trigger("blur")
+    await user.should_see("Update 5 cards")
+    user.find("Update 5 cards").click()
+    await user.should_see("Updated 5 cards")
+    assert all(session.card(m.card_id).faces[0].type_line == "Enchantment" for m in cycle.members)

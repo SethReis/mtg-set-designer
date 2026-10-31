@@ -348,6 +348,12 @@ def register(state) -> None:
                                       value=[a for a in card.archetypes if a in known],
                                       on_change=lambda e: changed("archetypes", e.value or [])) \
                                 .props("use-chips").classes("w-full")
+                        cycle = next((c for c in session.project.cycles if c.id == card.cycle), None)
+                        if cycle is not None:
+                            with ui.row().classes("items-center gap-1"):
+                                ui.icon("donut_large").classes("text-gray-500")
+                                ui.link(f"Cycle: {cycle.name}", f"/set/cycles?cycle={cycle.id}") \
+                                    .classes("text-sm")
                         ui.textarea("Notes", value=card.notes,
                                     on_change=lambda e: changed("notes", e.value)) \
                             .props("autogrow").classes("w-full")

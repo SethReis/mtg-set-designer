@@ -4,6 +4,7 @@
       set.json           SetInfo
       mechanics.json     list of Mechanic
       archetypes.json    list of Archetype
+      cycles.json        list of Cycle
       cards/<id>.json    one Card per file
       assets/            set symbol, custom frames, art (referenced by path)
 
@@ -20,6 +21,7 @@ from pydantic import BaseModel, Field
 
 from .archetype import Archetype
 from .card import Card, Face
+from .cycle import Cycle
 from .mechanic import Mechanic
 from .set_info import SetInfo
 
@@ -28,6 +30,7 @@ class SetProject(BaseModel):
     info: SetInfo
     mechanics: list[Mechanic] = Field(default_factory=list)
     archetypes: list[Archetype] = Field(default_factory=list)
+    cycles: list[Cycle] = Field(default_factory=list)
     # where the set lives (set by load_project / save_project; not saved): paths inside
     # the set, such as art and the symbol, are stored relative to it
     folder: Path | None = Field(default=None, exclude=True)
@@ -70,6 +73,7 @@ def save_project(project: SetProject, folder: Path) -> None:
     _write_json(folder / "set.json", _dump(project.info))
     _write_json(folder / "mechanics.json", [_dump(m) for m in project.mechanics])
     _write_json(folder / "archetypes.json", [_dump(a) for a in project.archetypes])
+    _write_json(folder / "cycles.json", [_dump(c) for c in project.cycles])
     cards_dir = folder / "cards"
     for card in project.cards:
         _write_json(cards_dir / f"{card.id}.json", _dump(card))
@@ -92,6 +96,10 @@ def delete_card(folder: Path, card_id: str) -> None:
 
 def save_mechanics(folder: Path, mechanics: list[Mechanic]) -> None:
     _write_json(Path(folder) / "mechanics.json", [_dump(m) for m in mechanics])
+
+
+def save_cycles(folder: Path, cycles: list[Cycle]) -> None:
+    _write_json(Path(folder) / "cycles.json", [_dump(c) for c in cycles])
 
 
 def save_archetypes(folder: Path, archetypes: list[Archetype]) -> None:
@@ -133,6 +141,7 @@ def load_project(folder: Path) -> SetProject:
         info=SetInfo.model_validate(_read_json(folder / "set.json", {})),
         mechanics=[Mechanic.model_validate(m) for m in _read_json(folder / "mechanics.json", [])],
         archetypes=[Archetype.model_validate(a) for a in _read_json(folder / "archetypes.json", [])],
+        cycles=[Cycle.model_validate(c) for c in _read_json(folder / "cycles.json", [])],
         cards=cards,
         folder=folder,
     )

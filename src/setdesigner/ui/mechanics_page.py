@@ -188,7 +188,7 @@ def register(state) -> None:
         async def confirm_changes(title: str, changes, notes=()) -> bool | None:
             """Show card text changes. True: update the cards; False: keep their text;
             None: cancel."""
-            with ui.dialog() as dialog, ui.card().classes("w-[640px] max-w-[95vw]"):
+            with view["dialogs"], ui.dialog() as dialog, ui.card().classes("w-[640px] max-w-[95vw]"):
                 ui.label(title).classes("text-lg font-semibold")
                 ui.label(f"{len(changes)} card face{'s' * (len(changes) != 1)} affected. "
                          "Update their rules text?").classes("text-sm")
@@ -246,7 +246,7 @@ def register(state) -> None:
             detail.refresh()
 
         async def delete(mechanic: Mechanic) -> None:
-            with ui.dialog() as dialog, ui.card():
+            with view["dialogs"], ui.dialog() as dialog, ui.card():
                 ui.label(f"Delete “{mechanic.name}”? Cards keep their text; it's just no longer "
                          "a mechanic of the set (no reminder text).")
                 with ui.row():
@@ -313,6 +313,8 @@ def register(state) -> None:
                         ui.label(use.line).classes("text-sm")
 
         # ---------------------------------------------------------------- header
+        # dialogs live here: the part of the page that opened one may be rebuilt meanwhile
+        view["dialogs"] = ui.element("div")
         with ui.header().classes("items-center bg-slate-800 py-2"):
             ui.button(icon="arrow_back", on_click=lambda: (session.flush(), ui.navigate.to("/set"))) \
                 .props("flat round color=white").tooltip("Back to the set overview").mark("back")

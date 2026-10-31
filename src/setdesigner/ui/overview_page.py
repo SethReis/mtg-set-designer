@@ -54,6 +54,8 @@ def register(state) -> None:
                 .props("flat no-caps color=white").tooltip("Name, frame, symbol, rarity targets")
             ui.button("Mechanics", icon="auto_fix_high", on_click=lambda: ui.navigate.to("/set/mechanics")) \
                 .props("flat no-caps color=white")
+            ui.button("Cycles", icon="donut_large", on_click=lambda: ui.navigate.to("/set/cycles")) \
+                .props("flat no-caps color=white")
             ui.button("Archetypes", icon="hub", on_click=lambda: archetype_dialog()) \
                 .props("flat no-caps color=white")
             ui.button("New card", icon="add", on_click=new_card).props("flat no-caps color=white")

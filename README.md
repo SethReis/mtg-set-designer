@@ -53,6 +53,8 @@ an existing one; recently opened sets are listed there.
   button in the overview) are in `docs/art.md`.
 - **Mechanics:** keywords with reminder text, word forms and renaming are in
   `docs/mechanics.md`.
+- **Cycles:** families of cards across colors (dual lands, Dragonstorm-style cycles),
+  generated from one template and kept in step, are in `docs/cycles.md`.
 
 ## Tests and tools
 

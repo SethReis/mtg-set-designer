@@ -30,6 +30,7 @@ OTHER_TYPE = "Other"
 MANA_VALUES = ["0", "1", "2", "3", "4", "5", "6", "7+"]
 NO_ARCHETYPE = ""
 NO_MECHANIC = "-"                # a group key no mechanic id can have
+NO_CYCLE = "-"                   # likewise for cycles
 
 
 # ------------------------------------------------------------------ card facts
@@ -118,6 +119,8 @@ FACTORS: dict[str, Factor] = {
                         lambda p: [(a.id, a.name) for a in p.archetypes] + [(NO_ARCHETYPE, "No archetype")]),
     "mechanic": Factor("mechanic", "Mechanic", lambda c: [],      # needs the project: see keys()
                        lambda p: [(m.id, m.name) for m in p.mechanics] + [(NO_MECHANIC, "No mechanic")]),
+    "cycle": Factor("cycle", "Cycle", lambda c: [],                # needs the project: see keys()
+                    lambda p: [(c.id, c.name) for c in p.cycles] + [(NO_CYCLE, "No cycle")]),
     "type": Factor("type", "Card type", lambda c: [card_type(c)],
                    lambda p: [(t, t) for t in TYPE_ORDER] + [(OTHER_TYPE, OTHER_TYPE)]),
     "mana_value": Factor("mana_value", "Mana value", lambda c: [mana_value_key(c)],
@@ -126,7 +129,7 @@ FACTORS: dict[str, Factor] = {
                      lambda p: [(s.value, s.value.title()) for s in Status]),
 }
 # shown only when a card is in them (nobody needs an empty "Other" or "No archetype")
-HIDE_WHEN_EMPTY = {OTHER_TYPE, NO_ARCHETYPE, NO_MECHANIC}
+HIDE_WHEN_EMPTY = {OTHER_TYPE, NO_ARCHETYPE, NO_MECHANIC, NO_CYCLE}
 
 
 def keys(card: Card, factor: Factor, project: SetProject) -> list[str]:
@@ -134,6 +137,9 @@ def keys(card: Card, factor: Factor, project: SetProject) -> list[str]:
         return _archetype_keys(card, project)
     if factor.name == "mechanic":
         return _mechanic_keys(card, project)
+    if factor.name == "cycle":
+        known = {c.id for c in project.cycles}
+        return [card.cycle] if card.cycle in known else [NO_CYCLE]
     return factor.keys_of(card)
 
 
