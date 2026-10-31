@@ -92,7 +92,9 @@ def reminder_choices(project: SetProject) -> dict[str, dict[str, bool]]:
             if not uses(card, mechanic):
                 continue
             policy = mechanic.reminder_policy
-            if mechanic.id in card.reminders:       # the card's own choice wins
+            if mechanic.kind == MechanicKind.ABILITY_WORD or not mechanic.reminder_text.strip():
+                show = False                        # nothing to show (ability words have none)
+            elif mechanic.id in card.reminders:     # the card's own choice wins
                 show = card.reminders[mechanic.id]
                 if policy == ReminderPolicy.FIRST_PER_COLOR:
                     seen_colors |= set(card.color_identity or "C")

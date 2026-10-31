@@ -51,8 +51,49 @@ This is stored as `Card.reminders` and wins over the mechanic's policy
 (`mse/mechanics.reminder_choices`). The choice becomes MSE's own per-mention `<kw-1>` /
 `<kw-0>` switch, so the picture is exactly what MSE draws (tested with real MSE).
 
+## Ability words: variants and shared phrases
+
+Ability words (Flurry, Renew, Settled) have no reminder text. The name is set in italics
+(MSE does this for the "pseudo" keyword mode), followed by a long dash and an ability whose
+**throughline is shared** while the rest varies. For an ability word, the Mechanics page
+shows two things in place of reminder text and policy:
+
+- **Shared phrases**: wording written once, e.g. `condition` = "you control four or more
+  lands that share a land type".
+- **Variants**: the shapes the ability takes, as templates for the text after the dash.
+  - `{effect}`, `{cost}`, `{trigger}` or any lowercase `{name}` is a **slot**, filled per
+    card. Uppercase `{G}`, `{T}` and `{2}` stay symbols.
+  - `{=condition}` inserts a shared phrase.
+
+  Settled, for example:
+
+  | Variant | Template |
+  | --- | --- |
+  | Activated | `{cost}: {effect}. Activate only if {=condition}.` |
+  | Landfall | `Whenever a land you control enters, if {=shares}, {effect}` |
+  | Trigger | `{trigger}, if {=condition}, {effect}` |
+
+Cards keep their full text. Each line starting with "Settled —" (a typed `-` or `--` works)
+is matched against the variants in order, and the first that fits wins
+(`app/ability_words.parse_line`). The usage list shows each line's variant and slot
+values. Amber badges mark **Doesn't follow any variant** and **Unfinished** (a `[slot]`
+placeholder is still there). The editor's Mechanics row shows the same note.
+
+**Changing a phrase or a variant** offers to update the cards
+(`app/ability_words.definition_change_plan`):
+- each card line is rebuilt from its own values with the new wording;
+- only lines the change actually reaches are touched (a phrase edit leaves variants that
+  don't use it alone);
+- slots dropped from a variant are named in the dialog;
+- lines that follow no variant are left as they are.
+
 ## Typing
 
 In the rules text, typing the start of a mechanic suggests it. Mechanics with a parameter
 come with a placeholder (`{1}` for cost or mana, `1` for a number). Each mechanic also has a
 button in the symbol palette.
+
+An ability word with variants is suggested once per variant ("Settled — Activated", …),
+and its palette button opens a small menu. Choosing one inserts the whole line with its
+phrases written in, and selects the first placeholder (`[cost]`), so you type straight over
+it.

@@ -157,3 +157,24 @@ async def test_mechanics_page_create_rename_and_editor_reminders(user: User) -> 
     select = next(iter(user.find(content="Hunt: reminder as policy").elements))
     select.value = "hide"
     assert bear.reminders == {mechanic.id: False}
+
+
+async def test_ability_word_variants_and_phrase_update(user: User) -> None:
+    from setdesigner.model import AbilityTemplate
+    session, bear, _ = await open_set_with_cards(user)
+    session.update(bear, "rules_text", "Settled - When this creature dies, if you control four or more "
+                                       "lands that share a land type, draw a card.")
+    settled = session.new_mechanic("Settled")
+    session.update_mechanic(settled, kind="ability_word",
+                            phrases={"condition": "you control four or more lands that share a land type"},
+                            templates=[AbilityTemplate(label="Trigger", text="{trigger}, if {=condition}, {effect}")])
+    await user.open("/set/mechanics")
+    await user.should_see("Shared phrases")
+    await user.should_see("trigger: When this creature dies · effect: draw a card.")
+    wording = user.find("Wording")
+    wording.clear().type("you control lands of four types").trigger("blur")
+    await user.should_see("Update 1 card")
+    user.find("Update 1 card").click()
+    await user.should_see("Updated 1 card face")
+    assert bear.faces[0].rules_text == ("Settled — When this creature dies, if you control lands of four types, "
+                                        "draw a card.")

@@ -20,10 +20,10 @@ from typing import Callable
 
 from PIL import Image
 
-from ..model import (Archetype, ArtCrop, Card, Face, Mechanic, MechanicKind, Rarity,
-                     ReminderPolicy, SetInfo, SetProject, Status, delete_card, load_project,
-                     new_card_id, save_archetypes, save_card, save_info, save_mechanics,
-                     save_project)
+from ..model import (AbilityTemplate, Archetype, ArtCrop, Card, Face, Mechanic, MechanicKind,
+                     Rarity, ReminderPolicy, SetInfo, SetProject, Status, delete_card,
+                     load_project, new_card_id, save_archetypes, save_card, save_info,
+                     save_mechanics, save_project)
 from ..model.project import slug
 from ..mse.mapping import join_type_line, split_type_line
 from .mechanics import mechanic_ids
@@ -227,8 +227,10 @@ class SetSession:
         self._mechanics_changed()
         return mechanic
 
-    def update_mechanic(self, mechanic: Mechanic, **values: object) -> None:
-        """Change a mechanic's definition (not its name: see rename_mechanic)."""
+    def update_mechanic(self, mechanic: Mechanic, update_cards: bool = False, **values: object) -> list:
+        """Change a mechanic's definition (not its name: see rename_mechanic). For an ability
+        word's `phrases` / `templates`, update_cards also rewrites the card lines that follow
+        it (app.ability_words.definition_change_plan). Returns the card changes made."""
         for key, value in values.items():
             if key == "kind":
                 value = MechanicKind(value)
@@ -238,8 +240,23 @@ class SetSession:
                 value = value or None
             elif key == "forms":
                 value = [f.strip() for f in value or [] if f.strip()]
+            elif key == "phrases":
+                value = {k.strip(): v for k, v in (value or {}).items() if k.strip()}
+            elif key == "templates":
+                value = [AbilityTemplate.model_validate(t) for t in value or []]
+            values[key] = value
+        changes = []
+        if update_cards and ("phrases" in values or "templates" in values):
+            from .ability_words import definition_change_plan
+            changes = definition_change_plan(self.project, mechanic, phrases=values.get("phrases"),
+                                             templates=values.get("templates")).changes
+            for change in changes:
+                change.card.faces[change.face].rules_text = change.after
+                self._changed(change.card)
+        for key, value in values.items():
             setattr(mechanic, key, value)
         self._mechanics_changed()
+        return changes
 
     def rename_mechanic(self, mechanic: Mechanic, new_name: str, update_cards: bool) -> list:
         """Rename a mechanic (and its word forms); with update_cards, also in card text.
