@@ -8,7 +8,7 @@ from setdesigner.app.mechanics import (find_uses, reminder_preview, rename_plan,
 from setdesigner.app.session import SetSession
 from setdesigner.model import (Card, Face, Mechanic, MechanicKind, Rarity, ReminderPolicy,
                                SetInfo, SetProject)
-from setdesigner.mse.mechanics import reminder_choices, tag_reminders
+from setdesigner.mse.mechanics import mechanic_keywords, reminder_choices, tag_reminders
 
 
 def builtin(project):
@@ -70,8 +70,11 @@ def test_reminders_only_on_the_name_and_overrides_win() -> None:
     rare = card("b", "Want target creature.", rarity=Rarity.RARE, number="2")
     p = project(common, rare)
     assert reminder_choices(p) == {"a": {"Want": True}, "b": {"Want": False}}     # commons only
-    tagged = tag_reminders(common.faces[0].rules_text, {"Want": True})
-    assert tagged == "<kw-1>Want</kw-1> target creature. Wanted creatures die."   # not on "Wanted"
+    text = common.faces[0].rules_text
+    assert tag_reminders(text, {"Want": True}) ==         "<kw-1>Want</kw-1> target creature. Wanted creatures die."     # without forms: name only
+    # with its forms: the first mention gets the choice, later ones are hidden
+    assert tag_reminders(text, {"Want": True}, {"Want": ["Wanted"]}) ==         "<kw-1>Want</kw-1> target creature. <kw-0>Wanted</kw-0> creatures die."
+    assert tag_reminders("Tap a wanted creature.", {"Want": True}, {"Want": ["Wanted"]}) ==         "Tap a <kw-1>wanted</kw-1> creature."                           # a form alone gets it
     common.reminders["want"] = False
     rare.reminders["want"] = True
     assert reminder_choices(p) == {"a": {"Want": False}, "b": {"Want": True}}
@@ -126,3 +129,11 @@ def test_session_mechanics_create_update_rename_delete(session) -> None:
     assert session.project.mechanics == [] and sheriff.reminders == {}
     assert hunter.mechanics == [] and hunter.faces[0].rules_text == "Hunt target creature."
     assert saved_mechanics(session) == []
+
+
+def test_word_forms_become_keywords_too() -> None:
+    keywords = mechanic_keywords(WANT)
+    assert [k["keyword"] for k in keywords] == ["Want", "Wanted", "Wants"]
+    assert {k["reminder"] for k in keywords} == {WANT.reminder_text}
+    cycling = Mechanic(id="c", name="Cycling", parameter="cost", forms=["Cycled"])
+    assert [k["keyword"] for k in mechanic_keywords(cycling)] == ["Cycling"]   # forms need no value

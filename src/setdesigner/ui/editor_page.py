@@ -5,8 +5,8 @@ import time
 
 from nicegui import run, ui
 
-from ..app import text_input
-from ..model import Card, Rarity, Status
+from ..app import ability_words, text_input
+from ..model import Card, MechanicKind, Rarity, Status
 from ..mse.mapping import split_type_line
 from .art_editor import art_editor
 from .mechanics_page import POLICY_LABELS
@@ -96,8 +96,11 @@ def register(state) -> None:
             session.update(card, field, value)
             if field in ("name", "collector_number", "rarity", "mana_cost"):
                 card_list.refresh()
-            if card.mechanics != used and view["mechanics"] is not None:
-                view["mechanics"].refresh()                 # a mechanic appeared or went
+            ability_word = any(m.kind == MechanicKind.ABILITY_WORD and m.id in card.mechanics
+                               for m in session.project.mechanics)
+            if view["mechanics"] is not None and (card.mechanics != used
+                                                  or (field == "rules_text" and ability_word)):
+                view["mechanics"].refresh()     # a mechanic appeared or went, or a variant check
             schedule_preview()
 
         def mechanics_row(card: Card):
@@ -110,6 +113,16 @@ def register(state) -> None:
                 with ui.row().classes("w-full items-center gap-3"):
                     ui.label("Mechanics").classes("text-xs text-gray-500")
                     for mechanic in used:
+                        if mechanic.kind == MechanicKind.ABILITY_WORD:     # no reminder text
+                            lines = [line for face in card.faces for line in face.rules_text.split("\n")
+                                     if ability_words.starts_line(mechanic, line)]
+                            off = [line for line in lines if ability_words.parse_line(mechanic, line) is None]
+                            if off and mechanic.templates:
+                                ui.badge(f"{mechanic.name}: doesn't follow any variant",
+                                         color="amber-2", text_color="amber-10")
+                            else:
+                                ui.label(mechanic.name).classes("text-sm italic")
+                            continue
                         current = card.reminders.get(mechanic.id)
                         options = {"policy": f"{mechanic.name}: reminder as policy "
                                              f"({POLICY_LABELS[mechanic.reminder_policy.value].lower()})",
@@ -180,27 +193,33 @@ def register(state) -> None:
             suggestion_row()
             return element
 
-        def set_text(field: str, text: str, caret: int) -> None:
+        def set_text(field: str, text: str, caret: int, select: int = 0) -> None:
+            """New text, the caret at `caret`; `select` characters after it selected (so a
+            placeholder like "[effect]" is typed over)."""
             element = view["inputs"][field]
             view["caret"][field] = caret               # first: on_change refreshes the suggestions
             element.value = text                       # triggers on_change -> save + preview
             tag = "textarea" if isinstance(element, ui.textarea) else "input"
             ui.run_javascript(f"setTimeout(() => {{ const t = document.querySelector('#c{element.id} {tag}');"
-                              f" if (t) {{ t.focus(); t.setSelectionRange({caret}, {caret}); }} }}, 30);")
+                              f" if (t) {{ t.focus(); t.setSelectionRange({caret}, {caret + select}); }} }}, 30);")
 
         def accept(field: str, option) -> None:
             element = view["inputs"][field]
             caret = view["caret"].get(field, len(element.value or ""))
             text, new_caret = text_input.apply(element.value or "", caret, option)
-            set_text(field, text, new_caret)
+            set_text(field, text, new_caret, option.select)
 
-        def insert(field: str, snippet: str) -> None:
+        def insert(field: str, snippet: str, select_start: int | None = None, select: int = 0) -> None:
+            """Insert at the caret; optionally select `select` characters from `select_start`
+            within the snippet."""
             element = view["inputs"].get(field)
             if element is None:
                 return
             caret = view["caret"].get(field, len(element.value or ""))
             text, new_caret = text_input.insert(element.value or "", caret, snippet)
-            set_text(field, text, new_caret)
+            if select_start is not None:
+                new_caret = new_caret - len(snippet) + select_start
+            set_text(field, text, new_caret, select)
 
         def symbol_palette(field: str, _element, costs_only: bool = False) -> None:
             """Buttons inserting symbols (and CARDNAME / mechanics for rules text)."""
@@ -214,9 +233,21 @@ def register(state) -> None:
                     ui.button("CARDNAME", on_click=lambda: insert(field, "CARDNAME")) \
                         .props("dense no-caps flat size=sm").tooltip("This card's name")
                     for mechanic in session.project.mechanics:
-                        snippet, _ = text_input.mechanic_insert(mechanic)
-                        ui.button(mechanic.name, on_click=lambda s=snippet: insert(field, s)) \
-                            .props("dense no-caps flat size=sm")
+                        variants = text_input.ability_word_inserts(mechanic)
+                        if len(variants) > 1:                  # ability word: pick a variant
+                            with ui.button(mechanic.name).props("dense no-caps flat size=sm"):
+                                with ui.menu():
+                                    for label, text, start, length in variants:
+                                        ui.menu_item(label, on_click=lambda t=text, a=start, n=length:
+                                                     insert(field, t, a, n))
+                        elif variants:
+                            _, text, start, length = variants[0]
+                            ui.button(mechanic.name, on_click=lambda t=text, a=start, n=length:
+                                      insert(field, t, a, n)).props("dense no-caps flat size=sm")
+                        else:
+                            snippet, _ = text_input.mechanic_insert(mechanic)
+                            ui.button(mechanic.name, on_click=lambda s=snippet: insert(field, s)) \
+                                .props("dense no-caps flat size=sm")
 
         # ------------------------------------------------------------ layout
         # The columns fill exactly the space under the header (each scrolls on its own),
@@ -317,6 +348,12 @@ def register(state) -> None:
                                       value=[a for a in card.archetypes if a in known],
                                       on_change=lambda e: changed("archetypes", e.value or [])) \
                                 .props("use-chips").classes("w-full")
+                        cycle = next((c for c in session.project.cycles if c.id == card.cycle), None)
+                        if cycle is not None:
+                            with ui.row().classes("items-center gap-1"):
+                                ui.icon("donut_large").classes("text-gray-500")
+                                ui.link(f"Cycle: {cycle.name}", f"/set/cycles?cycle={cycle.id}") \
+                                    .classes("text-sm")
                         ui.textarea("Notes", value=card.notes,
                                     on_change=lambda e: changed("notes", e.value)) \
                             .props("autogrow").classes("w-full")

@@ -18,7 +18,7 @@ from .fields import FieldDef, game_fields, style_fields
 from .frames import stylesheet_package
 from .mapping import face_uid, set_values
 from .keywords import KeywordDatabase
-from .mechanics import mechanic_keyword, project_to_mse
+from .mechanics import mechanic_keywords, project_to_mse
 from .objects import CardObject, SetObject, StylesheetObject, StylingObject
 from .reader import read_file
 from .script import ast as A
@@ -130,7 +130,8 @@ class ScriptEnvironment:
             nodes, _ = read_file(self.root / f"{self.game}.mse-game" / "game", self.root)
             db = KeywordDatabase.from_nodes(nodes)
             for mechanic in self.project.mechanics:
-                db.add(mechanic_keyword(mechanic), from_game=False)
+                for keyword in mechanic_keywords(mechanic):
+                    db.add(keyword, from_game=False)
             self._keyword_db = db
         return self._keyword_db
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from ..model import Mechanic
+from ..model import Mechanic, MechanicKind
 
 COLORS = "WUBRG"
 BASIC_SYMBOLS = [*COLORS, "C", "X", "T", "Q", "S", "E"]
@@ -25,6 +25,7 @@ class Suggestion:
     replace: int            # characters before the caret it replaces
     insert: str             # text inserted instead
     caret_back: int = 0     # leave the caret this many characters before the end of `insert`
+    select: int = 0         # then select this many characters after the caret (a placeholder)
 
 
 def symbol_suggestions(prefix: str) -> list[Suggestion]:
@@ -46,6 +47,22 @@ def mechanic_insert(mechanic: Mechanic) -> tuple[str, int]:
     return f"{mechanic.name} {placeholder}".rstrip() + ("" if placeholder else " "), 0
 
 
+def ability_word_inserts(mechanic: Mechanic) -> list[tuple[str, str, int, int]]:
+    """For an ability word with template variants: (label, text, select start, select length)
+    per variant, e.g. ("Settled — Activated", "Settled — [cost]: [effect]. Activate only if
+    …", 10, 6): the line with its shared phrases written in, first placeholder selected."""
+    if mechanic.kind != MechanicKind.ABILITY_WORD:
+        return []
+    from .ability_words import insertion
+    out = []
+    for i, template in enumerate(mechanic.templates):
+        if template.text.strip():
+            text, start, length = insertion(mechanic, i)
+            label = f"{mechanic.name} — {template.label}" if len(mechanic.templates) > 1 else mechanic.name
+            out.append((label, text, start, length))
+    return out
+
+
 def suggestions(text: str, caret: int, mechanics: list[Mechanic] = ()) -> list[Suggestion]:
     before = text[:max(0, min(caret, len(text)))]
     # an unclosed "{" before the caret: mana and other symbols
@@ -64,6 +81,11 @@ def suggestions(text: str, caret: int, mechanics: list[Mechanic] = ()) -> list[S
     out = []
     for mechanic in mechanics:
         if mechanic.name.lower().startswith(word.lower()) and mechanic.name.lower() != word.lower():
+            variants = ability_word_inserts(mechanic)
+            if variants:                            # one suggestion per variant
+                for label, insert, start, length in variants:
+                    out.append(Suggestion(label, len(word), insert, len(insert) - start, length))
+                continue
             insert, back = mechanic_insert(mechanic)
             label = mechanic.name + (f" {{{mechanic.parameter}}}" if mechanic.parameter else "")
             out.append(Suggestion(label, len(word), insert, back))

@@ -104,6 +104,26 @@ def test_mechanic_reminder_text_and_card_override() -> None:
     assert np.abs(hidden - plain).mean() < 0.05
 
 
+def test_ability_word_is_italic_without_reminder() -> None:
+    """An ability word of the set is set in italics by MSE (its "pseudo" keyword mode) and
+    gets no reminder text: the picture differs from the plain line only in that word."""
+    from setdesigner.model import AbilityTemplate, Mechanic, MechanicKind
+    project = oracle_project()
+    bears = project.card("grizzly-bears")
+    bears.faces[0].rules_text = "Settled — When this creature dies, draw a card."
+    with CardRenderer(project) as r:
+        plain = flatten(r.render(bears))
+    project.mechanics = [Mechanic(id="settled", name="Settled", kind=MechanicKind.ABILITY_WORD,
+                                  templates=[AbilityTemplate(label="Trigger", text="{trigger}, {effect}")])]
+    with CardRenderer(project) as r:
+        italic = flatten(r.render(bears))
+        text = r.env.card_object(bears).fields.get("rule text")
+    assert "Settled" in str(text) and "(" not in str(text)      # no reminder text added
+    changed = np.abs(italic - plain).sum(axis=2) > 60
+    rows = np.where(changed.any(axis=1))[0]
+    assert rows.size and rows.max() - rows.min() < 30          # only the first line differs
+
+
 def test_our_symbol_is_drawn_in_the_rarity_box(renderer) -> None:
     card = renderer.project.card("steel-overseer")                     # rare: gold
     image = np.asarray(renderer.render(card).convert("RGB"), int)

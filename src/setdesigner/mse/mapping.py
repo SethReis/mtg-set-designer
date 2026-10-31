@@ -128,8 +128,10 @@ def loyalty_abilities(rules_text: str) -> list[tuple[str, str]]:
     return out
 
 
-def face_values(card: Card, face: Face, reminders: dict[str, bool] | None = None) -> dict[str, str]:
-    """`reminders`: mechanic name -> show its reminder text on this card (see mechanics.py)."""
+def face_values(card: Card, face: Face, reminders: dict[str, bool] | None = None,
+                forms: dict[str, list[str]] | None = None) -> dict[str, str]:
+    """`reminders`: mechanic name -> show its reminder text on this card (see mechanics.py);
+    `forms`: mechanic name -> word forms that count as a mention too."""
     from .mechanics import tag_reminders
     supertype, subtype = split_type_line(face.type_line)
     rules_text = face.rules_text
@@ -144,7 +146,7 @@ def face_values(card: Card, face: Face, reminders: dict[str, bool] | None = None
         "casting cost": mse_mana_cost(face.mana_cost),
         "super type": supertype,
         "sub type": subtype,
-        "rule text": mse_text(tag_reminders(rules_text, reminders or {})),
+        "rule text": mse_text(tag_reminders(rules_text, reminders or {}, forms)),
         **costs,
         "flavor text": mse_text(face.flavor_text),
         "power": face.power or "",
@@ -170,7 +172,8 @@ def set_values(info: SetInfo, resolve: Callable[[str], Path | None] | None = Non
 
 
 def card_to_mse(card: Card, set_info: SetInfo, reminders: dict[str, bool] | None = None,
-                resolve: Callable[[str], Path | None] | None = None) -> list[MSECard]:
+                resolve: Callable[[str], Path | None] | None = None,
+                forms: dict[str, list[str]] | None = None) -> list[MSECard]:
     """The MSE cards for one of our cards (one per face), linked if multi-faced.
     `reminders` are this card's reminder-text choices per mechanic name
     (mechanics.reminder_choices); use mechanics.project_to_mse for a whole project.
@@ -182,7 +185,7 @@ def card_to_mse(card: Card, set_info: SetInfo, reminders: dict[str, bool] | None
         out.append(MSECard(
             uid=face_uid(card, index),
             stylesheet=stylesheet_package(frame, planeswalker=planeswalker),
-            values=face_values(card, face, reminders),
+            values=face_values(card, face, reminders, forms),
             notes=card.notes,
             art=ArtRef(art_path, face.art_crop) if art_path is not None else None,
             styling=frame_styling(frame, planeswalker=planeswalker),

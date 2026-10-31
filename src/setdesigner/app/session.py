@@ -20,10 +20,10 @@ from typing import Callable
 
 from PIL import Image
 
-from ..model import (Archetype, ArtCrop, Card, Face, Mechanic, MechanicKind, Rarity,
-                     ReminderPolicy, SetInfo, SetProject, Status, delete_card, load_project,
-                     new_card_id, save_archetypes, save_card, save_info, save_mechanics,
-                     save_project)
+from ..model import (AbilityTemplate, Archetype, ArtCrop, Card, Cycle, CycleTemplate, Face,
+                     Mechanic, MechanicKind, Rarity, ReminderPolicy, SetInfo, SetProject, Status,
+                     delete_card, load_project, new_card_id, save_archetypes, save_card,
+                     save_cycles, save_info, save_mechanics, save_project)
 from ..model.project import slug
 from ..mse.mapping import join_type_line, split_type_line
 from .mechanics import mechanic_ids
@@ -124,6 +124,11 @@ class SetSession:
         if self._renderer is not None:
             with self._renderer_lock:
                 self._renderer.env.remove_card(card.id)
+        for cycle in self.project.cycles:               # its cycle shows it as missing now
+            for member in cycle.members:
+                if member.card_id == card.id:
+                    member.card_id = None
+                    save_cycles(self.folder, self.project.cycles)
 
     # ------------------------------------------------------------ editing
 
@@ -214,6 +219,107 @@ class SetSession:
                 self._renderer.close()
                 self._renderer = None
 
+    # ------------------------------------------------------------ cycles
+
+    def new_cycle(self, name: str = "New cycle", grouping: str = "mono") -> Cycle:
+        from .cycles import members_for
+        taken = {c.id for c in self.project.cycles}
+        base = slug(name)
+        cid, n = base, 2
+        while cid in taken:
+            cid, n = f"{base}-{n}", n + 1
+        cycle = Cycle(id=cid, name=name, grouping=grouping, members=members_for(grouping))
+        self.project.cycles.append(cycle)
+        save_cycles(self.folder, self.project.cycles)
+        return cycle
+
+    def set_cycle_grouping(self, cycle: Cycle, grouping: str, custom: list[str] | None = None,
+                           count: int = 5) -> None:
+        """Change which colors the cycle covers. Members keep their card and overrides when
+        their colors stay; a dropped member's card stays in the set, just unlinked."""
+        from .cycles import members_for
+        members = members_for(grouping, custom, count, cycle.members)
+        kept = {m.card_id for m in members if m.card_id}
+        for member in cycle.members:
+            if member.card_id and member.card_id not in kept:
+                self._unlink(member.card_id)
+        cycle.grouping, cycle.members = grouping, members
+        save_cycles(self.folder, self.project.cycles)
+
+    def update_cycle(self, cycle: Cycle, update_cards: bool = False, **values: object) -> list:
+        """Change a cycle's name, notes or template. With update_cards, a new template is
+        carried to the members' cards (fields edited on a card stay; see
+        app.cycles.template_change_plan). Returns the card changes made."""
+        from .cycles import template_change_plan
+        changes = []
+        if "template" in values:
+            values["template"] = CycleTemplate.model_validate(values["template"]) \
+                if not isinstance(values["template"], CycleTemplate) else values["template"]
+            if update_cards:
+                changes = template_change_plan(cycle, self.project, values["template"]).changes
+                for change in changes:
+                    for name, (_, after) in change.fields.items():
+                        self._set_card_field(change.card, name, after)
+        for key, value in values.items():
+            setattr(cycle, key, value)
+        save_cycles(self.folder, self.project.cycles)
+        return changes
+
+    def set_member_override(self, cycle: Cycle, index: int, field: str, text: str | None) -> None:
+        """A member's own text for a template field (None: follow the template again)."""
+        member = cycle.members[index]
+        if text is None:
+            member.overrides.pop(field, None)
+        else:
+            member.overrides[field] = text
+        save_cycles(self.folder, self.project.cycles)
+
+    def generate_cycle(self, cycle: Cycle) -> list[Card]:
+        """Create a placeholder card ("idea") for every member without one, in member order,
+        with the template filled in for its colors. Returns the new cards."""
+        from .cycles import matching_archetypes, member_fields
+        made = []
+        for n, member in enumerate(cycle.members, 1):
+            if member.card_id and any(c.id == member.card_id for c in self.project.cards):
+                continue
+            fields = member_fields(cycle, member, n)
+            card = self.new_card(fields["name"] or f"{cycle.name} {n}")
+            for name, value in fields.items():
+                if name != "name":
+                    self._set_card_field(card, name, value)
+            card.cycle = cycle.id
+            if cycle.template.tag_archetypes and member.colors:
+                card.archetypes = matching_archetypes(self.project, member.colors)
+            card.mechanics = mechanic_ids(self.project, card)
+            self._changed(card)
+            member.card_id = card.id
+            made.append(card)
+        save_cycles(self.folder, self.project.cycles)
+        self.flush()
+        return made
+
+    def delete_cycle(self, cycle: Cycle) -> None:
+        """Remove a cycle. Its cards stay in the set, unlinked."""
+        for member in cycle.members:
+            if member.card_id:
+                self._unlink(member.card_id)
+        self.project.cycles = [c for c in self.project.cycles if c.id != cycle.id]
+        save_cycles(self.folder, self.project.cycles)
+
+    def _unlink(self, card_id: str) -> None:
+        card = next((c for c in self.project.cards if c.id == card_id), None)
+        if card is not None and card.cycle is not None:
+            card.cycle = None
+            self._changed(card)
+
+    def _set_card_field(self, card: Card, name: str, value: str) -> None:
+        if name == "rarity":
+            self.update(card, "rarity", value or "common")
+        elif name == "frame":
+            self.update(card, "frame", value or None)
+        else:
+            self.update(card, name, value)
+
     # ---------------------------------------------------------- mechanics
 
     def new_mechanic(self, name: str = "New mechanic") -> Mechanic:
@@ -227,8 +333,10 @@ class SetSession:
         self._mechanics_changed()
         return mechanic
 
-    def update_mechanic(self, mechanic: Mechanic, **values: object) -> None:
-        """Change a mechanic's definition (not its name: see rename_mechanic)."""
+    def update_mechanic(self, mechanic: Mechanic, update_cards: bool = False, **values: object) -> list:
+        """Change a mechanic's definition (not its name: see rename_mechanic). For an ability
+        word's `phrases` / `templates`, update_cards also rewrites the card lines that follow
+        it (app.ability_words.definition_change_plan). Returns the card changes made."""
         for key, value in values.items():
             if key == "kind":
                 value = MechanicKind(value)
@@ -238,8 +346,23 @@ class SetSession:
                 value = value or None
             elif key == "forms":
                 value = [f.strip() for f in value or [] if f.strip()]
+            elif key == "phrases":
+                value = {k.strip(): v for k, v in (value or {}).items() if k.strip()}
+            elif key == "templates":
+                value = [AbilityTemplate.model_validate(t) for t in value or []]
+            values[key] = value
+        changes = []
+        if update_cards and ("phrases" in values or "templates" in values):
+            from .ability_words import definition_change_plan
+            changes = definition_change_plan(self.project, mechanic, phrases=values.get("phrases"),
+                                             templates=values.get("templates")).changes
+            for change in changes:
+                change.card.faces[change.face].rules_text = change.after
+                self._changed(change.card)
+        for key, value in values.items():
             setattr(mechanic, key, value)
         self._mechanics_changed()
+        return changes
 
     def rename_mechanic(self, mechanic: Mechanic, new_name: str, update_cards: bool) -> list:
         """Rename a mechanic (and its word forms); with update_cards, also in card text.

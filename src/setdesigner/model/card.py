@@ -96,6 +96,7 @@ class Card(BaseModel):
     reminders: dict[str, bool] = Field(default_factory=dict)
     status: Status = Status.IDEA
     notes: str = ""
+    cycle: str | None = None            # the id of the cycle it was generated for, if any
 
     def iter_faces(self) -> Iterator[tuple[int, Face]]:
         return iter(enumerate(self.faces))
