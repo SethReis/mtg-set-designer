@@ -13,6 +13,7 @@ from it, never stored on cards. Open the **Mechanics** page from the overview he
 | Reminder text | shown in parentheses after the mechanic; `{cost}` (or `{param}`) stands for the parameter's value |
 | Show reminder text | always, on commons only, on the first card of each color, or never |
 | Word forms | other forms that also count: Wanted, Wants. **Add common forms** suggests them (`app/mechanics.suggest_forms`) |
+| Roles | what the mechanic does for the Health page (evasion, removal, ...): every card with it counts toward these (`docs/health.md`) |
 | Design intent | notes for yourself |
 
 Fields save when you leave them. Mechanics are set-wide, so each save restarts the

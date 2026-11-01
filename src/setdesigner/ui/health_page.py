@@ -307,7 +307,8 @@ def register(state) -> None:
                 counts_tables()
                 creature_tables()
             with section("Roles per color"):
-                ui.label("Detected from rules text; correct a card's roles in the editor. "
+                ui.label("Detected from rules text and the roles given to mechanics; correct a card's roles "
+                         "in the editor. "
                          "Click a number to see the cards.").classes("text-xs text-gray-500")
                 ui.select(RARITY_CHOICES, value=view["role_rarity"], label="Rarity",
                           on_change=lambda e: (view.update(role_rarity=e.value), roles_table.refresh())) \

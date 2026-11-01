@@ -76,7 +76,7 @@ def role_table(project: SetProject, rarity: str | None = None) -> dict[str, dict
     """color -> role -> the cards with that role."""
     out = {c: {r: [] for r in ROLES} for c in COLORS}
     for card in cards_at(project, rarity):
-        for role in roles(card):
+        for role in roles(card, project):
             out[color_key(card)][role].append(card)
     return out
 

@@ -6,7 +6,7 @@ import time
 from nicegui import run, ui
 
 from ..app import ability_words, text_input
-from ..app.health.roles import ROLES, detected_roles
+from ..app.health.roles import ROLES, detected_roles, mechanic_roles
 from ..model import Card, MechanicKind, Rarity, Status
 from ..mse.mapping import split_type_line
 from .art_editor import art_editor
@@ -147,7 +147,8 @@ def register(state) -> None:
             by hand (marked), detected ones removed by hand (struck through, click to restore)."""
             @ui.refreshable
             def row() -> None:
-                detected = detected_roles(card)
+                detected = detected_roles(card, session.project)
+                from_mechanics = mechanic_roles(card, session.project)
                 overrides = card.role_overrides
 
                 def set_role(rid: str, value) -> None:
@@ -163,10 +164,13 @@ def register(state) -> None:
                                 .props("dense outline clickable").classes("text-xs line-through opacity-60") \
                                 .tooltip("Removed by hand; click to restore")
                         elif found or override:
-                            ui.chip(role.label, removable=True, icon=None if found else "person",
+                            mechanics = from_mechanics.get(rid)
+                            icon = "auto_fix_high" if mechanics else None if found else "person"
+                            tip = (f"From {', '.join(mechanics)}" if mechanics
+                                   else "Detected from the rules text" if found else "Added by hand")
+                            ui.chip(role.label, removable=True, icon=icon,
                                     on_value_change=lambda e, r=rid, f=found: set_role(r, False if f else None)) \
-                                .props("dense").classes("text-xs") \
-                                .tooltip("Detected from the rules text" if found else "Added by hand")
+                                .props("dense").classes("text-xs").tooltip(tip)
                     missing = [rid for rid in ROLES if rid not in detected and not overrides.get(rid)]
                     if missing:
                         with ui.button(icon="add").props("flat dense round size=sm").tooltip("Add a role"):

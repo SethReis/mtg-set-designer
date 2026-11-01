@@ -49,6 +49,11 @@ the rules text, with reminder text left out and the card's name read as "this"
 | Makes tokens | create … token |
 | Lifegain | gain N life, lifelink |
 
+Your own mechanics aren't real Magic templating, so give them roles on the Mechanics page
+(**Roles**, `Mechanic.roles`). For example, tag a "Skyward" keyword with Evasion, or a "Hunt"
+keyword action that fights with Removal. Every card using the mechanic then counts toward
+those roles. In the editor, these roles show a mechanic icon and "From Skyward".
+
 Detection knows common templating, not every card. When it gets a card wrong, correct it
 in the editor's **Roles** row, under the rules text:
 - **×** on a detected role removes it; it stays visible, struck through, so a click

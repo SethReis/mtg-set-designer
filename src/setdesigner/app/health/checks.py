@@ -50,7 +50,7 @@ def _plural(n: float, word: str) -> str:
 def common_removal(project, threshold):
     out = []
     for color in FIVE:
-        cards = [c for c in _commons(project, color) if "removal" in roles(c)]
+        cards = [c for c in _commons(project, color) if "removal" in roles(c, project)]
         if len(cards) < threshold:
             out.append(Warning("common_removal", f"{COLOR_LABELS[color]} has {len(cards)} common removal "
                                f"(wanted ≥ {int(threshold)})", [c.id for c in cards]))
@@ -61,7 +61,7 @@ def any_removal(project, threshold):
     out = []
     for color in FIVE:
         cards = [c for c in project.cards if color_key(c) == color
-                 and c.rarity in (Rarity.COMMON, Rarity.UNCOMMON) and "removal" in roles(c)]
+                 and c.rarity in (Rarity.COMMON, Rarity.UNCOMMON) and "removal" in roles(c, project)]
         if len(cards) < threshold:
             out.append(Warning("any_removal", f"{COLOR_LABELS[color]} has {len(cards)} removal at common or "
                                f"uncommon (wanted ≥ {int(threshold)})", [c.id for c in cards]))
@@ -183,7 +183,8 @@ def fixing(project, threshold):
     multicolor = [c for c in project.cards if color_key(c) == "M"]
     if not multicolor:
         return []
-    cards = [c for c in project.cards if c.rarity in (Rarity.COMMON, Rarity.UNCOMMON) and "fixing" in roles(c)]
+    cards = [c for c in project.cards
+             if c.rarity in (Rarity.COMMON, Rarity.UNCOMMON) and "fixing" in roles(c, project)]
     if len(cards) >= threshold:
         return []
     return [Warning("fixing", f"{_plural(len(multicolor), 'multicolor card')} but only "

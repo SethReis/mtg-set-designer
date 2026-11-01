@@ -43,3 +43,5 @@ class Mechanic(BaseModel):
     # Shared wording is written once in `phrases` and used in each variant as {=name}.
     phrases: dict[str, str] = Field(default_factory=dict)
     templates: list[AbilityTemplate] = Field(default_factory=list)
+    # set-health roles (app/health/roles.ROLES ids) every card with this mechanic counts toward
+    roles: list[str] = Field(default_factory=list)

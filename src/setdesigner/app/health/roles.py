@@ -1,5 +1,6 @@
 """What a card does in the set: removal, card draw, fixing, ... detected from its rules
-text, with the card's own corrections on top (Card.role_overrides).
+text and its custom mechanics' roles (Mechanic.roles), with the card's own corrections on
+top (Card.role_overrides).
 
 Detection reads the front face's rules text with reminder text left out and the card's
 name written as "this". It knows common Magic templating, not every card: when it gets
@@ -11,7 +12,7 @@ import re
 from dataclasses import dataclass
 
 from ..overview import main_types
-from ...model import Card
+from ...model import Card, SetProject
 
 N = r"(?:a|an|one|two|three|four|five|x|\d+)"
 EVASION_WORDS = ("flying", "menace", "trample", "skulk", "shadow", "fear", "intimidate", "horsemanship")
@@ -78,8 +79,19 @@ def _keyword_lines(text: str) -> list[str]:
             if line.strip() and re.fullmatch(r"[A-Za-z][A-Za-z ]*(?:, [A-Za-z][A-Za-z ]*)*", line.strip())]
 
 
-def detected_roles(card: Card) -> list[str]:
-    """The roles read from the card's rules text, in ROLES order."""
+def mechanic_roles(card: Card, project: SetProject | None) -> dict[str, list[str]]:
+    """role -> names of the card's mechanics tagged with it (Mechanic.roles)."""
+    out: dict[str, list[str]] = {}
+    for mechanic in project.mechanics if project is not None else []:
+        if mechanic.id in card.mechanics:
+            for rid in mechanic.roles:
+                out.setdefault(rid, []).append(mechanic.name)
+    return out
+
+
+def detected_roles(card: Card, project: SetProject | None = None) -> list[str]:
+    """The roles read from the card's rules text, plus those of its mechanics when the
+    project is given, in ROLES order."""
     text = plain_text(card)
     types = {t.lower() for t in main_types(card)}
     found = {rid for rid, patterns in COMPILED.items() if any(p.search(text) for p in patterns)}
@@ -94,12 +106,14 @@ def detected_roles(card: Card) -> list[str]:
         found.add("fixing")                                   # lands making two colors
     if ("instant" in types or "flash" in keywords) and TRICK.search(text):
         found.add("combat_trick")
+    found.update(mechanic_roles(card, project))
     return [rid for rid in ROLES if rid in found]
 
 
-def roles(card: Card) -> list[str]:
-    """The card's roles: detected ones, corrected by its overrides."""
-    found = set(detected_roles(card))
+def roles(card: Card, project: SetProject | None = None) -> list[str]:
+    """The card's roles: detected ones (with its mechanics' when the project is given),
+    corrected by its overrides."""
+    found = set(detected_roles(card, project))
     for rid, add in card.role_overrides.items():
         if add:
             found.add(rid)

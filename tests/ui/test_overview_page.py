@@ -245,3 +245,15 @@ async def test_health_page_warnings_tuning_chip_and_roles(user: User) -> None:
     chip.value = False                                          # the chip's remove button
     assert bear.role_overrides == {"removal": False}
     await user.should_see("Removed by hand; click to restore")
+
+
+async def test_mechanic_roles_show_on_the_card(user: User) -> None:
+    session, bear, _ = await open_set_with_cards(user)
+    skyward = session.new_mechanic("Skyward")
+    session.update(bear, "rules_text", "Skyward")
+    await user.open("/set/mechanics")
+    await user.should_see(marker="mechanic-roles")
+    next(iter(user.find(marker="mechanic-roles").elements)).value = ["evasion"]
+    assert skyward.roles == ["evasion"]
+    await user.open(f"/set/card/{bear.id}")
+    await user.should_see("From Skyward")

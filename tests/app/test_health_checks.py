@@ -85,3 +85,19 @@ def test_role_overrides_are_saved(tmp_path) -> None:
     session.set_role(card, "removal", None)
     session.flush()
     assert load_project(tmp_path / "s").cards[0].role_overrides == {}
+
+
+def test_mechanic_roles_fill_the_counts(tmp_path) -> None:
+    session = SetSession.create(tmp_path / "s", "S", "S", renderer_factory=lambda p: None)
+    hunt = session.new_mechanic("Hunt")
+    for name in ("Stalker", "Tracker"):
+        c = session.new_card(name)
+        session.update(c, "mana_cost", "{B}")
+        session.update(c, "rules_text", "Hunt")
+    black = lambda: [w for w in run_checks(session.project)                     # noqa: E731
+                     if w.check_id == "common_removal" and w.message.startswith("Black")]
+    assert black()
+    session.update_mechanic(hunt, roles=["removal", "nonsense"])
+    assert hunt.roles == ["removal"]
+    assert not black()
+    assert load_project(tmp_path / "s").mechanics[0].roles == ["removal"]

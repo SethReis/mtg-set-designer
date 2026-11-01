@@ -11,6 +11,7 @@ import html
 from nicegui import ui
 
 from ..app.ability_words import build_line, definition_change_plan, template_uses
+from ..app.health.roles import ROLES
 from ..app.mechanics import PARAMETER_TYPES, find_uses, reminder_preview, rename_plan, suggest_forms, usage
 from ..app.overview import COLOR_LABELS
 from ..model import AbilityTemplate, Mechanic, MechanicKind, ReminderPolicy
@@ -83,6 +84,11 @@ def register(state) -> None:
                         ui.select(POLICY_LABELS, value=mechanic.reminder_policy.value,
                                   label="Show reminder text",
                                   on_change=lambda e: save(reminder_policy=e.value))
+                    ui.select({rid: role.label for rid, role in ROLES.items()}, multiple=True,
+                              value=list(mechanic.roles), label="Roles",
+                              on_change=lambda e: save(roles=[r for r in ROLES if r in (e.value or [])])) \
+                        .props("use-chips dense").mark("mechanic-roles") \
+                        .tooltip("Cards with this mechanic count toward these on the Health page")
                 if ability_word:
                     throughline(mechanic)
                 else:

@@ -60,3 +60,17 @@ def test_overrides_add_and_remove() -> None:
     c.role_overrides = {"card_draw": False, "removal": True}
     assert roles(c) == ["removal"]
     assert detected_roles(c) == ["card_draw"]
+
+
+def test_mechanic_roles_count_for_cards_with_the_mechanic() -> None:
+    from setdesigner.app.health.roles import mechanic_roles
+    from setdesigner.model import Mechanic, SetInfo, SetProject
+    c = card("Skyward", "Creature")
+    c.mechanics = ["skyward"]
+    project = SetProject(info=SetInfo(name="T", code="T"), cards=[c],
+                         mechanics=[Mechanic(id="skyward", name="Skyward", roles=["evasion"])])
+    assert detected_roles(c) == []                                # text alone: nothing
+    assert roles(c, project) == ["evasion"]
+    assert mechanic_roles(c, project) == {"evasion": ["Skyward"]}
+    c.role_overrides = {"evasion": False}
+    assert roles(c, project) == []

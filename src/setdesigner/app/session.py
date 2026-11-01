@@ -365,6 +365,9 @@ class SetSession:
                 value = {k.strip(): v for k, v in (value or {}).items() if k.strip()}
             elif key == "templates":
                 value = [AbilityTemplate.model_validate(t) for t in value or []]
+            elif key == "roles":
+                from .health.roles import ROLES
+                value = [r for r in ROLES if r in (value or [])]
             values[key] = value
         changes = []
         if update_cards and ("phrases" in values or "templates" in values):
