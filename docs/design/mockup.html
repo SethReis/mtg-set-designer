@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Set Designer mockup</title>
+<!-- the real tokens; the app loads the same file -->
+<link rel="stylesheet" href="../../src/setdesigner/ui/theme/tokens.css">
+<!-- mockup only: the app bundles these fonts (OFL) instead of loading them -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Marcellus&family=Cinzel:wght@500;600&family=JetBrains+Mono&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mana-font@1.18.0/css/mana.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL@20,400,0">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--text); font: 400 var(--text-sm)/18px var(--font-ui);
+         -webkit-font-smoothing: antialiased; overflow: hidden; }
+  body.font-cinzel { --font-display: "Cinzel", serif; }
+  .icon { font-family: "Material Symbols Rounded"; font-size: 20px; line-height: 1; font-weight: normal;
+          font-style: normal; display: inline-block; -webkit-font-feature-settings: "liga"; user-select: none; }
+  .display { font-family: var(--font-display); letter-spacing: .01em; }
+  .muted { color: var(--text-muted); } .faint { color: var(--text-faint); }
+  .num { font-variant-numeric: tabular-nums; }
+  .ms-cost { font-size: .95em; margin-right: 1px; box-shadow: none; }
+
+  /* ---------------------------------------------------------------- shell */
+  .app { display: grid; grid-template-columns: var(--rail-w) 1fr; height: 100vh;
+         --rail-w: var(--rail-collapsed); transition: grid-template-columns var(--dur-med) var(--ease); }
+  .app.rail-open { --rail-w: var(--rail-expanded); }
+  .rail { background: var(--surface-1); border-right: 1px solid var(--border); display: flex;
+          flex-direction: column; padding: var(--space-2); gap: 2px; overflow: hidden; }
+  .rail .brand { height: 36px; display: flex; align-items: center; gap: 10px; padding: 0 10px;
+                 margin-bottom: var(--space-3); color: var(--accent); }
+  .rail .brand span:last-child { color: var(--text); font-family: var(--font-display); font-size: 15px; white-space: nowrap;
+                               opacity: 0; transition: opacity var(--dur-fast); }
+  .app.rail-open .rail .brand span:last-child { opacity: 1; }
+  .nav { position: relative; height: 38px; display: flex; align-items: center; gap: 12px; padding: 0 12px;
+         border-radius: var(--radius-md); color: var(--text-muted); cursor: pointer; white-space: nowrap;
+         transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+  .nav:hover { background: var(--surface-2); color: var(--text); }
+  .nav.active { background: var(--surface-3); color: var(--text); }
+  .nav.active::before { content: ""; position: absolute; left: -8px; top: 9px; bottom: 9px; width: 3px;
+                        border-radius: 0 3px 3px 0; background: var(--accent); }
+  .nav .label { font-weight: 500; opacity: 0; transition: opacity var(--dur-fast); }
+  .app.rail-open .nav .label { opacity: 1; }
+  .nav .badge { margin-left: auto; }
+  .app:not(.rail-open) .nav .badge { position: absolute; top: 4px; right: 4px; margin: 0; padding: 0 4px;
+                                    min-width: 16px; height: 16px; font-size: 10px; }
+  .rail .spacer { flex: 1; }
+  .rail hr { border: 0; border-top: 1px solid var(--border); margin: var(--space-2) 4px; width: auto; }
+
+  .main { display: grid; grid-template-rows: var(--topbar-height) var(--toolbar-height) auto 1fr; min-width: 0; height: 100vh; }
+  .topbar { background: var(--surface-1); border-bottom: 1px solid var(--border); display: flex;
+            align-items: center; gap: var(--space-4); padding: 0 var(--space-4); }
+  .setname { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+  .setname img { width: 24px; height: 24px; object-fit: contain; }
+  .setname .display { font-size: 19px; }
+  .search { flex: 1; max-width: 480px; height: 32px; display: flex; align-items: center; gap: 8px;
+            padding: 0 10px; background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: var(--radius-md); color: var(--text-faint); }
+  .search kbd { margin-left: auto; }
+  kbd { font: 500 10px var(--font-ui); color: var(--text-faint); border: 1px solid var(--border);
+        border-radius: 4px; padding: 1px 5px; background: var(--surface-1); }
+  .grow { flex: 1; }
+  .status { display: flex; align-items: center; gap: 6px; color: var(--text-muted); white-space: nowrap; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); flex: none; }
+
+  /* ---------------------------------------------------------------- controls */
+  .btn { height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-radius: var(--radius-md);
+         font: 500 var(--text-sm) var(--font-ui); border: 1px solid transparent; cursor: pointer; white-space: nowrap;
+         transition: background var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast); }
+  .btn .icon { font-size: 18px; }
+  .btn.primary { background: var(--accent); color: var(--on-accent); }
+  .btn.primary:hover { background: var(--accent-hover); }
+  .btn.secondary { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+  .btn.secondary:hover { border-color: var(--border-strong); }
+  .btn.ghost { background: none; color: var(--text-muted); }
+  .btn.ghost:hover { background: var(--surface-2); color: var(--text); }
+  .btn.danger { background: none; color: var(--danger); }
+  .btn.iconbtn { width: 32px; padding: 0; justify-content: center; background: none; color: var(--text-muted); }
+  .btn.iconbtn:hover { background: var(--surface-2); color: var(--text); }
+  .btn.dense { height: 28px; }
+
+  .seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 2px; }
+  .seg span { height: 26px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: 4px;
+              color: var(--text-muted); font-weight: 500; cursor: pointer; }
+  .seg span.on { background: var(--surface-1); color: var(--text); box-shadow: var(--shadow-1); }
+  .select { height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 8px 0 10px;
+            background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-md); white-space: nowrap; }
+  .select .k { color: var(--text-faint); }
+  .select .icon { font-size: 18px; color: var(--text-faint); margin-left: 2px; }
+
+  .badge { display: inline-flex; align-items: center; gap: 4px; height: 18px; padding: 0 7px; border-radius: 9px;
+           font: 600 var(--text-xs) var(--font-ui); font-variant-numeric: tabular-nums; }
+  .badge.warning { background: var(--warning-soft); color: var(--warning); }
+  .badge.success { background: var(--success-soft); color: var(--success); }
+  .badge.info { background: var(--info-soft); color: var(--info); }
+  .chip { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border-radius: var(--radius-sm);
+          background: var(--surface-3); color: var(--text); font-size: 12px; white-space: nowrap; }
+  .chip .icon { font-size: 14px; color: var(--text-faint); }
+  .chip.ref { background: none; border: 1px solid var(--border); color: var(--text-muted); }
+  .pip { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+  .pip.W { background: var(--mana-w); box-shadow: 0 0 0 1px var(--border-strong) inset; }
+  .pip.U { background: var(--mana-u); } .pip.B { background: var(--mana-b); } .pip.R { background: var(--mana-r); }
+  .pip.G { background: var(--mana-g); } .pip.M { background: var(--mana-m); } .pip.C { background: var(--mana-c); }
+  .pip.L { background: var(--mana-l); }
+
+  /* ---------------------------------------------------------------- workspace */
+  .toolbar { display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-4); }
+  .toolbar .sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+  .size { display: flex; align-items: center; gap: 8px; color: var(--text-faint); }
+  .size .track { width: 90px; height: 3px; border-radius: 2px; background: var(--surface-3); position: relative; }
+  .size .track::before { content: ""; position: absolute; inset: 0 55% 0 0; background: var(--accent); border-radius: 2px; }
+  .size .track::after { content: ""; position: absolute; left: 45%; top: -5px; width: 13px; height: 13px; border-radius: 50%;
+                        background: var(--accent); transform: translateX(-50%); }
+  .filters { display: flex; align-items: center; gap: 6px; padding: 0 var(--space-4) var(--space-2); }
+  .filters .btn { height: 22px; padding: 0 6px; font-size: 12px; }
+  .workspace { overflow: auto; padding: var(--space-2) var(--space-4) var(--space-8); min-height: 0; }
+  .group { margin-bottom: var(--space-6); }
+  .group-h { display: flex; align-items: center; gap: 8px; margin: var(--space-3) 0; color: var(--text); cursor: pointer; }
+  .group-h .title { font-size: var(--text-md); font-weight: 600; }
+  .group-h .count { color: var(--text-faint); font-variant-numeric: tabular-nums; }
+  .group-h .count.short { color: var(--warning); }
+  .group-h .rule { flex: 1; height: 1px; background: var(--border); margin-left: 6px; }
+  .group-h .icon { font-size: 18px; color: var(--text-faint); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--tile), 1fr)); gap: var(--space-4); --tile: 168px; }
+  .tile { position: relative; aspect-ratio: 300 / 418; border-radius: 4.5% / 3.2%; overflow: hidden; cursor: pointer;
+          outline: 1px solid transparent; transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast), outline-color var(--dur-fast); }
+  .tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tile:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); outline-color: var(--border-strong); }
+  .tile.current { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tile .sdot { position: absolute; right: 6px; bottom: 6px; width: 8px; height: 8px; border-radius: 50%;
+                box-shadow: 0 0 0 2px rgb(0 0 0 / 45%); }
+
+  /* ---------------------------------------------------------------- modals */
+  .scrim { position: fixed; inset: 0; background: var(--scrim); backdrop-filter: blur(var(--blur-backdrop));
+           display: none; align-items: center; justify-content: center; z-index: 10; }
+  .scrim.open { display: flex; animation: fade var(--dur-med) var(--ease); }
+  .modal { background: var(--surface-1); border-radius: var(--radius-xl); box-shadow: var(--shadow-3); display: flex;
+           flex-direction: column; overflow: hidden; animation: pop var(--dur-med) var(--ease); }
+  .modal.workspace { width: 94vw; height: 92vh; }
+  @keyframes fade { from { opacity: 0; } }
+  @keyframes pop { from { opacity: 0; transform: scale(.98); } }
+  .mhead { height: 56px; flex: none; display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-3) 0 var(--space-5);
+           border-bottom: 1px solid var(--border); }
+  .mhead .display { font-size: var(--text-xl); white-space: nowrap; }
+  .mbody { flex: 1; min-height: 0; display: grid; }
+
+  /* card editor */
+  .editor { grid-template-columns: clamp(220px, 18vw, 290px) minmax(0, 1fr) clamp(300px, 28vw, 440px); }
+  .pane { overflow: auto; min-height: 0; }
+  .list { border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+  .list .head { padding: var(--space-3); display: flex; gap: 8px; }
+  .list .head .search { height: 30px; max-width: none; }
+  .row { height: 34px; display: flex; align-items: center; gap: 10px; padding: 0 var(--space-3); position: relative;
+         cursor: pointer; white-space: nowrap; }
+  .row:hover { background: var(--surface-2); }
+  .row.on { background: var(--surface-3); }
+  .row.on::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 2px; background: var(--accent); }
+  .row .n { width: 22px; color: var(--text-faint); font-variant-numeric: tabular-nums; font-size: 12px; }
+  .row .name { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+  .rar { font: 600 11px var(--font-ui); width: 12px; text-align: center; }
+  .rar.c { color: var(--rarity-common); } .rar.u { color: var(--rarity-uncommon); } .rar.r { color: var(--rarity-rare); }
+  .rar.m { color: var(--rarity-mythic); }
+  .form { padding: var(--space-5) var(--space-6); display: flex; flex-direction: column; gap: var(--space-5); }
+  .sec h3 { margin: 0 0 var(--space-3); font-size: 12px; font-weight: 600; color: var(--text-muted); display: flex;
+            align-items: center; gap: 8px; }
+  .sec h3::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+  .fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--min, 220px), 1fr)); gap: var(--space-3); }
+  .fields.short { --min: 110px; }
+  .field label { display: block; font-size: 12px; font-weight: 500; color: var(--text-muted); margin-bottom: 5px; }
+  .input { min-height: 32px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; padding: 6px 10px; background: var(--surface-2);
+           border: 1px solid var(--border); border-radius: var(--radius-md); }
+  .input.focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .input.area { display: block; min-height: 84px; line-height: 20px; }
+  .input .ph { color: var(--text-faint); }
+  .span-all { grid-column: 1 / -1; }
+  .palette { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .palette span { height: 24px; min-width: 24px; display: inline-flex; align-items: center; justify-content: center; padding: 0 6px;
+                  border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--border); cursor: pointer;
+                  font-size: 12px; color: var(--text-muted); }
+  .palette span:hover { border-color: var(--border-strong); color: var(--text); }
+  .hint { font-size: 12px; color: var(--text-faint); margin-top: 5px; }
+  .inline { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+  .art { display: grid; grid-template-columns: minmax(0, 360px) 1fr; gap: var(--space-4); align-items: start; }
+  .art .img { aspect-ratio: 4 / 3; border-radius: var(--radius-lg); background: center/cover; position: relative; border: 1px solid var(--border); overflow: hidden; }
+  .art .crop { position: absolute; inset: 12% 6% 14% 6%; outline: 2px solid var(--accent); box-shadow: 0 0 0 999px rgb(0 0 0 / 45%); }
+  .preview { border-left: 1px solid var(--border); background: var(--bg); display: flex; flex-direction: column;
+             align-items: center; padding: var(--space-5); gap: var(--space-3); }
+  .preview img { width: 100%; max-width: 400px; border-radius: 4.5% / 3.2%; box-shadow: var(--shadow-2); }
+
+  /* list + detail (mechanics) */
+  .ld { grid-template-columns: clamp(220px, 20%, 300px) minmax(0, 1fr); }
+  .detail { padding: var(--space-5) var(--space-6); display: flex; flex-direction: column; gap: var(--space-4); }
+  .panel { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-4); }
+  .panel-h { display: flex; align-items: center; gap: 8px; margin-bottom: var(--space-3); }
+  .panel-h b { font-size: var(--text-md); font-weight: 600; }
+  .modal .detail { background: var(--bg); }
+  .table { display: grid; grid-template-columns: minmax(40px, auto) minmax(160px, 1.2fr) minmax(40px, auto) minmax(240px, 3fr); }
+  .table > div { height: 34px; display: flex; align-items: center; padding: 0 10px; border-bottom: 1px solid var(--border); }
+  .table .th { height: 28px; background: var(--surface-2); color: var(--text-muted); font: 600 10.5px var(--font-ui);
+               letter-spacing: .06em; text-transform: uppercase; border-bottom: 0; }
+  .table .th:first-child { border-radius: var(--radius-md) 0 0 var(--radius-md); }
+  .table .th:nth-child(4) { border-radius: 0 var(--radius-md) var(--radius-md) 0; }
+  mark { background: var(--accent-soft); color: var(--accent); border-radius: 3px; padding: 0 2px; }
+  .mono { font-family: var(--font-mono); font-size: 12px; }
+
+  /* ---------------------------------------------------------------- mockup controls (not part of the design) */
+  .review { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 50; display: flex; gap: 10px;
+            align-items: center; padding: 6px 8px 6px 14px; border-radius: 12px; background: #000c; color: #fff;
+            font: 500 12px var(--font-ui); box-shadow: 0 8px 30px #0008; }
+  .review .seg { background: #ffffff14; border-color: #ffffff22; }
+  .review .seg span { color: #fffa; height: 24px; }
+  .review .seg span.on { background: #fff; color: #000; }
+</style>
+</head>
+<body class="body--dark">
+<div class="app" id="app">
+  <!-- rail -->
+  <nav class="rail">
+    <div class="brand"><span class="icon">style</span><span>Set Designer</span></div>
+    <div class="nav active" data-open="workspace"><span class="icon">view_module</span><span class="label">Cards</span></div>
+    <div class="nav" data-open="mechanics"><span class="icon">auto_fix_high</span><span class="label">Mechanics</span></div>
+    <div class="nav"><span class="icon">donut_large</span><span class="label">Cycles</span></div>
+    <div class="nav"><span class="icon">hub</span><span class="label">Archetypes</span></div>
+    <div class="nav"><span class="icon">monitor_heart</span><span class="label">Health</span><span class="badge warning">22</span></div>
+    <div class="spacer"></div>
+    <div class="nav"><span class="icon">tune</span><span class="label">Set</span></div>
+    <div class="nav"><span class="icon">arrow_back</span><span class="label">Sets</span></div>
+    <hr>
+    <div class="nav" id="railToggle"><span class="icon">left_panel_open</span><span class="label">Collapse</span></div>
+  </nav>
+
+  <div class="main">
+    <!-- top bar -->
+    <header class="topbar">
+      <div class="setname"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><defs><linearGradient id="rare" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6dc93"/><stop offset=".55" stop-color="#c8963a"/><stop offset="1" stop-color="#8a5f1c"/></linearGradient></defs><path d="M12 1.5c1.2 3.6 5.6 6 5.6 11.2A5.6 5.6 0 0 1 12 18.3a5.6 5.6 0 0 1-5.6-5.6c0-2.4 1.2-3.9 2.3-5 .1 2 .9 3.2 2 3.7-.6-3.7.4-6.9 1.3-9.9ZM5 20h14l-1.4 2.5H6.4Z" fill="url(#rare)" stroke="#1a1408" stroke-width=".9" stroke-linejoin="round"/></svg><span class="display">Emberwild</span><span class="faint">EMW</span></div>
+      <div class="search"><span class="icon" style="font-size:18px">search</span>Search cards<kbd>Ctrl K</kbd></div>
+      <div class="grow"></div>
+      <div class="status"><span class="dot"></span>All changes saved</div>
+      <button class="btn primary"><span class="icon">add</span>New card</button>
+      <button class="btn iconbtn"><span class="icon">more_horiz</span></button>
+    </header>
+
+    <!-- toolbar -->
+    <div class="toolbar">
+      <div class="seg"><span class="on">Rows</span><span>Matrix</span></div>
+      <div class="select"><span class="k">Group</span> Color<span class="icon">expand_more</span></div>
+      <div class="select"><span class="k">Sort</span> Collector number<span class="icon">expand_more</span></div>
+      <div class="sep"></div>
+      <div class="seg"><span class="on">Grid</span><span>Stacks</span></div>
+      <div class="seg"><span class="on">Images</span><span>Text</span></div>
+      <div class="grow"></div>
+      <button class="btn secondary dense"><span class="icon">filter_list</span>Filters <span class="badge info">1</span></button>
+      <div class="size"><span class="icon" style="font-size:16px">photo_size_select_small</span><div class="track"></div></div>
+    </div>
+    <div class="filters">
+      <span class="chip">Status: Draft, Final <span class="icon">close</span></span>
+      <button class="btn ghost">Clear all</button>
+    </div>
+
+    <!-- workspace -->
+    <main class="workspace" id="workspace"></main>
+  </div>
+</div>
+
+<!-- card editor modal -->
+<div class="scrim" id="editor">
+  <div class="modal workspace">
+    <div class="mhead">
+      <span class="display">Grove Warden</span>
+      <span class="muted num">001</span><span class="rar c">C</span>
+      <span class="chip ref"><span class="pip G"></span>Green creature</span>
+      <div class="grow"></div>
+      <div class="status"><span class="dot"></span>All changes saved</div>
+      <button class="btn iconbtn" title="Previous card · Alt+←"><span class="icon">chevron_left</span></button>
+      <button class="btn iconbtn" title="Next card · Alt+→"><span class="icon">chevron_right</span></button>
+      <button class="btn iconbtn" title="Duplicate, delete"><span class="icon">more_horiz</span></button>
+      <button class="btn iconbtn close" title="Close · Esc"><span class="icon">close</span></button>
+    </div>
+    <div class="mbody editor">
+      <div class="pane list">
+        <div class="head"><div class="search"><span class="icon" style="font-size:16px">search</span>Find a card</div></div>
+        <div id="cardlist"></div>
+      </div>
+      <div class="pane form">
+        <div class="sec"><h3>Identity</h3>
+          <div class="fields">
+            <div class="field"><label>Name</label><div class="input focus">Grove Warden</div></div>
+            <div class="field"><label>Mana cost</label><div class="input"><i class="ms ms-1 ms-cost"></i><i class="ms ms-g ms-cost"></i><i class="ms ms-g ms-cost"></i><span class="faint mono" style="margin-left:auto">{1}{G}{G}</span></div>
+              <div class="palette"><span><i class="ms ms-w ms-cost"></i></span><span><i class="ms ms-u ms-cost"></i></span><span><i class="ms ms-b ms-cost"></i></span><span><i class="ms ms-r ms-cost"></i></span><span><i class="ms ms-g ms-cost"></i></span><span><i class="ms ms-c ms-cost"></i></span><span><i class="ms ms-x ms-cost"></i></span><span><i class="ms ms-1 ms-cost"></i></span><span><i class="ms ms-2 ms-cost"></i></span><span><i class="ms ms-3 ms-cost"></i></span></div></div>
+            <div class="field"><label>Types</label><div class="input">Creature</div></div>
+            <div class="field"><label>Subtypes</label><div class="input">Elf Druid</div></div>
+          </div>
+        </div>
+        <div class="sec"><h3>Text</h3>
+          <div class="field span-all"><label>Rules text</label>
+            <div class="input area">Reach<br><i>Settled</i> — When this creature dies, if you control four or more lands that share a basic land type, create a 1/1 white Soldier creature token.</div>
+            <div class="palette"><span><i class="ms ms-tap ms-cost"></i></span><span><i class="ms ms-w ms-cost"></i></span><span><i class="ms ms-u ms-cost"></i></span><span><i class="ms ms-b ms-cost"></i></span><span><i class="ms ms-r ms-cost"></i></span><span><i class="ms ms-g ms-cost"></i></span><span>CARDNAME</span><span>Hunt</span><span>Settled</span><span>Flurry</span><span>Renew</span></div>
+          </div>
+          <div class="inline" style="margin-top:var(--space-3)"><span class="muted" style="width:72px">Mechanics</span><span class="chip"><span class="icon">auto_fix_high</span>Settled · follows “Trigger”</span></div>
+          <div class="inline" style="margin-top:var(--space-2)"><span class="muted" style="width:72px">Roles</span><span class="chip">Evasion<span class="icon">close</span></span><span class="chip">Makes tokens<span class="icon">close</span></span><button class="btn ghost dense"><span class="icon">add</span>Role</button></div>
+          <div class="field" style="margin-top:var(--space-3)"><label>Flavor text</label><div class="input"><span class="ph">Optional</span></div></div>
+        </div>
+        <div class="sec"><h3>Art</h3>
+          <div class="art"><div class="img" style="background-image:url(_cards/art-grove-warden.png)"><div class="crop"></div></div>
+            <div><div class="field"><label>Zoom</label><div class="size"><div class="track" style="width:180px"></div></div></div>
+              <div class="inline" style="margin-top:var(--space-3)"><button class="btn secondary dense">Replace</button><button class="btn ghost dense">Reset crop</button><button class="btn danger dense">Remove</button></div>
+              <div class="hint">Drag to move the crop. Drop or paste an image anywhere on the card to replace it.</div></div></div>
+        </div>
+        <div class="sec"><h3>Stats</h3>
+          <div class="fields short">
+            <div class="field"><label>Power</label><div class="input">2</div></div>
+            <div class="field"><label>Toughness</label><div class="input">3</div></div>
+            <div class="field"><label>Loyalty</label><div class="input"><span class="ph">—</span></div></div>
+            <div class="field"><label>Rarity</label><div class="input">Common</div></div>
+            <div class="field"><label>Number</label><div class="input">1</div></div>
+          </div>
+        </div>
+        <div class="sec"><h3>Set data</h3>
+          <div class="fields">
+            <div class="field"><label>Frame</label><div class="input">Set default (M15)</div></div>
+            <div class="field"><label>Artist</label><div class="input"><span class="ph">Unknown</span></div></div>
+            <div class="field"><label>Status</label><div class="input"><span class="pip" style="background:var(--status-final)"></span>Final</div></div>
+            <div class="field"><label>Archetypes</label><div class="input"><span class="chip"><span class="pip G"></span><span class="pip U"></span>UG Ramp<span class="icon">close</span></span></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="pane preview">
+        <img src="_cards/grove-warden.webp" alt="Grove Warden">
+        <div class="faint" style="font-size:12px">Drawn by Magic Set Editor · updates as you type</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- mechanics modal -->
+<div class="scrim" id="mechanics">
+  <div class="modal workspace">
+    <div class="mhead">
+      <span class="display">Mechanics</span><span class="muted">Emberwild</span>
+      <div class="grow"></div>
+      <div class="status"><span class="dot"></span>All changes saved</div>
+      <button class="btn iconbtn close" title="Close · Esc"><span class="icon">close</span></button>
+    </div>
+    <div class="mbody ld">
+      <div class="pane list">
+        <div class="head"><button class="btn secondary" style="width:100%;justify-content:center"><span class="icon">add</span>New mechanic</button></div>
+        <div class="row on"><span class="icon" style="font-size:16px;color:var(--text-faint)">key</span><span class="name">Hunt</span><span class="faint num">3</span></div>
+        <div class="row"><span class="icon" style="font-size:16px;color:var(--text-faint)">format_italic</span><span class="name">Settled</span><span class="faint num">3</span></div>
+        <div class="row"><span class="icon" style="font-size:16px;color:var(--text-faint)">format_italic</span><span class="name">Flurry</span><span class="faint num">0</span></div>
+        <div class="row"><span class="icon" style="font-size:16px;color:var(--text-faint)">format_italic</span><span class="name">Renew</span><span class="faint num">0</span></div>
+      </div>
+      <div class="pane detail">
+        <div class="inline"><span class="display" style="font-size:var(--text-xl)">Hunt</span><span class="badge info">Keyword</span><div class="grow"></div><button class="btn iconbtn"><span class="icon">more_horiz</span></button></div>
+        <div class="panel">
+          <div class="panel-h"><b>Definition</b></div>
+          <div class="fields">
+            <div class="field"><label>Name</label><div class="input">Hunt</div></div>
+            <div class="field"><label>Kind</label><div class="input">Keyword (Flying, Cycling {2})</div></div>
+            <div class="field"><label>Parameter</label><div class="input">No parameter</div></div>
+            <div class="field"><label>Show reminder text</label><div class="input">On commons only</div></div>
+            <div class="field"><label>Roles</label><div class="input"><span class="chip">Removal<span class="icon">close</span></span></div></div>
+          </div>
+          <div class="field" style="margin-top:var(--space-3)"><label>Reminder text</label><div class="input">Put a bounty counter on target creature. A wanted creature is one with a bounty counter.</div>
+            <div class="hint">Shown in parentheses after the mechanic on cards.</div></div>
+          <div class="field" style="margin-top:var(--space-3)"><label>Word forms that also count</label><div class="input"><span class="chip">Hunts<span class="icon">close</span></span><span class="chip">Hunted<span class="icon">close</span></span><span class="chip">Hunting<span class="icon">close</span></span><span class="grow"></span><button class="btn ghost dense">Add common forms</button></div></div>
+          <div class="hint" style="margin-top:var(--space-3)">On a card: <i>Hunt (Put a bounty counter on target creature. A wanted creature is one with a bounty counter.)</i></div>
+        </div>
+        <div class="panel">
+          <div class="panel-h"><b>Used on 3 cards</b><span class="inline faint" style="margin-left:8px"><span class="pip W"></span>1 <span class="pip B"></span>2 · C 1 · U 2</span></div>
+          <div class="table">
+            <div class="th">#</div><div class="th">Card</div><div class="th">Rarity</div><div class="th">Where</div>
+            <div class="num faint">009</div><div><span class="pip W" style="margin-right:8px"></span>Skyguard Captain</div><div><span class="rar u">U</span></div><div><span><mark>Hunted</mark> creatures your opponents control can't block.</span></div>
+            <div class="num faint">013</div><div><span class="pip B" style="margin-right:8px"></span>Gravecaller</div><div><span class="rar u">U</span></div><div><span>Sacrifice a <mark>hunted</mark> creature: Draw a card.</span></div>
+            <div class="num faint">015</div><div><span class="pip B" style="margin-right:8px"></span>Night Stalker</div><div><span class="rar c">C</span></div><div><span>When CARDNAME enters, <mark>hunt</mark> target creature an opponent controls.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- mockup controls -->
+<div class="review">
+  Mockup
+  <div class="seg" id="view"><span class="on" data-v="workspace">Workspace</span><span data-v="editor">Card editor</span><span data-v="mechanics">Mechanics</span></div>
+  <div class="seg" id="theme"><span class="on" data-v="dark">Dark</span><span data-v="light">Light</span></div>
+  <div class="seg" id="font"><span class="on" data-v="marcellus">Marcellus</span><span data-v="cinzel">Cinzel</span></div>
+  <div class="seg" id="rail"><span class="on" data-v="closed">Rail</span><span data-v="open">Rail open</span></div>
+</div>
+
+<script>
+const CARDS = [
+  ["G","c","grove-warden","Grove Warden"],["G","c","wild-growth-ritual","Wild Growth Ritual"],["G","c","canopy-stalker","Canopy Stalker"],["G","r","moss-colossus","Moss Colossus"],["G","r","sandsteppe-roar","Sandsteppe Roar"],
+  ["U","c","tidecaller-adept","Tidecaller Adept"],["U","c","thought-spiral","Thought Spiral"],["U","c","mistwing-drake","Mistwing Drake"],["U","u","counterflow","Counterflow"],["U","c","silent-archivist","Silent Archivist"],["U","r","mistrise-village","Mistrise Village"],
+  ["W","u","skyguard-captain","Skyguard Captain"],["W","c","dawn-patrol","Dawn Patrol"],["W","u","banish-to-light","Banish to Light"],["W","c","serene-healer","Serene Healer"],["W","r","bloom-of-dawn","Bloom of Dawn"],
+  ["B","u","gravecaller","Gravecaller"],["B","c","grim-bargain","Grim Bargain"],["B","c","night-stalker","Night Stalker"],["B","r","ruinous-night","Ruinous Night"],
+  ["R","c","fling-fodder","Fling Fodder"],["R","c","cinder-imp","Cinder Imp"],["R","r","ember-wrath","Ember Wrath"],["R","c","firebrand-shaman","Firebrand Shaman"],["R","r","teeming-ashes","Teeming Ashes"],
+  ["M","m","ember-wildspeaker","Ember, Wildspeaker"],["M","u","riverbend-druid","Riverbend Druid"],["M","r","sky-tyrant","Sky Tyrant"],["M","u","bloodfire-pact","Bloodfire Pact"],["M","m","hydra-of-the-deep","Hydra of the Deep"],
+  ["C","c","clockwork-golem","Clockwork Golem"],["C","u","wayfinder-s-compass","Wayfinder's Compass"],
+  ["L","c","forest","Forest"],["L","c","island","Island"],["L","c","thornwood-grove","Thornwood Grove"],["L","c","azorius-crossing","Azorius Crossing"],["L","c","dimir-crossing","Dimir Crossing"],["L","c","rakdos-crossing","Rakdos Crossing"],["L","c","gruul-crossing","Gruul Crossing"],["L","c","selesnya-crossing","Selesnya Crossing"],
+];
+const GROUPS = [["W","White",6],["U","Blue",6],["B","Black",6],["R","Red",6],["G","Green",6],["M","Multicolor",5],["C","Colorless",null],["L","Land",null]];
+const STATUS = ["var(--status-final)","var(--status-draft)","var(--status-draft)","var(--status-playtested)","var(--status-idea)"];
+const ws = document.getElementById("workspace");
+ws.innerHTML = GROUPS.map(([k, label, target]) => {
+  const cards = CARDS.filter(c => c[0] === k);
+  const short = target && cards.length < target;
+  return `<section class="group"><div class="group-h"><span class="icon">expand_more</span><span class="pip ${k}"></span>
+    <span class="title">${label}</span><span class="count ${short ? "short" : ""}">· ${cards.length}${target ? " / " + target : ""}</span><span class="rule"></span></div>
+    <div class="tiles">${cards.map(([, , id, name], i) => `<div class="tile ${id === "grove-warden" ? "current" : ""}" title="${name}" data-open="editor">
+      <img src="_cards/${id}.webp" alt="${name}" loading="lazy"><span class="sdot" style="background:${STATUS[i % 5]}"></span></div>`).join("")}</div></section>`;
+}).join("");
+document.getElementById("cardlist").innerHTML = CARDS.slice(0, 22).map(([k, r, id, name], i) =>
+  `<div class="row ${id === "grove-warden" ? "on" : ""}"><span class="n">${String(i + 1).padStart(3, "0")}</span><span class="pip ${k}"></span><span class="name">${name}</span><span class="rar ${r}">${r.toUpperCase()}</span></div>`).join("");
+
+function seg(id, fn) {
+  const el = document.getElementById(id);
+  el.addEventListener("click", e => { const s = e.target.closest("span[data-v]"); if (!s) return;
+    el.querySelectorAll("span").forEach(x => x.classList.toggle("on", x === s)); fn(s.dataset.v); });
+}
+function show(v) {
+  document.querySelectorAll(".scrim").forEach(s => s.classList.toggle("open", s.id === v));
+  document.querySelectorAll("#view span").forEach(x => x.classList.toggle("on", x.dataset.v === v));
+  document.querySelectorAll(".rail .nav").forEach(n => n.classList.toggle("active", n.dataset.open === (v === "editor" ? "workspace" : v)));
+}
+seg("view", show);
+seg("theme", v => { document.body.classList.toggle("body--light", v === "light"); document.body.classList.toggle("body--dark", v === "dark"); });
+seg("font", v => document.body.classList.toggle("font-cinzel", v === "cinzel"));
+seg("rail", v => document.getElementById("app").classList.toggle("rail-open", v === "open"));
+document.getElementById("railToggle").onclick = () => document.getElementById("app").classList.toggle("rail-open");
+document.addEventListener("click", e => { const o = e.target.closest("[data-open]"); if (o && !o.closest(".review")) show(o.dataset.open);
+  if (e.target.closest(".close")) show("workspace"); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") show("workspace"); });
+const p = new URLSearchParams(location.search);
+if (p.get("theme") === "light") document.querySelector('#theme [data-v="light"]').click();
+if (p.get("font") === "cinzel") document.querySelector('#font [data-v="cinzel"]').click();
+if (p.get("rail") === "open") document.querySelector('#rail [data-v="open"]').click();
+if (p.get("view")) show(p.get("view"));
+</script>
+</body>
+</html>

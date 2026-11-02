@@ -26,6 +26,9 @@ svg = ["cairosvg"]      # SVG set symbols (PNG works without it)
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+"setdesigner.ui.theme" = ["*.css", "fonts/*"]     # the theme's stylesheets and bundled fonts
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["tests"]

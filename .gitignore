@@ -21,3 +21,6 @@ tests/script/oracle/images/
 
 # Your own sets stay on your machine
 sets/
+
+# mockup pictures copied from a local demo set (MSE renders; not ours to publish)
+docs/design/_cards/
