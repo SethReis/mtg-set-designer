@@ -15,6 +15,7 @@ from nicegui import app, ui
 from ..app.overview import Filters
 from ..app.session import SetSession
 from ..app.settings import Settings
+from . import theme
 
 REPO = Path(__file__).resolve().parents[3]
 FRAME_LABELS = {"m15": "Modern (M15)", "ub": "Universes Beyond (M15)", "8th": "8th Edition (2003)",
@@ -70,6 +71,7 @@ def build(sets_root: Path | None = None, settings_path: Path | None = None,
     STATE.renderer_factory = renderer_factory
     STATE.settings = Settings.load(settings_path)
     STATE.session = None
+    theme.apply()
     start_page.register(STATE)
     overview_page.register(STATE)
     uploads.register(STATE)
@@ -79,6 +81,13 @@ def build(sets_root: Path | None = None, settings_path: Path | None = None,
     editor_page.register(STATE)
     app.on_shutdown(STATE.close)
     return STATE
+
+
+def remember_size(state: AppState, args: dict) -> None:
+    """Keep the window's size (saved with the settings when the app closes)."""
+    width, height = args.get("width"), args.get("height")
+    if width and height and width >= 800 and height >= 600:     # not while minimized
+        state.settings.window = (int(width), int(height))
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -93,6 +102,9 @@ def main(argv: list[str] | None = None) -> None:
     if not browser:
         from .native_window import window_started      # spelling suggestions (see there)
         app.native.start_args["func"] = window_started
+        app.native.on("resized", lambda e: remember_size(state, e.args))
+        app.on_shutdown(lambda: state.settings.save(state.settings_path))
     ui.run(title="Set Designer", native=not browser, show=browser,
+           dark=theme.dark_value(state.settings.theme),
            window_size=None if browser else tuple(state.settings.window),
            reload=False, port=8765 if browser else None, favicon="🃏")

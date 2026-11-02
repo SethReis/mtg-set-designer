@@ -1,4 +1,4 @@
-"""Per-user app settings: recently opened sets, the window size, overview tiles.
+"""Per-user app settings: recently opened sets, the window size, overview tiles, the theme.
 Stored as JSON in %APPDATA%/setdesigner/settings.json (or ~/.setdesigner elsewhere)."""
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 MAX_RECENT = 8
+THEMES = ("dark", "light", "system")
 
 
 def settings_path() -> Path:
@@ -23,6 +24,8 @@ class Settings:
     layout: str = "grid"                                # overview: "grid" or "stacks"
     tiles: str = "images"                               # overview: "images" or "text"
     tile_width: int = 180                               # overview tile width in pixels
+    theme: str = "dark"                                 # "dark", "light" or "system"
+    rail_open: bool = False                             # the set's sidebar shows labels
 
     @classmethod
     def load(cls, path: Path | None = None) -> "Settings":
@@ -34,7 +37,9 @@ class Settings:
                        window=tuple(data.get("window", (1400, 900))),
                        layout=data.get("layout", "grid"),
                        tiles="text" if tiles == "compact" else tiles,    # its old name
-                       tile_width=int(data.get("tile_width", 180)))
+                       tile_width=int(data.get("tile_width", 180)),
+                       theme=data.get("theme", "dark") if data.get("theme") in THEMES else "dark",
+                       rail_open=bool(data.get("rail_open", False)))
         except (OSError, ValueError):
             return cls()
 

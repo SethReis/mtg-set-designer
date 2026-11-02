@@ -1,0 +1,7 @@
+Mana (https://github.com/andrewgioia/mana), version 1.18.0, by Andrew Gioia.
+
+- The Mana font (mana.woff2) is licensed under the SIL Open Font License 1.1
+  (https://openfontlicense.org).
+- The Mana CSS (mana.css, trimmed to the Mana face) is licensed under the MIT License
+  (https://opensource.org/licenses/MIT).
+- The mana, tap and card type symbols the font draws are copyright Wizards of the Coast.

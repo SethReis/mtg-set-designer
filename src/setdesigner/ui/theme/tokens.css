@@ -1,0 +1,132 @@
+/* Design tokens: docs/design/tokens.md. Dark is the default; Quasar puts body--light on
+   the body for the light theme. Screens use these variables, never raw values. */
+
+:root {
+  /* surfaces and text */
+  --bg: #0e1014;
+  --surface-1: #15181e;
+  --surface-2: #1c2028;
+  --surface-3: #252b35;
+  --border: #2a303b;
+  --border-strong: #3a4250;
+  --text: #e8eaef;
+  --text-muted: #9aa2b1;
+  --text-faint: #69717f;
+  --scrim: rgb(8 10 14 / 55%);
+
+  /* accent: gold */
+  --accent: #d9ad55;
+  --accent-hover: #e6bf6e;
+  --accent-soft: rgb(217 173 85 / 14%);
+  --on-accent: #1a1408;
+
+  /* semantic */
+  --success: #46b97f;
+  --warning: #e8a33d;
+  --danger: #e5574f;
+  --info: #5aa3e8;
+  --success-soft: rgb(70 185 127 / 14%);
+  --warning-soft: rgb(232 163 61 / 14%);
+  --danger-soft: rgb(229 87 79 / 14%);
+  --info-soft: rgb(90 163 232 / 14%);
+
+  /* mana: color data only */
+  --mana-w: #efe6c4;
+  --mana-u: #4b8fd6;
+  --mana-b: #8a7f93;
+  --mana-r: #df5b3b;
+  --mana-g: #3f9a5d;
+  --mana-m: #d4af37;
+  --mana-c: #a8aeb6;
+  --mana-l: #a5835b;
+
+  /* rarity and card status */
+  --rarity-common: var(--text-muted);
+  --rarity-uncommon: #a9bacb;
+  --rarity-rare: #d9b35b;
+  --rarity-mythic: #e8702a;
+  --rarity-special: #a66ad9;
+  --status-idea: var(--text-faint);
+  --status-draft: #e3c547;
+  --status-playtested: #5aa3e8;
+  --status-final: var(--success);
+
+  /* type */
+  --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Marcellus", "Cinzel", Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-md: 14px;
+  --text-lg: 17px;
+  --text-xl: 22px;
+  --text-2xl: 30px;
+
+  /* spacing (4px grid) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* radii */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+
+  /* elevation */
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 30%), 0 2px 8px rgb(0 0 0 / 20%);
+  --shadow-2: 0 4px 16px rgb(0 0 0 / 35%);
+  --shadow-3: 0 16px 48px rgb(0 0 0 / 50%), 0 0 0 1px var(--border);
+
+  /* shell */
+  --rail-collapsed: 64px;
+  --rail-expanded: 220px;
+  --topbar-height: 52px;
+  --toolbar-height: 44px;
+
+  /* blur and motion */
+  --blur-backdrop: 8px;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+  --dur-fast: 120ms;
+  --dur-med: 200ms;
+}
+
+.body--light {
+  --bg: #f5f4f0;
+  --surface-1: #ffffff;
+  --surface-2: #f0eee9;
+  --surface-3: #e6e3dc;
+  --border: #e0dcd3;
+  --border-strong: #c9c4b8;
+  --text: #1c1e23;
+  --text-muted: #5c6370;
+  --text-faint: #8c919b;
+  --scrim: rgb(40 36 28 / 30%);
+
+  --accent: #9a6d14;
+  --accent-hover: #82590b;
+  --accent-soft: rgb(154 109 20 / 10%);
+  --on-accent: #ffffff;
+
+  --success: #1f8a55;
+  --warning: #b06d00;
+  --danger: #c4352c;
+  --info: #2a6fb8;
+  --success-soft: rgb(31 138 85 / 10%);
+  --warning-soft: rgb(176 109 0 / 10%);
+  --danger-soft: rgb(196 53 44 / 10%);
+  --info-soft: rgb(42 111 184 / 10%);
+
+  --shadow-1: 0 1px 2px rgb(40 30 10 / 8%), 0 2px 8px rgb(40 30 10 / 6%);
+  --shadow-2: 0 4px 16px rgb(40 30 10 / 12%);
+  --shadow-3: 0 16px 48px rgb(40 30 10 / 18%), 0 0 0 1px var(--border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-fast: 0ms; --dur-med: 0ms; }
+}
