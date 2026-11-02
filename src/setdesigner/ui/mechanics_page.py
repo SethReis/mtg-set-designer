@@ -16,6 +16,7 @@ from ..app.mechanics import PARAMETER_TYPES, find_uses, reminder_preview, rename
 from ..app.overview import COLOR_LABELS
 from ..model import AbilityTemplate, Mechanic, MechanicKind, ReminderPolicy
 from ..mse.mechanics import words_pattern
+from . import theme
 from .widgets import COLOR_PIPS, RARITY_LETTERS, number_label
 
 KIND_LABELS = {MechanicKind.KEYWORD.value: "Keyword (Flying, Cycling {2})",
@@ -37,6 +38,7 @@ def register(state) -> None:
 
     @ui.page("/set/mechanics")
     def mechanics_page() -> None:
+        theme.mode(state.settings.theme)
         session = state.session
         if session is None:
             ui.navigate.to("/")

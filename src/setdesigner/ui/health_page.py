@@ -9,6 +9,7 @@ from ..app.health.checks import CHECKS, enabled, run_checks, threshold
 from ..app.health.roles import ROLES
 from ..app.overview import COLOR_LABELS, MANA_VALUES
 from ..model import Card
+from . import theme
 from .widgets import COLOR_BORDERS, RARITY_LETTERS, number_label
 
 RARITY_CHOICES = {"": "All rarities", "common": "Common", "uncommon": "Uncommon", "rare": "Rare",
@@ -38,6 +39,7 @@ def register(state) -> None:
 
     @ui.page("/set/health")
     def health_page() -> None:
+        theme.mode(state.settings.theme)
         session = state.session
         if session is None:
             ui.navigate.to("/")

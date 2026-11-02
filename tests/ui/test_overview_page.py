@@ -120,7 +120,7 @@ async def test_stacks_in_rows_and_matrix(user: User) -> None:
 
 async def test_set_settings_panel_saves(user: User) -> None:
     session, _, _ = await open_set_with_cards(user)
-    user.find(content="Set", kind=ui.button).click()
+    user.find(marker="nav-settings").click()
     await user.should_see("Set settings")
     await user.should_see("Set symbol")
     code = user.find("Code")

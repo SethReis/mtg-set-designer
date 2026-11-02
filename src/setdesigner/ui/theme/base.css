@@ -67,7 +67,7 @@ body { font-family: var(--font-ui); font-size: var(--text-sm); line-height: 18px
 /* Quasar's color classes (bg-primary, ...) are !important inside a cascade layer, which
    outranks our rules; components use their own color names instead (components.py) */
 .text-on-accent { color: var(--on-accent); }
-.bg-seg-on { background: var(--surface-1); box-shadow: var(--shadow-1); }
+.bg-seg-on { background: var(--surface-3); box-shadow: var(--shadow-1); }
 .text-seg-on { color: var(--text); }
 .q-btn--flat:not(.text-primary):not(.text-negative):not([class*=" text-"]) { color: var(--text-muted); }
 .q-btn--flat:hover { color: var(--text); }
@@ -171,3 +171,99 @@ body { font-family: var(--font-ui); font-size: var(--text-sm); line-height: 18px
 .ds-label { display: block; font-size: 12px; font-weight: 500; color: var(--text-muted); margin-bottom: 5px; }
 .ds-hint { font-size: 12px; color: var(--text-faint); }
 .ds-rule { flex: 1; height: 1px; background: var(--border); }
+
+/* ------------------------------------------------------------------ shell (shell.py) */
+.ds-app { display: grid; grid-template-columns: var(--rail-w) minmax(0, 1fr); height: 100vh; width: 100%;
+          --rail-w: var(--rail-collapsed); transition: grid-template-columns var(--dur-med) var(--ease); }
+.ds-app.rail-open { --rail-w: var(--rail-expanded); }
+.ds-rail { background: var(--surface-1); border-right: 1px solid var(--border); display: flex;
+           flex-direction: column; padding: var(--space-2); gap: 2px; overflow: hidden; min-height: 0; }
+.ds-rail .ds-brand { height: 36px; align-items: center; gap: 10px; padding: 0 10px; margin-bottom: var(--space-3);
+                     color: var(--accent); flex: none; }
+.ds-rail .ds-brand .q-icon { font-size: 22px; }
+.ds-rail .ds-brand .q-label, .ds-rail .ds-brand div:last-child { color: var(--text); font-family: var(--font-display);
+                     font-size: 15px; white-space: nowrap; opacity: 0; transition: opacity var(--dur-fast); }
+.ds-app.rail-open .ds-rail .ds-brand div:last-child { opacity: 1; }
+.ds-rail .ds-rule { flex: none; margin: var(--space-2) 4px; border: 0; }
+.q-btn.ds-nav { position: relative; height: 38px; min-height: 38px; padding: 0 12px; flex: none; width: 100%;
+                border-radius: var(--radius-md); color: var(--text-muted) !important; white-space: nowrap;
+                overflow: visible; }
+.q-btn.ds-nav .q-btn__content { flex-wrap: nowrap; gap: 12px; justify-content: flex-start; }
+.q-btn.ds-nav .q-icon { font-size: 22px; margin: 0 !important; }
+.q-btn.ds-nav .q-btn__content > .block { opacity: 0; transition: opacity var(--dur-fast); }
+.ds-app.rail-open .q-btn.ds-nav .q-btn__content > .block { opacity: 1; }
+.q-btn.ds-nav:hover { background: var(--surface-2); color: var(--text) !important; }
+.q-btn.ds-nav.active { background: var(--surface-3); color: var(--text) !important; }
+.q-btn.ds-nav.active::after { content: ""; position: absolute; left: -8px; top: 9px; bottom: 9px; width: 3px;
+                              border-radius: 0 3px 3px 0; background: var(--accent); }
+.ds-nav-badge { margin-left: auto; }
+.ds-app:not(.rail-open) .ds-nav-badge { position: absolute; top: 3px; right: 3px; margin: 0; padding: 0 4px;
+                                        min-width: 16px; height: 16px; font-size: 10px; justify-content: center; }
+
+.ds-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; height: 100vh; }
+.ds-topbar { height: var(--topbar-height); flex: none; background: var(--surface-1); border-bottom: 1px solid var(--border);
+             display: flex; align-items: center; gap: var(--space-4); padding: 0 var(--space-4); }
+.ds-setname { gap: 10px; white-space: nowrap; min-width: 0; }
+.ds-setname img { width: 24px; height: 24px; object-fit: contain; }
+.ds-setname .display { font-size: 19px; overflow: hidden; text-overflow: ellipsis; }
+.ds-search { flex: 1; max-width: 480px; min-width: 160px; }
+.ds-search .q-field__control, .ds-search.q-field--dense .q-field__control { height: 32px; min-height: 32px; }
+.ds-search .q-field__marginal { height: 32px; color: var(--text-faint); }
+.ds-view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+/* ------------------------------------------------------------------ card workspace (overview_page.py) */
+.ds-toolbar { min-height: var(--toolbar-height); flex: none; display: flex; flex-wrap: wrap; align-items: center;
+              gap: var(--space-2); padding: 6px var(--space-4); }
+.ds-toolbar .ds-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+.ds-toolbar .q-field--dense .q-field__control { height: 32px; min-height: 32px; }
+.ds-toolbar .q-field--dense .q-field__marginal { height: 32px; }
+/* toolbar selects name themselves with a prefix ("Group  Color"); their label stays for
+   screen readers and tests, hidden along with the room Quasar keeps for it */
+.ds-toolbar .ds-select .q-field__label { display: none; }
+.ds-toolbar .ds-select.q-field--labeled .q-field__control-container { padding-top: 0; }
+.ds-toolbar .ds-select.q-field--labeled .q-field__native { padding: 0; min-height: 32px; line-height: 32px; }
+.ds-toolbar .ds-select.q-field--labeled .q-field__prefix { padding: 0 6px 0 0; min-height: 32px; line-height: 32px; }
+.ds-toolbar .ds-select .q-field__native > span { white-space: nowrap; }
+.ds-toolbar .ds-select { min-width: 120px; }
+.ds-toolbar .ds-select .q-field__prefix { color: var(--text-faint); padding-right: 6px; }
+.ds-size { display: flex; align-items: center; gap: 8px; color: var(--text-faint); width: 110px; }
+.ds-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 0 var(--space-4) var(--space-2); }
+.ds-filters .q-chip { margin: 0; }
+.ds-workspace { flex: 1; min-height: 0; overflow: auto; padding: var(--space-2) var(--space-4) var(--space-8); }
+.ds-group { margin-bottom: var(--space-6); }
+.ds-group-h { display: flex; align-items: center; gap: 8px; margin: var(--space-3) 0; cursor: pointer;
+              user-select: none; }
+.ds-group-h .q-icon { font-size: 18px; color: var(--text-faint); }
+.ds-group-title { font-size: var(--text-md); font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ds-group-h .short { color: var(--warning); font-size: 16px; }
+.ds-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--tile), 1fr)); gap: var(--space-4); }
+.ds-tile { position: relative; cursor: pointer; border-radius: 4.5% / 3.2%; overflow: hidden;
+           outline: 1px solid transparent;
+           transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast), outline-color var(--dur-fast); }
+.ds-tile:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); outline-color: var(--border-strong); }
+.ds-tile > img { width: 100%; aspect-ratio: 375 / 523; height: auto; object-fit: cover; display: block; }
+.ds-matrix { border-collapse: separate; border-spacing: 0; width: 100%; }
+.ds-matrix th { position: sticky; background: var(--surface-2); color: var(--text); font-weight: 600; text-align: left;
+                padding: 6px 10px; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border);
+                vertical-align: top; white-space: nowrap; }
+.ds-matrix thead th { top: 0; z-index: 2; }
+.ds-matrix tbody th { left: 0; z-index: 1; }
+.ds-matrix thead th:first-child { left: 0; z-index: 3; }
+.ds-matrix td { vertical-align: top; padding: 6px; border-bottom: 1px solid var(--border);
+                border-right: 1px solid var(--border); }
+
+/* the text tile (widgets.compact_tile): a card-shaped box in the theme */
+.ds-text-tile { width: 100%; aspect-ratio: 375 / 523; display: flex; flex-direction: column; overflow: hidden;
+                background: var(--surface-2); color: var(--text); border: 3px solid var(--tile-border);
+                border-radius: inherit; line-height: 1.25; }
+.ds-text-tile .head { display: flex; align-items: center; gap: 4px; padding: 3px 5px; background: var(--surface-3); }
+.ds-text-tile .name { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ds-text-tile .type { padding: 2px 5px; color: var(--text-muted); font-style: italic; overflow: hidden;
+                      text-overflow: ellipsis; white-space: nowrap; }
+.ds-text-tile .rules { flex: 1; padding: 2px 5px; overflow: hidden; white-space: pre-line; display: -webkit-box;
+                       -webkit-box-orient: vertical; }
+.ds-text-tile .foot { display: flex; align-items: center; gap: 5px; padding: 3px 5px; color: var(--text-faint); }
+.ds-text-tile .foot .stats { margin-left: auto; font-weight: 600; color: var(--text); }
+.ds-status-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.ds-status-dot.idea { background: var(--status-idea); } .ds-status-dot.draft { background: var(--status-draft); }
+.ds-status-dot.playtested { background: var(--status-playtested); } .ds-status-dot.final { background: var(--status-final); }

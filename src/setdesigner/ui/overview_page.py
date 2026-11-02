@@ -1,4 +1,11 @@
-"""The set overview (home of an open set): every card, grouped in rows or in a matrix."""
+"""The card workspace (home of an open set, docs/design/layout.md): every card, grouped in
+rows or in a matrix, inside the app shell. Everything else opens over it.
+
+    /set                          the workspace
+    /set?card=<id>                ... with a card open in the editor
+    /set?open=mechanics&id=<id>   ... with a rail item open (mechanics, cycles, health,
+                                  archetypes, settings)
+"""
 from __future__ import annotations
 
 from nicegui import ui
@@ -6,12 +13,16 @@ from nicegui import ui
 from ..app import overview as ov
 from ..app.health.checks import run_checks
 from ..model import Card, Rarity, Status
+from . import components as c
+from .shell import set_shell
 from .uploads import add_art_script, set_paste_target
-from .widgets import (CARD_RATIO, COLOR_PIPS, STACK_CSS, compact_tile, grid_cells, responsive_grid,
-                      served_url)
+from .widgets import CARD_RATIO, STACK_CSS, compact_tile, served_url
 
 THUMB_POLL = 0.5                         # seconds between checks for newly rendered pictures
 COLOR_CHOICES = {k: v for k, v in ov.COLOR_LABELS.items()}
+# rail items that are still pages of their own (they become modals over the workspace)
+PAGES = {"mechanics": "/set/mechanics", "cycles": "/set/cycles", "health": "/set/health"}
+PAGE_IDS = {"mechanics": "mechanic", "cycles": "cycle"}     # their query parameter for ?id=
 
 
 def thumbnail_url(folder, path) -> str:
@@ -22,10 +33,17 @@ def thumbnail_url(folder, path) -> str:
 def register(state) -> None:
 
     @ui.page("/set")
-    def overview_page() -> None:
+    def overview_page(open: str = "", id: str = "", card: str = "") -> None:   # noqa: A002 (query names)
         session = state.session
         if session is None:
             ui.navigate.to("/")
+            return
+        if card and any(x.id == card for x in session.project.cards):
+            ui.navigate.to(f"/set/card/{card}")
+            return
+        if open in PAGES:
+            key = PAGE_IDS.get(open)
+            ui.navigate.to(PAGES[open] + (f"?{key}={id}" if key and id else ""))
             return
         view, settings = state.overview, state.settings
         ui.add_css(STACK_CSS)
@@ -42,27 +60,28 @@ def register(state) -> None:
         def new_card() -> None:
             open_card(session.new_card())
 
-        # ------------------------------------------------------------ header
-        with ui.header().classes("items-center bg-slate-800 py-2"):
-            ui.button(icon="arrow_back", on_click=lambda: (state.close(), ui.navigate.to("/"))) \
-                .props("flat round color=white").tooltip("Back to sets")
-            ui.label(session.project.info.name).classes("text-lg font-semibold")
-            ui.label(session.project.info.code).classes("text-sm opacity-70")
-            count = ui.label().classes("text-sm opacity-70 ml-2")
-            ui.space()
-            status = ui.label().classes("text-sm opacity-70")
-            ui.button("Set", icon="settings", on_click=lambda: settings_dialog()) \
-                .props("flat no-caps color=white").tooltip("Name, frame, symbol, rarity targets")
-            ui.button("Mechanics", icon="auto_fix_high", on_click=lambda: ui.navigate.to("/set/mechanics")) \
-                .props("flat no-caps color=white")
-            ui.button("Cycles", icon="donut_large", on_click=lambda: ui.navigate.to("/set/cycles")) \
-                .props("flat no-caps color=white")
-            ui.button("Archetypes", icon="hub", on_click=lambda: archetype_dialog()) \
-                .props("flat no-caps color=white")
-            health = ui.button(on_click=lambda: ui.navigate.to("/set/health")) \
-                .props("rounded dense unelevated no-caps").classes("px-3").mark("health") \
-                .tooltip("Set health: curves, roles per color, mechanics, complexity")
-            ui.button("New card", icon="add", on_click=new_card).props("flat no-caps color=white")
+        def open_view(name: str) -> None:
+            if name == "cards":
+                return
+            if name == "sets":
+                session.flush()
+                state.close()
+                ui.navigate.to("/")
+            elif name in PAGES:
+                session.flush()
+                ui.navigate.to(PAGES[name])
+            elif name == "archetypes":
+                archetype_dialog()
+            elif name == "settings":
+                settings_dialog()
+
+        def set_filter(**values) -> None:
+            for key, value in values.items():
+                setattr(view.filters, key, value)
+            content.refresh()
+
+        shell = set_shell(state, open_view=open_view, new_card=new_card,
+                          on_search=lambda text: set_filter(text=text), search_text=view.filters.text)
 
         # ------------------------------------------------------------ toolbar
         factor_names = {name: f.label for name, f in ov.FACTORS.items()}
@@ -78,78 +97,105 @@ def register(state) -> None:
             settings.save(state.settings_path)
             content.refresh()
 
-        def set_filter(**values) -> None:
-            for key, value in values.items():
-                setattr(view.filters, key, value)
-            content.refresh()
+        def select(options: dict, value, label: str, prefix: str, on_change) -> ui.select:
+            """A compact toolbar select: its label shows as a prefix ("Group  Color")."""
+            return ui.select(options, value=value, label=label, on_change=on_change) \
+                .props(f'dense outlined options-dense prefix="{prefix}"').classes("ds-select")
 
-        # one grid for every control: they stretch across the window and wrap onto more
-        # rows as it narrows
-        with responsive_grid(140).classes("pb-1"):
-            with grid_cells():
+        with shell.main:
+            with ui.element("div").classes("ds-toolbar"):
                 @ui.refreshable
                 def factor_selects() -> None:
                     # rebuilt with the content, so they show changes made elsewhere (a matrix
                     # cell click switches to rows) without firing their own change handlers
-                    ui.toggle({"rows": "Rows", "matrix": "Matrix"}, value=view.mode,
-                              on_change=lambda e: set_view(mode=e.value, cell=None)) \
-                        .props("no-caps spread").classes("w-full")
+                    c.segmented({"rows": "Rows", "matrix": "Matrix"}, view.mode,
+                                lambda e: set_view(mode=e.value, cell=None))
                     if view.mode == "rows":
-                        ui.select(factor_names, value=view.group_by, label="Group by",
-                                  on_change=lambda e: set_view(group_by=e.value, cell=None)) \
-                            .classes("w-full")
+                        select(factor_names, view.group_by, "Group by", "Group",
+                               lambda e: set_view(group_by=e.value, cell=None))
                     else:
-                        ui.select(factor_names, value=view.rows, label="Rows",
-                                  on_change=lambda e: set_view(rows=e.value)).classes("w-full")
-                        ui.select(factor_names, value=view.columns, label="Columns",
-                                  on_change=lambda e: set_view(columns=e.value)).classes("w-full")
+                        select(factor_names, view.rows, "Rows", "Rows", lambda e: set_view(rows=e.value))
+                        select(factor_names, view.columns, "Columns", "Columns",
+                               lambda e: set_view(columns=e.value))
                 factor_selects()
-            ui.select({k: label for k, (label, _) in ov.SORTS.items()}, value=view.sort, label="Sort",
-                      on_change=lambda e: set_view(sort=e.value)).classes("w-full")
-            ui.toggle({"grid": "Grid", "stacks": "Stacks"}, value=settings.layout,
-                      on_change=lambda e: set_setting(layout=e.value)) \
-                .props("no-caps spread").classes("w-full").tooltip("Stacks overlap the cards: hover one to see it")
-            ui.toggle({"images": "Images", "text": "Text"}, value=settings.tiles,
-                      on_change=lambda e: set_setting(tiles=e.value)) \
-                .props("no-caps spread").classes("w-full")
-            with ui.column().classes("w-full gap-0"):
-                ui.label("Card size").classes("text-xs text-gray-500")
-                ui.slider(min=100, max=300, step=20, value=settings.tile_width) \
-                    .on("change", lambda e: set_setting(tile_width=int(e.args))).classes("w-full") \
-                    .props("dense")
-            ui.input(placeholder="Search name, type, rules", value=view.filters.text) \
-                .props("dense outlined clearable").classes("w-full").style("grid-column:span 2") \
-                .on_value_change(lambda e: set_filter(text=e.value or ""))
-            ui.select({s.value: s.value.title() for s in Status}, multiple=True, label="Status",
-                      value=sorted(view.filters.statuses),
-                      on_change=lambda e: set_filter(statuses=set(e.value or []))) \
-                .props("dense use-chips clearable").classes("w-full")
-            ui.select({r.value: r.value.title() for r in Rarity}, multiple=True, label="Rarity",
-                      value=sorted(view.filters.rarities),
-                      on_change=lambda e: set_filter(rarities=set(e.value or []))) \
-                .props("dense use-chips clearable").classes("w-full")
-            ui.select(COLOR_CHOICES, multiple=True, label="Color", value=sorted(view.filters.colors),
-                      on_change=lambda e: set_filter(colors=set(e.value or []))) \
-                .props("dense use-chips clearable").classes("w-full")
+                select({k: label for k, (label, _) in ov.SORTS.items()}, view.sort, "Sort", "Sort",
+                       lambda e: set_view(sort=e.value))
+                ui.element("div").classes("ds-sep")
+                c.segmented({"grid": "Grid", "stacks": "Stacks"}, settings.layout,
+                            lambda e: set_setting(layout=e.value)) \
+                    .tooltip("Stacks overlap the cards: hover one to see it")
+                c.segmented({"images": "Images", "text": "Text"}, settings.tiles,
+                            lambda e: set_setting(tiles=e.value))
+                ui.element("div").classes("grow")
+                count = ui.label().classes("muted num")
+                with c.button("Filters", kind="secondary", icon="filter_list") \
+                        .props("dense").classes("px-2") as filters_button:
+                    filters_badge = ui.label().classes("ds-badge info ml-1")
+                    with ui.menu().props("anchor='bottom right' self='top right'"), \
+                            ui.column().classes("p-4 gap-3 w-[300px]"):
+                        ui.select({s.value: s.value.title() for s in Status}, multiple=True, label="Status",
+                                  value=sorted(view.filters.statuses),
+                                  on_change=lambda e: set_filter(statuses=set(e.value or []))) \
+                            .props("dense outlined use-chips clearable").classes("w-full")
+                        ui.select({r.value: r.value.title() for r in Rarity}, multiple=True, label="Rarity",
+                                  value=sorted(view.filters.rarities),
+                                  on_change=lambda e: set_filter(rarities=set(e.value or []))) \
+                            .props("dense outlined use-chips clearable").classes("w-full")
+                        ui.select(COLOR_CHOICES, multiple=True, label="Color", value=sorted(view.filters.colors),
+                                  on_change=lambda e: set_filter(colors=set(e.value or []))) \
+                            .props("dense outlined use-chips clearable").classes("w-full")
+                filters_button.tooltip("Status, rarity, color")
+                with ui.element("div").classes("ds-size").tooltip("Card size"):
+                    ui.icon("photo_size_select_small").classes("text-[16px]")
+                    ui.slider(min=100, max=300, step=20, value=settings.tile_width) \
+                        .on("change", lambda e: set_setting(tile_width=int(e.args))).props("dense") \
+                        .classes("grow")
+
+            filter_chips = ui.element("div").classes("ds-filters")
+            workspace = ui.element("div").classes("ds-workspace")
+
+        def show_filters() -> None:
+            """The active filters as removable chips under the toolbar (and the badge count)."""
+            f = view.filters
+            groups = [("Status", "statuses", {s.value: s.value.title() for s in Status}),
+                      ("Rarity", "rarities", {r.value: r.value.title() for r in Rarity}),
+                      ("Color", "colors", COLOR_CHOICES)]
+            active = [(label, key, names) for label, key, names in groups if getattr(f, key)]
+            filters_badge.text = str(len(active))
+            filters_badge.set_visibility(bool(active))
+            filter_chips.clear()
+            filter_chips.set_visibility(bool(active))
+            with filter_chips:
+                for label, key, names in active:
+                    chosen = ", ".join(names.get(v, v) for v in sorted(getattr(f, key)))
+                    ui.chip(f"{label}: {chosen}", removable=True,
+                            on_value_change=lambda e, k=key: set_filter(**{k: set()}))
+                if active:
+                    c.button("Clear all", kind="ghost",
+                             on_click=lambda: set_filter(statuses=set(), rarities=set(), colors=set())) \
+                        .props("dense")
 
         # ------------------------------------------------------------ tiles
         def picture(card: Card, width: int) -> None:
             path = worker.get(card) if settings.tiles == "images" else None
             if path is not None:
                 ui.element("img").props(f'src="{thumbnail_url(worker.cache.folder, path)}" '
-                                        f'loading=lazy draggable=false') \
-                    .style(f"width:{width}px;height:{round(width * CARD_RATIO)}px;display:block")
+                                        f'loading=lazy draggable=false alt=""')
             else:
                 compact_tile(card, width)
 
-        def tile(card: Card, width: int, stacked: bool = False) -> None:
-            box = ui.element("div").classes("cursor-pointer") \
+        def tile(card: Card, width: int, fixed: bool = False, stacked: bool = False) -> None:
+            """A card's tile. It fills its grid cell, or is `width` wide when `fixed` (stacks,
+            matrix cells)."""
+            box = ui.element("div").classes("ds-tile") \
                 .on("click", lambda c=card: open_card(c)).mark(f"tile-{card.id}") \
                 .props(f'data-art-card="{card.id}"')            # drop an image: the card's art
+            if fixed:
+                box.style(f"width:{width}px")
             if stacked:
                 box.classes("stack-card")                # see STACK_CSS
             else:
-                box.classes("hover:shadow-lg transition-shadow rounded").tooltip(card.faces[0].name)
+                box.tooltip(card.faces[0].name)
             box.card, box.width = card, width
             tiles.setdefault(card.id, []).append(box)
             with box:
@@ -159,7 +205,7 @@ def register(state) -> None:
             with ui.element("div").classes("card-stack").mark("stack") \
                     .style(f"--card-h:{round(width * CARD_RATIO)}px"):
                 for card in cards:
-                    tile(card, width, stacked=True)
+                    tile(card, width, fixed=True, stacked=True)
 
         def update_tiles() -> None:
             """Swap text tiles for pictures that have been rendered meanwhile."""
@@ -184,15 +230,16 @@ def register(state) -> None:
         def cell_cards(cards: list[Card]) -> list[Card]:
             if view.cell is None:
                 return cards
-            rows, r, cols, c = view.cell
+            rows, r, cols, c_ = view.cell
             p = session.project
             return [x for x in cards if r in ov.keys(x, ov.FACTORS[rows], p)
-                    and c in ov.keys(x, ov.FACTORS[cols], p)]
+                    and c_ in ov.keys(x, ov.FACTORS[cols], p)]
 
         # ------------------------------------------------------------ content
         @ui.refreshable
         def content() -> None:
             factor_selects.refresh()
+            show_filters()
             tiles.clear()
             seen["version"] = -1
             project = session.project
@@ -200,77 +247,87 @@ def register(state) -> None:
             if view.mode == "rows":
                 cards = cell_cards(cards)
             count.text = f"{len(cards)} of {len(project.cards)} cards" \
-                if len(cards) != len(project.cards) else f"{len(project.cards)} cards"
-            found = run_checks(project)
-            health.text = f"{len(found)} warning{'s' * (len(found) != 1)}" if found else "Healthy"
-            health.props(f"color={'amber-7' if found else 'green-7'} icon={'warning' if found else 'favorite'}")
+                if len(cards) != len(project.cards) else f"{len(cards)} card{'s' * (len(cards) != 1)}"
+            shell.set_health(len(run_checks(project)))
             if settings.tiles == "images":
                 worker.request(cards)
             if not project.cards:
-                ui.label("No cards yet. Add one with “New card”.").classes("text-gray-500 m-4")
+                c.empty_state("style", "No cards yet", "Start the set with its first card.",
+                              action="Create the first card", on_action=new_card)
                 return
             if view.mode == "rows":
                 rows_view(cards)
             else:
                 matrix_view(cards)
 
+        def group_header(title: str, open_: bool, short: bool, pip: str | None, toggle) -> None:
+            with ui.element("div").classes("ds-group-h").on("click", toggle):
+                ui.icon("expand_more" if open_ else "chevron_right")
+                if pip:
+                    c.pips(pip)
+                ui.label(title).classes("ds-group-title")
+                if short:
+                    ui.icon("error_outline").classes("short").tooltip("Fewer cards than the target")
+                ui.element("div").classes("ds-rule")
+
+        def toggle_group(key: str) -> None:
+            view.collapsed.symmetric_difference_update({key})
+            content.refresh()
+
         def rows_view(cards: list[Card]) -> None:
             if view.cell is not None:
-                rows, r, cols, c = view.cell
+                rows, r, cols, c_ = view.cell
                 labels = dict(ov.FACTORS[rows].options(session.project))
                 labels2 = dict(ov.FACTORS[cols].options(session.project))
-                with ui.row().classes("items-center gap-2"):
-                    ui.chip(f"{labels.get(r, r)} · {labels2.get(c, c)}", removable=True,
-                            on_value_change=lambda e: set_view(cell=None)).props("color=blue-1")
-                    ui.label("(one matrix cell)").classes("text-sm text-gray-500")
+                with ui.row().classes("items-center gap-2 mt-2"):
+                    ui.chip(f"{labels.get(r, r)} · {labels2.get(c_, c_)}", removable=True,
+                            on_value_change=lambda e: set_view(cell=None))
+                    ui.label("(one matrix cell)").classes("faint")
             factor = ov.FACTORS[view.group_by]
             width = settings.tile_width
             groups = []                                      # (group, its target, collapse key)
             for g in ov.group(cards, factor, session.project):
                 if view.cell is not None:                    # just the cell's group
-                    rows, r, cols, c = view.cell
+                    rows, r, cols, c_ = view.cell
                     if g.key != r:
                         continue
-                    wanted = target(ov.FACTORS[rows], r, ov.FACTORS[cols], c)
+                    wanted = target(ov.FACTORS[rows], r, ov.FACTORS[cols], c_)
                 else:
                     wanted = target(factor, g.key)
                 groups.append((g, wanted, f"{factor.name}:{g.key}"))
             if settings.layout == "stacks":
-                stacked_groups(groups, width)
+                stacked_groups(groups, width, factor)
                 return
             for g, wanted, key in groups:
-                with ui.expansion(heading(g.label, len(g.cards), wanted), value=key not in view.collapsed) \
-                        .classes("w-full").props("dense header-class=text-base font-semibold") as section:
-                    section.on_value_change(lambda e, k=key: view.collapsed.discard(k) if e.value
-                                            else view.collapsed.add(k))
+                open_ = key not in view.collapsed
+                with ui.element("div").classes("ds-group"):
+                    group_header(heading(g.label, len(g.cards), wanted), open_,
+                                 wanted is not None and len(g.cards) < wanted,
+                                 g.key if factor.name == "color" else None,
+                                 lambda k=key: toggle_group(k))
+                    if not open_:
+                        continue
                     if not g.cards:
-                        ui.label("No cards").classes("text-sm text-gray-400 ml-2")
-                    # the same columns in every section, spread across the window
-                    with ui.element("div").classes("w-full pr-2").style(
-                            f"display:grid;grid-template-columns:repeat(auto-fill,{width}px);"
-                            "justify-content:space-between;gap:12px"):
+                        ui.label("No cards").classes("faint ml-7")
+                    # tiles fill the row: each at least the card size, all growing alike
+                    with ui.element("div").classes("ds-tiles").style(f"--tile:{width}px"):
                         for card in g.cards:
                             tile(card, width)
 
-        def stacked_groups(groups, width: int) -> None:
+        def stacked_groups(groups, width: int, factor) -> None:
             """Stacks layout: each group is a column of stacks, the columns flowing across."""
-            def toggle(key: str) -> None:
-                view.collapsed.symmetric_difference_update({key})
-                content.refresh()
-
             with ui.row().classes("w-full gap-x-8 gap-y-4 items-start"):
                 for g, wanted, key in groups:
                     open_ = key not in view.collapsed
                     with ui.column().classes("gap-2"):
-                        with ui.row().classes("items-center gap-1 cursor-pointer no-wrap") \
-                                .on("click", lambda k=key: toggle(k)):
-                            ui.icon("expand_more" if open_ else "chevron_right").classes("text-gray-500")
-                            ui.label(heading(g.label, len(g.cards), wanted)) \
-                                .classes("text-base font-semibold whitespace-nowrap")
+                        group_header(heading(g.label, len(g.cards), wanted), open_,
+                                     wanted is not None and len(g.cards) < wanted,
+                                     g.key if factor.name == "color" else None,
+                                     lambda k=key: toggle_group(k))
                         if not open_:
                             continue
                         if not g.cards:
-                            ui.label("No cards").classes("text-sm text-gray-400 ml-6")
+                            ui.label("No cards").classes("faint ml-6")
                         with ui.row().classes("gap-3 no-wrap items-start"):
                             for cards_in_stack in ov.stacks(g.cards):
                                 stack(cards_in_stack, width)
@@ -281,62 +338,53 @@ def register(state) -> None:
             width = settings.tile_width
             row_header = 170
 
-            def open_cell(r: str, c: str) -> None:
-                set_view(mode="rows", group_by=view.rows, cell=(view.rows, r, view.columns, c))
+            def open_cell(r: str, c_: str) -> None:
+                set_view(mode="rows", group_by=view.rows, cell=(view.rows, r, view.columns, c_))
 
             # full width; the browser gives busy columns more room than empty ones. Every
             # column fits at least one tile: below that the table scrolls sideways instead
             # of squashing
             min_width = row_header + len(m.columns) * (width + 24)
-            with ui.element("table").classes("border-collapse w-full") \
-                    .style(f"min-width:{min_width}px"):
+            with ui.element("table").classes("ds-matrix mt-2").style(f"min-width:{min_width}px"):
                 with ui.element("colgroup"):
                     ui.element("col").style(f"width:{row_header}px")
                     for _ in m.columns:
                         ui.element("col")
-                with ui.element("tr"):
-                    ui.element("th").classes("sticky top-0 left-0 z-20 bg-gray-100")
-                    for c, label in m.columns:
-                        with ui.element("th").classes("sticky top-0 z-10 bg-gray-100 px-2 py-1 "
-                                                      "text-left font-semibold border"):
-                            n = sum(len(m.cell(r, c)) for r, _ in m.rows)
-                            ui.label(heading(label, n, target(cols, c)))
-                for r, row_label in m.rows:
-                    with ui.element("tr"):
-                        with ui.element("th").classes("sticky left-0 z-10 bg-gray-100 px-2 py-1 "
-                                                      "text-left align-top font-semibold border"):
-                            n = sum(len(m.cell(r, c)) for c, _ in m.columns)
-                            pip = COLOR_PIPS.get(r) if rows.name == "color" else None
-                            with ui.row().classes("items-center gap-1"):
-                                if pip:
-                                    ui.element("span").style(f"width:10px;height:10px;border-radius:50%;"
-                                                             f"background:{pip};border:1px solid #888")
-                                ui.label(heading(row_label, n, target(rows, r)))
-                        for c, _ in m.columns:
-                            in_cell = m.cell(r, c)
-                            wanted = target(rows, r, cols, c)
-                            short = wanted is not None and len(in_cell) < wanted
-                            with ui.element("td").classes("align-top border p-1") \
-                                    .style(f"min-width:{width + 24}px"):
-                                ui.button(f"{len(in_cell)}" + (f" / {wanted}" if wanted is not None else ""),
-                                          on_click=lambda r=r, c=c: open_cell(r, c)) \
-                                    .props("flat dense no-caps size=sm"
-                                           + (" text-color=orange-9" if short else " text-color=grey-7")) \
-                                    .tooltip("Show just these cards")
-                                if settings.layout == "stacks":
-                                    if in_cell:
-                                        stack(in_cell, width)
-                                else:
-                                    with ui.row().classes("gap-2 flex-wrap"):
-                                        for card in in_cell:
-                                            tile(card, width)
+                with ui.element("thead"), ui.element("tr"):
+                    ui.element("th")
+                    for col, label in m.columns:
+                        with ui.element("th"):
+                            n = sum(len(m.cell(r, col)) for r, _ in m.rows)
+                            ui.label(heading(label, n, target(cols, col)))
+                with ui.element("tbody"):
+                    for r, row_label in m.rows:
+                        with ui.element("tr"):
+                            with ui.element("th"):
+                                n = sum(len(m.cell(r, col)) for col, _ in m.columns)
+                                with ui.row().classes("items-center gap-2 no-wrap"):
+                                    if rows.name == "color":
+                                        c.pips(r)
+                                    ui.label(heading(row_label, n, target(rows, r)))
+                            for col, _ in m.columns:
+                                in_cell = m.cell(r, col)
+                                wanted = target(rows, r, cols, col)
+                                short = wanted is not None and len(in_cell) < wanted
+                                with ui.element("td").style(f"min-width:{width + 24}px"):
+                                    ui.button(f"{len(in_cell)}" + (f" / {wanted}" if wanted is not None else ""),
+                                              on_click=lambda r=r, col=col: open_cell(r, col)) \
+                                        .props("flat dense no-caps size=sm") \
+                                        .classes("num" + (" text-warning" if short else "")) \
+                                        .tooltip("Show just these cards")
+                                    if settings.layout == "stacks":
+                                        if in_cell:
+                                            stack(in_cell, width)
+                                    else:
+                                        with ui.row().classes("gap-2 flex-wrap"):
+                                            for card in in_cell:
+                                                tile(card, width, fixed=True)
 
-        with ui.scroll_area().classes("w-full grow"):
+        with workspace:
             content()
-
-        # page fills the window under the header; the cards scroll
-        ui.query(".q-page").classes("column")
-        ui.query(".nicegui-content").classes("grow h-0 min-h-0")
 
         # ------------------------------------------------------------ timers
         def tick() -> None:
@@ -351,17 +399,34 @@ def register(state) -> None:
             update_tiles()
             waiting = settings.tiles == "images" and any(worker.get(b[0].card) is None
                                                          for b in tiles.values() if b)
-            status.text = (f"Pictures: {worker.error}" if worker.error
-                           else "Drawing card pictures…" if waiting else "")
+            if worker.error:
+                shell.set_status(f"Pictures: {worker.error}", "danger")
+            elif session.unsaved:
+                shell.set_status("Saving…", "muted")
+            elif waiting:
+                shell.set_status("Drawing card pictures…", "info")
+            else:
+                shell.set_status("All changes saved")
 
         ui.timer(THUMB_POLL, tick)
 
+        def remember(name: str | None) -> None:
+            """Keep the open modal in the URL, so a reload reopens it."""
+            ui.navigate.history.replace(f"/set?open={name}" if name else "/set")
+
         def archetype_dialog() -> None:
             from .archetypes import archetype_manager
-            archetype_manager(session, on_close=content.refresh)
+            remember("archetypes")
+            archetype_manager(session, on_close=lambda: (remember(None), content.refresh()))
 
         def settings_dialog() -> None:
             from .app import FRAME_LABELS
             from .set_settings import set_settings
-            # the header, targets and every card picture may change: rebuild the page
+            remember("settings")
+            # the top bar, targets and every card picture may change: rebuild the page
             set_settings(session, FRAME_LABELS, on_close=lambda: ui.navigate.to("/set"))
+
+        if open == "archetypes":
+            archetype_dialog()
+        elif open == "settings":
+            settings_dialog()

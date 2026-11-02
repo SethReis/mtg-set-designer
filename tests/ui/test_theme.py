@@ -17,11 +17,13 @@ def test_stylesheets_and_fonts_exist() -> None:
 
 
 def test_every_token_used_is_defined() -> None:
+    base = (theme.FOLDER / "base.css").read_text(encoding="utf-8")
     tokens = (theme.FOLDER / "tokens.css").read_text(encoding="utf-8")
-    defined = set(re.findall(r"(--[\w-]+):", tokens))
-    used = set(re.findall(r"var\((--[\w-]+)", (theme.FOLDER / "base.css").read_text(encoding="utf-8")))
-    quasar = {u for u in used if u.startswith("--q-") or u == "--dot"}
-    assert used - defined - quasar == set()
+    defined = set(re.findall(r"(--[\w-]+):", tokens + base))     # tokens, and component-local ones
+    used = set(re.findall(r"var\((--[\w-]+)", base))
+    inline = {"--dot", "--tile", "--tile-border"}                # set by components in a style=""
+    quasar = {u for u in used if u.startswith("--q-")}
+    assert used - defined - quasar - inline == set()
 
 
 @pytest.mark.parametrize("symbol, glyph", [

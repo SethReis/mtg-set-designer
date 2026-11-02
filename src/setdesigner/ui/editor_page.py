@@ -9,6 +9,7 @@ from ..app import ability_words, text_input
 from ..app.health.roles import ROLES, detected_roles, mechanic_roles
 from ..model import Card, MechanicKind, Rarity, Status
 from ..mse.mapping import split_type_line
+from . import theme
 from .art_editor import art_editor
 from .mechanics_page import POLICY_LABELS
 from .uploads import add_art_script, set_paste_target
@@ -26,6 +27,7 @@ def register(state) -> None:
 
     @ui.page("/set/card/{card_id}")
     async def editor_page(card_id: str) -> None:
+        theme.mode(state.settings.theme)
         session = state.session
         if session is None:
             ui.navigate.to("/")

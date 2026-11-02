@@ -7,6 +7,7 @@ from nicegui import app, ui
 
 from ..app.session import SessionError, SetSession
 from ..model.project import slug
+from . import theme
 
 
 def register(state) -> None:
@@ -33,6 +34,7 @@ def register(state) -> None:
 
     @ui.page("/")
     def start_page() -> None:
+        theme.mode(state.settings.theme)
         ui.label("Set Designer").classes("text-3xl font-bold mt-6 mx-auto")
         with ui.row().classes("w-full justify-center gap-8 mt-6 items-start"):
             with ui.card().classes("w-96"):

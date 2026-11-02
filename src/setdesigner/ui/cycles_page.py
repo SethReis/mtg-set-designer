@@ -12,6 +12,7 @@ from nicegui import ui
 from ..app.cycles import (ALL_COMBINATIONS, GROUP_NAMES, GROUPINGS, member_fields, render, status,
                           template_change_plan)
 from ..model import Cycle, CycleTemplate, Rarity
+from . import theme
 from .widgets import COLOR_PIPS, number_label
 
 FIELD_LABELS = {"name": "Name", "mana_cost": "Mana cost", "type_line": "Type line",
@@ -41,6 +42,7 @@ def register(state) -> None:
 
     @ui.page("/set/cycles")
     def cycles_page(cycle: str = "") -> None:
+        theme.mode(state.settings.theme)
         session = state.session
         if session is None:
             ui.navigate.to("/")
