@@ -60,3 +60,11 @@ def test_frame_resolution() -> None:
     card = Card(id="z", frame="old", faces=[Face(name="A"), Face(name="B", frame="m15")])
     assert card.frame_for(0, "m15") == "old"
     assert card.frame_for(1, "4th") == "m15"
+
+
+def test_load_summary_reads_info_and_counts_cards(tmp_path) -> None:
+    from setdesigner.model.project import load_summary
+    project = oracle_project()
+    save_project(project, tmp_path)
+    info, count = load_summary(tmp_path)
+    assert info.name == project.info.name and count == len(project.cards)

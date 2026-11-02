@@ -10,6 +10,7 @@ from ..app.symbol_check import check_symbol
 from ..model import Rarity
 from ..mse.script.values import ScriptError
 from ..render.symbol import symbol_image
+from . import components as c
 
 PREVIEW_RARITIES = [("common", "Common"), ("uncommon", "Uncommon"), ("rare", "Rare"),
                     ("mythic rare", "Mythic")]
@@ -17,7 +18,8 @@ CARD_SIZE = 20                  # the symbol's height on an M15 card at 150 dpi
 LARGE_SIZE = 72
 
 
-def set_settings(session, frame_labels: dict[str, str], on_close=None) -> None:
+def set_settings(session, frame_labels: dict[str, str], *, parent, on_close=None) -> c.Modal:
+    """Open the dialog (an md modal in `parent`); `on_close` runs after it closes."""
     info = session.project.info
 
     def save(**values) -> None:
@@ -38,8 +40,8 @@ def set_settings(session, frame_labels: dict[str, str], on_close=None) -> None:
         e.sender.reset()
         symbol_section.refresh()
 
-    with ui.dialog() as dialog, ui.card().classes("w-[760px] max-w-[95vw]"):
-        ui.label("Set settings").classes("text-xl font-semibold")
+    with c.modal("md", "Set settings", parent=parent, footer=True, persistent=False,
+                 on_close=on_close) as m:
         with ui.element("div").classes("w-full") \
                 .style("display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px"):
             name = ui.input("Set name", value=info.name)
@@ -53,15 +55,15 @@ def set_settings(session, frame_labels: dict[str, str], on_close=None) -> None:
             copyright_ = ui.input("Copyright line", value=info.copyright)
             copyright_.on("blur", lambda: save(copyright=copyright_.value))
 
-        ui.label("Cards wanted per rarity").classes("text-sm font-semibold mt-2")
-        ui.label("Shown as “18 / 20” in the overview.").classes("text-xs text-gray-500")
+        ui.label("Cards wanted per rarity").classes("ds-form-h")
+        c.hint("Shown as “18 / 20” in the overview.")
         with ui.row().classes("gap-2"):
             for rarity in Rarity:
                 field = ui.number(rarity.value.title(), value=info.rarity_slots.get(rarity), min=0,
                                   format="%d").props("dense").classes("w-24")
                 field.on("blur", lambda f=field, r=rarity: save_slot(r, f.value))
 
-        ui.label("Set symbol").classes("text-sm font-semibold mt-2")
+        ui.label("Set symbol").classes("ds-form-h")
 
         @ui.refreshable
         def symbol_section() -> None:
@@ -70,7 +72,7 @@ def set_settings(session, frame_labels: dict[str, str], on_close=None) -> None:
                       auto_upload=True, max_files=1) \
                 .props('accept=".png,.svg,image/*" flat bordered').classes("w-full")
             if path is None or not path.is_file():
-                ui.label("No symbol yet: cards show a plain placeholder.").classes("text-sm text-gray-500")
+                c.hint("No symbol yet: cards show a plain placeholder.")
             try:
                 previews = [(label, symbol_image(str(path) if path else None, v, CARD_SIZE),
                              symbol_image(str(path) if path else None, v, LARGE_SIZE))
@@ -78,24 +80,21 @@ def set_settings(session, frame_labels: dict[str, str], on_close=None) -> None:
                 advice = check_symbol(path)
             except ScriptError as error:              # e.g. SVG without cairosvg
                 ui.label(f"{error}. Use a PNG with a transparent background instead.") \
-                    .classes("text-sm text-red-700")
+                    .classes("text-negative")
                 return
             with ui.row().classes("gap-6 items-end"):
                 for label, small, large in previews:
                     with ui.column().classes("items-center gap-1"):
                         ui.image(large).style(f"width:{large.width}px;height:{large.height}px")
-                        with ui.row().classes("items-center gap-2 px-2 py-1 rounded bg-stone-200"):
+                        with ui.row().classes("ds-symbol-chip items-center gap-2 px-2 py-1"):
                             ui.image(small).style(f"width:{small.width}px;height:{small.height}px")
-                            ui.label("card size").classes("text-xs text-gray-500")
+                            ui.label("card size").classes("text-xs")
                         ui.label(label).classes("text-sm")
             for message in advice:
-                with ui.row().classes("items-center gap-1 no-wrap"):
-                    ui.icon("warning", color="amber-8")
-                    ui.label(message).classes("text-sm text-amber-800")
+                c.status(message, "warning").classes("whitespace-normal")
         symbol_section()
 
-        with ui.row().classes("w-full justify-end"):
-            ui.button("Done", on_click=dialog.close).props("color=primary")
-
-    dialog.on("hide", lambda: on_close and on_close())
-    dialog.open()
+    with m.footer:
+        c.button("Done", kind="primary", on_click=m.close)
+    m.open()
+    return m

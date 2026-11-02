@@ -1,5 +1,6 @@
 """The app shell around an open set (rail, top bar, filters, deep links), driven by
 NiceGUI's simulated user (built-in renderer, no MSE)."""
+import asyncio
 from pathlib import Path
 
 import pytest
@@ -112,3 +113,48 @@ async def test_rail_and_theme_are_remembered(user: User, test_dir: Path) -> None
     saved = Settings.load(test_dir / "settings.json")
     assert saved.rail_open is not open_before
     assert saved.theme == "light"
+
+
+async def test_editor_steps_through_the_workspace_order(user: User) -> None:
+    session, bear = await open_set(user)
+    wolf = session.new_card("Timber Wolf")
+    await user.open(f"/set?card={bear.id}")
+    await user.should_see("Rules text")
+
+    async def showing(name: str) -> None:
+        """Wait for the editor's Name field to show `name` (clicks run as tasks)."""
+        for _ in range(40):
+            if {e.value for e in user.find(kind=ui.input, content="Name").elements} == {name}:
+                return
+            await asyncio.sleep(0.05)
+        raise AssertionError(f"the editor doesn't show {name}")
+    await showing("Grizzly Bears")
+    user.find(marker="next-card").click()
+    await showing(wolf.faces[0].name)
+    user.find(marker="prev-card").click()
+    await showing("Grizzly Bears")
+
+
+async def test_a_card_opened_from_mechanics_returns_to_them(user: User) -> None:
+    session, bear = await open_set(user)
+    session.update(bear, "rules_text", "Hunt target creature.")
+    session.new_mechanic("Hunt")
+    await user.open("/set?open=mechanics")
+    await user.should_see("Used on 1 card")
+    user.find(kind=ui.button, content="Grizzly Bears").click()
+    await user.should_see("Rules text")
+    user.find(marker="modal-close").click()
+    await user.should_see("Used on 1 card")
+    user.find(marker="modal-close").click()
+    await user.should_not_see("Used on 1 card", retries=20)    # gone after the leave animation
+    await user.should_see("Group by")
+
+
+@pytest.mark.parametrize("route, expected", [("/set/mechanics", "No mechanics yet."),
+                                             ("/set/health", "Set health"),
+                                             ("/set/cycles", "No cycles yet.")])
+async def test_old_routes_open_their_view(user: User, route: str, expected: str) -> None:
+    await open_set(user)
+    await user.open(route)
+    await user.should_see(expected)
+    await user.should_see("Group by")                  # over the workspace

@@ -71,7 +71,7 @@ async def test_tile_opens_editor_and_back_keeps_grouping(user: User) -> None:
     user.find(marker=f"tile-{bear.id}").click()
     await user.should_see("Rules text")
     await user.should_see("Grizzly Bears")
-    user.find(marker="back").click()
+    user.find(marker="modal-close").click()
     await user.should_see("Group by")
     await user.should_see("Mana value 2 · 1")
 

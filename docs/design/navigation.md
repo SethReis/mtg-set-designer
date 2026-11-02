@@ -43,7 +43,7 @@ redirect to these.
 | Ctrl+K / Ctrl+F | Focuses card search (top bar; in the editor, its card list) |
 | Ctrl+N | New card (opens it in the editor) |
 | Ctrl+D | Duplicate the card (editor) |
-| Alt+← / Alt+→ | Previous / next card in the editor, in workspace order |
+| Ctrl+[ / Ctrl+] | Previous / next card in the editor, in workspace order (Alt+← would be the browser's Back) |
 | Ctrl+B | Toggles the rail |
 
 Shortcuts are shown in the tooltips of their buttons ("New card · Ctrl+N").

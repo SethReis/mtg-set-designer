@@ -8,21 +8,26 @@ rows or in a matrix, inside the app shell. Everything else opens over it.
 """
 from __future__ import annotations
 
+from fastapi.responses import RedirectResponse
 from nicegui import ui
 
 from ..app import overview as ov
 from ..app.health.checks import run_checks
 from ..model import Card, Rarity, Status
 from . import components as c
+from .cycles_page import cycles_panel
+from .editor_page import editor_panel
+from .health_page import health_panel
+from .mechanics_page import mechanics_panel
 from .shell import set_shell
 from .uploads import add_art_script, set_paste_target
 from .widgets import CARD_RATIO, STACK_CSS, compact_tile, served_url
 
 THUMB_POLL = 0.5                         # seconds between checks for newly rendered pictures
 COLOR_CHOICES = {k: v for k, v in ov.COLOR_LABELS.items()}
-# rail items that are still pages of their own (they become modals over the workspace)
-PAGES = {"mechanics": "/set/mechanics", "cycles": "/set/cycles", "health": "/set/health"}
-PAGE_IDS = {"mechanics": "mechanic", "cycles": "cycle"}     # their query parameter for ?id=
+# the views that open over the workspace: workspace-size modals and the two dialogs
+WORKSPACE_VIEWS = {"mechanics": "Mechanics", "cycles": "Cycles", "health": "Set health"}
+VIEWS = {*WORKSPACE_VIEWS, "archetypes", "settings"}
 
 
 def thumbnail_url(folder, path) -> str:
@@ -32,18 +37,28 @@ def thumbnail_url(folder, path) -> str:
 
 def register(state) -> None:
 
+    # the routes from before the views became modals
+    @ui.page("/set/card/{card_id}")
+    def old_card(card_id: str) -> RedirectResponse:
+        return RedirectResponse(f"/set?card={card_id}")
+
+    @ui.page("/set/mechanics")
+    def old_mechanics() -> RedirectResponse:
+        return RedirectResponse("/set?open=mechanics")
+
+    @ui.page("/set/cycles")
+    def old_cycles(cycle: str = "") -> RedirectResponse:
+        return RedirectResponse("/set?open=cycles" + (f"&id={cycle}" if cycle else ""))
+
+    @ui.page("/set/health")
+    def old_health() -> RedirectResponse:
+        return RedirectResponse("/set?open=health")
+
     @ui.page("/set")
     def overview_page(open: str = "", id: str = "", card: str = "") -> None:   # noqa: A002 (query names)
         session = state.session
         if session is None:
             ui.navigate.to("/")
-            return
-        if card and any(x.id == card for x in session.project.cards):
-            ui.navigate.to(f"/set/card/{card}")
-            return
-        if open in PAGES:
-            key = PAGE_IDS.get(open)
-            ui.navigate.to(PAGES[open] + (f"?{key}={id}" if key and id else ""))
             return
         view, settings = state.overview, state.settings
         ui.add_css(STACK_CSS)
@@ -54,26 +69,22 @@ def register(state) -> None:
         tiles: dict[str, list] = {}              # card id -> its placeholder containers
         seen = {"version": -1}
 
-        def open_card(card: Card) -> None:
-            ui.navigate.to(f"/set/card/{card.id}")
+        def open_card(card: Card, back: tuple[str, str | None] | None = None) -> None:
+            show("card", card.id, back)
 
         def new_card() -> None:
             open_card(session.new_card())
 
         def open_view(name: str) -> None:
             if name == "cards":
-                return
-            if name == "sets":
+                close_view()
+            elif name == "sets":
+                close_view()
                 session.flush()
                 state.close()
                 ui.navigate.to("/")
-            elif name in PAGES:
-                session.flush()
-                ui.navigate.to(PAGES[name])
-            elif name == "archetypes":
-                archetype_dialog()
-            elif name == "settings":
-                settings_dialog()
+            else:
+                show(name)
 
         def set_filter(**values) -> None:
             for key, value in values.items():
@@ -82,6 +93,9 @@ def register(state) -> None:
 
         shell = set_shell(state, open_view=open_view, new_card=new_card,
                           on_search=lambda text: set_filter(text=text), search_text=view.filters.text)
+        # the view open over the workspace: its modal, (name, item), and the one to return to
+        active = {"modal": None, "view": None, "back": None}
+        shell.busy = lambda: active["modal"] is not None
 
         # ------------------------------------------------------------ toolbar
         factor_names = {name: f.label for name, f in ov.FACTORS.items()}
@@ -410,23 +424,84 @@ def register(state) -> None:
 
         ui.timer(THUMB_POLL, tick)
 
-        def remember(name: str | None) -> None:
-            """Keep the open modal in the URL, so a reload reopens it."""
-            ui.navigate.history.replace(f"/set?open={name}" if name else "/set")
+        # ------------------------------------------------------------ views over the workspace
+        # One at a time (docs/design/navigation.md): opening a card from Mechanics replaces
+        # that modal, and closing the editor returns to it.
+        def remember() -> None:
+            """Keep the open view in the URL, so a reload or a link reopens it."""
+            name, item = active["view"] or (None, None)
+            query = (f"card={item}" if name == "card" else
+                     f"open={name}" + (f"&id={item}" if item else "") if name else "")
+            ui.navigate.history.replace(f"/set?{query}" if query else "/set")
 
-        def archetype_dialog() -> None:
-            from .archetypes import archetype_manager
-            remember("archetypes")
-            archetype_manager(session, on_close=lambda: (remember(None), content.refresh()))
+        def shown(item: str | None) -> None:
+            """The open view shows another item (card, mechanic, cycle)."""
+            if active["view"] is not None:
+                active["view"] = (active["view"][0], item)
+                remember()
 
-        def settings_dialog() -> None:
-            from .app import FRAME_LABELS
-            from .set_settings import set_settings
-            remember("settings")
-            # the top bar, targets and every card picture may change: rebuild the page
-            set_settings(session, FRAME_LABELS, on_close=lambda: ui.navigate.to("/set"))
+        def close_view() -> None:
+            if active["modal"] is not None:
+                active["modal"].close()
 
-        if open == "archetypes":
-            archetype_dialog()
-        elif open == "settings":
-            settings_dialog()
+        def show(name: str, item: str | None = None, back: tuple[str, str | None] | None = None) -> None:
+            """Open a view over the workspace, in place of the one that is open."""
+            previous = active["modal"]
+            active.update(modal=None, view=(name, item), back=back)
+            if previous is not None:
+                previous.close()                     # closed() sees it's no longer the active one
+
+            def here() -> tuple[str, str | None] | None:
+                return active["view"]                # where a card is opened from: back to it
+            if name == "archetypes":
+                from .archetypes import archetype_manager
+                m = archetype_manager(session, parent=shell.dialogs, on_close=lambda: closed(m))
+            elif name == "settings":
+                from .app import FRAME_LABELS
+                from .set_settings import set_settings
+                m = set_settings(session, FRAME_LABELS, parent=shell.dialogs, on_close=lambda: closed(m))
+            else:
+                with c.modal("workspace", WORKSPACE_VIEWS.get(name, ""), parent=shell.dialogs,
+                             on_close=lambda: closed(m)) as m:
+                    if name == "card":
+                        editor_panel(state, m, item, order=workspace_order,
+                                     open_cycle=lambda cid: show("cycles", cid, back=here()),
+                                     on_card=lambda card: shown(card.id if card else None))
+                    elif name == "mechanics":
+                        mechanics_panel(state, m, select_id=item, on_select=shown,
+                                        open_card=lambda card: open_card(card, back=here()))
+                    elif name == "cycles":
+                        cycles_panel(state, m, select_id=item, on_select=shown,
+                                     open_card=lambda card: open_card(card, back=here()))
+                    elif name == "health":
+                        health_panel(state, m, open_card=lambda card: open_card(card, back=here()),
+                                     open_cycle=lambda cid: show("cycles", cid, back=here()),
+                                     on_change=content.refresh)
+                m.open()
+            active["modal"] = m
+            remember()
+
+        def closed(m: c.Modal) -> None:
+            if active["modal"] is not m:             # replaced by another view
+                return
+            session.flush()
+            set_paste_target(None)
+            back = active["back"]
+            active.update(modal=None, view=None, back=None)
+            shell.refresh_title()                    # Set settings may have changed it
+            content.refresh()                        # edits show on the tiles
+            if back is not None:
+                show(*back)
+            else:
+                remember()
+
+        def workspace_order() -> list[Card]:
+            """The cards in the workspace's order (the editor's previous / next)."""
+            return ov.sort(ov.apply(view.filters, session.project.cards), view.sort)
+
+        # a linked view opens once the page is up: building one can take a while (Set
+        # settings draws its symbol previews), longer than the page may take to connect
+        if card and any(x.id == card for x in session.project.cards):
+            ui.timer(0, lambda: show("card", card), once=True)
+        elif open in VIEWS:
+            ui.timer(0, lambda: show(open, id or None), once=True)

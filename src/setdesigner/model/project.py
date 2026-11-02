@@ -145,3 +145,11 @@ def load_project(folder: Path) -> SetProject:
         cards=cards,
         folder=folder,
     )
+
+
+def load_summary(folder: Path) -> tuple[SetInfo, int]:
+    """A set's info and card count, without reading its cards (the start page's list)."""
+    folder = Path(folder)
+    cards_dir = folder / "cards"
+    count = sum(1 for _ in cards_dir.glob("*.json")) if cards_dir.is_dir() else 0
+    return SetInfo.model_validate(_read_json(folder / "set.json", {})), count

@@ -52,5 +52,5 @@ async def test_reopen_from_recent(user: User, test_dir: Path) -> None:
     state().close()
     await user.open("/")
     await user.should_see("Recent")
-    user.find(content="tst").click()
+    user.find(marker="recent-tst").click()
     await user.should_see("New card")

@@ -64,8 +64,7 @@ STATE = AppState()
 def build(sets_root: Path | None = None, settings_path: Path | None = None,
           renderer_factory=None) -> AppState:
     """Register the pages. Returns the shared state (tests inspect it)."""
-    from . import (cycles_page, editor_page, health_page, mechanics_page, overview_page, start_page,
-                   uploads)
+    from . import overview_page, start_page, uploads
     STATE.sets_root = Path(sets_root) if sets_root else REPO / "sets"
     STATE.settings_path = settings_path
     STATE.renderer_factory = renderer_factory
@@ -75,10 +74,6 @@ def build(sets_root: Path | None = None, settings_path: Path | None = None,
     start_page.register(STATE)
     overview_page.register(STATE)
     uploads.register(STATE)
-    mechanics_page.register(STATE)
-    cycles_page.register(STATE)
-    health_page.register(STATE)
-    editor_page.register(STATE)
     app.on_shutdown(STATE.close)
     return STATE
 

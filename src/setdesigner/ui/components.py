@@ -9,16 +9,18 @@ follow the design language and both themes.
 """
 from __future__ import annotations
 
+import asyncio
 import html
 import re
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Callable, Iterator
 
-from nicegui import ui
+from nicegui import background_tasks, ui
 
 from ..model import Rarity
 
+LEAVE = 0.3                              # seconds: a closing modal's leave animation
 BUTTON_PROPS = {
     "primary": "unelevated no-caps color=primary text-color=on-accent",
     "secondary": "outline no-caps",
@@ -188,6 +190,8 @@ def data_table(columns: list[Column], rows: list[list]) -> ui.element:
 class Modal:
     dialog: ui.dialog
     card: ui.card
+    title: ui.label
+    subtitle: ui.label
     actions: ui.element                    # the header's right side, before the close button
     body: ui.element
     footer: ui.element | None
@@ -207,24 +211,31 @@ def modal(size: str, title: str, *, parent: ui.element, subtitle: str | None = N
     92vh). Content built inside the `with` goes into the body. `parent` is a container that
     outlives refreshes (a page's dialog holder). Workspace modals ignore clicks outside."""
     persistent = size == "workspace" if persistent is None else persistent
-    with parent, ui.dialog() as dialog, ui.card().classes(f"ds-modal {size}") as card:
-        if persistent:
-            dialog.props("persistent no-backdrop-dismiss")
-            dialog.on("keydown.esc", dialog.close)
+    with parent, ui.dialog() as dialog, ui.card().classes(f"ds-modal ds-modal-{size}") as card:
+        if persistent:                     # a stray click outside mustn't close it; Esc does
+            dialog.props("no-backdrop-dismiss")
         with ui.element("div").classes("ds-modal-head"):
-            ui.label(title).classes("ds-modal-title")
-            if subtitle:
-                ui.label(subtitle).classes("muted truncate")
+            title_label = ui.label(title).classes("ds-modal-title truncate")
+            subtitle_label = ui.label(subtitle or "").classes("muted truncate")
+            subtitle_label.set_visibility(bool(subtitle))
             ui.space()
             actions = ui.row().classes("items-center gap-1 no-wrap")
             button(icon="close", kind="icon", on_click=dialog.close, tooltip="Close · Esc").mark("modal-close")
         body = ui.element("div").classes("ds-modal-body")
         foot = ui.element("div").classes("ds-modal-foot") if footer else None
+    # a modal is built for one showing: closed, it goes (after Quasar's leave animation)
+    dialog.on_value_change(lambda e: None if e.value else background_tasks.create(_retire(dialog)))
     if on_close:
         dialog.on_value_change(lambda e: None if e.value else on_close())
-    m = Modal(dialog, card, actions, body, foot)
+    m = Modal(dialog, card, title_label, subtitle_label, actions, body, foot)
     with body:
         yield m
+
+
+async def _retire(dialog: ui.dialog) -> None:
+    await asyncio.sleep(LEAVE)
+    if not dialog.is_deleted:
+        dialog.delete()
 
 
 async def confirm(parent: ui.element, title: str, message: str = "", *, confirm_label: str = "Delete",
@@ -243,6 +254,4 @@ async def confirm(parent: ui.element, title: str, message: str = "", *, confirm_
             button(extra, kind="secondary", on_click=lambda: m.dialog.submit("extra"))
         ui.button(confirm_label, on_click=lambda: m.dialog.submit("confirm")) \
             .props("unelevated no-caps " + ("color=negative" if kind == "danger" else BUTTON_PROPS["primary"]))
-    result = await m.dialog
-    m.dialog.delete()
-    return result
+    return await m.dialog

@@ -23,7 +23,7 @@ NAV = [("cards", "Cards", "view_module", "The set's cards"),
        ("cycles", "Cycles", "donut_large", "Cards made as a cycle"),
        ("archetypes", "Archetypes", "hub", "Draft archetypes and their targets"),
        ("health", "Health", "monitor_heart", "Curves, roles per color, mechanics, complexity")]
-FOOT = [("settings", "Set", "tune", "Name, frame, symbol, rarity targets"),
+FOOT = [("settings", "Set", "tune", "The set's name, frame, symbol and rarity targets"),
         ("sets", "Sets", "arrow_back", "Back to sets")]
 
 
@@ -36,6 +36,8 @@ class Shell:
     health: ui.button
     health_badge: ui.label
     dark: ui.dark_mode
+    refresh_title: Callable[[], None]     # after the set's name, code or symbol change
+    busy: Callable[[], bool] = lambda: False   # a modal is open: the shell's keys rest
 
     def set_health(self, warnings: int) -> None:
         self.health_badge.text = str(warnings)
@@ -55,7 +57,6 @@ def set_shell(state, *, active: str = "cards", open_view: Callable[[str], None],
     """Build the shell for the open set. `open_view(view)` runs for a rail item ("mechanics",
     "settings", "sets", ...); `on_search` gets the top bar's search text."""
     session, settings = state.session, state.settings
-    info = session.project.info
     dark = theme.mode(settings.theme)
 
     # the page's own content area becomes the shell: no padding, the window's height
@@ -101,14 +102,18 @@ def set_shell(state, *, active: str = "cards", open_view: Callable[[str], None],
         # ------------------------------------------------------------ top bar and view
         with ui.element("div").classes("ds-main"):
             with ui.element("header").classes("ds-topbar"):
-                with ui.row().classes("ds-setname no-wrap items-center"):
-                    symbol = session.project.resolve(info.symbol_path)
-                    if symbol is not None and symbol.is_file() and symbol.suffix.lower() != ".svg":
-                        ui.element("img").props(f'src="{served_url(session.folder, symbol)}" alt=""')
-                    else:
-                        ui.icon("style").classes("text-[22px]").style("color: var(--accent)")
-                    ui.label(info.name).classes("display")
-                    ui.label(info.code).classes("faint")
+                @ui.refreshable
+                def title() -> None:
+                    info = session.project.info
+                    with ui.row().classes("ds-setname no-wrap items-center"):
+                        symbol = session.project.resolve(info.symbol_path)
+                        if symbol is not None and symbol.is_file() and symbol.suffix.lower() != ".svg":
+                            ui.element("img").props(f'src="{served_url(session.folder, symbol)}" alt=""')
+                        else:
+                            ui.icon("style").classes("text-[22px]").style("color: var(--accent)")
+                        ui.label(info.name).classes("display")
+                        ui.label(info.code).classes("faint")
+                title()
                 search = ui.input(placeholder="Search name, type, rules", value=search_text) \
                     .props("dense outlined clearable debounce=250").classes("ds-search")
                 with search.add_slot("prepend"):
@@ -135,7 +140,7 @@ def set_shell(state, *, active: str = "cards", open_view: Callable[[str], None],
         dark.value = theme.dark_value(value)
 
     def keys(e) -> None:
-        if not e.action.keydown or not e.modifiers.ctrl:
+        if not e.action.keydown or not e.modifiers.ctrl or shell.busy():
             return
         key = e.key.name.lower() if e.key.name else ""
         if key == "b":
@@ -146,6 +151,6 @@ def set_shell(state, *, active: str = "cards", open_view: Callable[[str], None],
             new_card()
 
     ui.keyboard(on_key=keys, ignore=["input", "select", "button", "textarea"])
-    shell = Shell(main, dialogs, search, status, health, health_badge, dark)
+    shell = Shell(main, dialogs, search, status, health, health_badge, dark, title.refresh)
     shell.set_health(0)
     return shell
