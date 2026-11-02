@@ -6,17 +6,11 @@ from pathlib import Path
 from nicegui import app, ui
 
 from ..app.overview import color_key
-from ..model import Card, Rarity, Status
+from ..model import Card, Rarity
 from .components import mana_cost
 
-COLOR_PIPS = {"W": "#f3eccb", "U": "#3b82c4", "B": "#3a3434", "R": "#d9472b", "G": "#2f8f4e"}
-# tile borders by overview color group (M multicolor, C colorless, L land)
-COLOR_BORDERS = {"W": "#d8cc9a", "U": "#3b82c4", "B": "#3a3434", "R": "#d9472b", "G": "#2f8f4e",
-                 "M": "#c9a227", "C": "#9aa3ab", "L": "#8b6b4a"}
 RARITY_LETTERS = {Rarity.COMMON: "C", Rarity.UNCOMMON: "U", Rarity.RARE: "R",
                   Rarity.MYTHIC: "M", Rarity.SPECIAL: "S"}
-STATUS_DOTS = {Status.IDEA: "#cbd5e1", Status.DRAFT: "#facc15", Status.PLAYTESTED: "#60a5fa",
-               Status.FINAL: "#22c55e"}
 CARD_RATIO = 523 / 375                   # height / width of an M15 card
 PEEK = 0.12                              # share of a stacked card left showing: its name bar
 
@@ -71,11 +65,6 @@ def number_label(card: Card) -> str:
     n = card.collector_number
     return n.zfill(3) if n.isdigit() else n or "—"
 
-
-def color_pips(card: Card) -> None:
-    for color in card.color_identity:
-        ui.element("span").style(f"width:9px;height:9px;border-radius:50%;flex:none;"
-                                 f"background:{COLOR_PIPS[color]};border:1px solid #888")
 
 
 TILE_BORDERS = {k: f"var(--mana-{k.lower()})" for k in "WUBRGMCL"}     # tokens.css

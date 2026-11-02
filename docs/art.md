@@ -18,7 +18,7 @@ In the overview you can also drop an image onto any card. All three ways go thro
 Dropped and pasted files are sent with `fetch` to `POST /api/art/<card id>` (`ui/uploads.py`)
 rather than over the page's websocket, which limits message sizes. The route can't reach the
 page that sent the file, so it bumps `session.art_version` and leaves a
-`session.art_notice`; both pages check these in their timers.
+`session.art_notice`; the workspace and the editor check these in their timers.
 
 ## Choosing what shows (the crop)
 
@@ -45,7 +45,7 @@ The box's shape depends on the frame (M15's art box is 316 × 231, 8th Edition's
 
 ## The set symbol
 
-Use the **Set** button in the overview header for set-wide settings: name, code, default
+Use **Set** in the rail for set-wide settings: name, code, default
 frame, default artist, copyright line, and cards wanted per rarity (the targets in "18 / 20").
 It also holds the symbol:
 - drop or choose an image; it is copied to `assets/symbol.png`;

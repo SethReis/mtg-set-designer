@@ -21,7 +21,7 @@ from ..app.assets import AssetError, import_art
 
 ART_SCRIPT = """
 <style>
-  [data-art-card].art-drop { outline: 3px dashed #3b82f6; outline-offset: 3px; }
+  [data-art-card].art-drop { outline: 3px dashed var(--accent); outline-offset: 3px; }
   .q-uploader__subtitle { display: none; }   /* "0.0B / 0.00%": files are added at once */
 </style>
 <script>

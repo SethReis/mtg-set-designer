@@ -182,7 +182,7 @@ def register(state) -> None:
             with filter_chips:
                 for label, key, names in active:
                     chosen = ", ".join(names.get(v, v) for v in sorted(getattr(f, key)))
-                    ui.chip(f"{label}: {chosen}", removable=True,
+                    ui.chip(f"{label}: {chosen}", removable=True, color=None,
                             on_value_change=lambda e, k=key: set_filter(**{k: set()}))
                 if active:
                     c.button("Clear all", kind="ghost",
@@ -294,7 +294,7 @@ def register(state) -> None:
                 labels = dict(ov.FACTORS[rows].options(session.project))
                 labels2 = dict(ov.FACTORS[cols].options(session.project))
                 with ui.row().classes("items-center gap-2 mt-2"):
-                    ui.chip(f"{labels.get(r, r)} · {labels2.get(c_, c_)}", removable=True,
+                    ui.chip(f"{labels.get(r, r)} · {labels2.get(c_, c_)}", removable=True, color=None,
                             on_value_change=lambda e: set_view(cell=None))
                     ui.label("(one matrix cell)").classes("faint")
             factor = ov.FACTORS[view.group_by]
@@ -384,11 +384,10 @@ def register(state) -> None:
                                 wanted = target(rows, r, cols, col)
                                 short = wanted is not None and len(in_cell) < wanted
                                 with ui.element("td").style(f"min-width:{width + 24}px"):
-                                    ui.button(f"{len(in_cell)}" + (f" / {wanted}" if wanted is not None else ""),
-                                              on_click=lambda r=r, col=col: open_cell(r, col)) \
-                                        .props("flat dense no-caps size=sm") \
-                                        .classes("num" + (" text-warning" if short else "")) \
-                                        .tooltip("Show just these cards")
+                                    c.button(f"{len(in_cell)}" + (f" / {wanted}" if wanted is not None else ""),
+                                             kind="ghost", on_click=lambda r=r, col=col: open_cell(r, col),
+                                             tooltip="Show just these cards") \
+                                        .props("dense size=sm").classes("num" + (" warning-text" if short else ""))
                                     if settings.layout == "stacks":
                                         if in_cell:
                                             stack(in_cell, width)

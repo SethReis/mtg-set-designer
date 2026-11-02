@@ -42,22 +42,26 @@ python -m setdesigner             # opens its own window (or double-click run.ba
 python -m setdesigner --browser   # in a browser tab at http://localhost:8765 instead
 ```
 
-The start page creates a new set folder (default `sets/<code>/`, git-ignored) or opens
-an existing one; recently opened sets are listed there.
+The start page lists recent sets, creates a new set folder (default `sets/<code>/`,
+git-ignored) or opens an existing one. An open set has a left rail (Cards, Mechanics,
+Cycles, Archetypes, Health, Set) and a top bar with card search and **New card**; the
+views open over the cards as modals.
 - **Overview:** an open set lands here. Every card is grouped in rows or a matrix
   (color, rarity, archetype, ...), with counts against your targets (`docs/overview.md`).
 - **Editor:** clicking a card opens it, with the card list, the card form and a live
   preview drawn by Magic Set Editor. Every change is saved automatically to
   `cards/<id>.json`, so there is no Save button (`docs/editor.md`).
 - **Art and set symbol:** card art (pick, drop or paste, then crop) and the set symbol (Set
-  button in the overview) are in `docs/art.md`.
+  in the rail) are in `docs/art.md`.
 - **Mechanics:** keywords with reminder text, word forms and renaming are in
   `docs/mechanics.md`.
 - **Cycles:** families of cards across colors (dual lands, Dragonstorm-style cycles),
   generated from one template and kept in step, are in `docs/cycles.md`.
 - **Set health:** warnings ("Blue has no common removal"), the mana curve, roles per color,
-  mechanic spread and complexity, on their own page and as a chip in the overview header,
-  are in `docs/health.md`.
+  mechanic spread and complexity, with a warnings badge in the rail, are in
+  `docs/health.md`.
+- **Design language:** the look, the layout rules and the shared components every screen
+  is built from are in `docs/design/` (start with its README).
 
 ## Tests and tools
 

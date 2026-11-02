@@ -1,8 +1,8 @@
 # Set health
 
-The **Health** page (`/set/health`) shows where the set is lopsided. To open it, click the
-chip in the overview header. The chip reads "N warnings" in amber, or "Healthy" in green.
-Everything is computed when the page opens, from the cards' **front faces**.
+**Health** (`/set?open=health`) shows where the set is lopsided. Open it from the rail;
+its badge there counts the warnings. It is a dashboard modal: the warnings beside the
+charts and tables. Everything is computed when it opens, from the cards' **front faces**.
 
 The code is in `src/setdesigner/app/health/` (pure, tested) and `ui/health_page.py`.
 

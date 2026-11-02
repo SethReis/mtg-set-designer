@@ -1,8 +1,8 @@
 # Cycles
 
 A cycle is a family of similar cards across colors: dual lands, the five Dragonstorm
-enchantments, Bloomburrow's Duos, uncommon signposts. Open the **Cycles** page from the
-overview header, define the cycle once, and create its cards in one go. The cards stay
+enchantments, Bloomburrow's Duos, uncommon signposts. Open **Cycles** from the
+rail (`/set?open=cycles&id=<id>`), define the cycle once, and create its cards in one go. The cards stay
 linked to the cycle (`Card.cycle`), and each stays an ordinary card you can edit freely.
 
 ## Defining a cycle

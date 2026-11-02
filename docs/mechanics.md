@@ -1,7 +1,7 @@
 # Mechanics
 
 A mechanic is defined once and every card follows the definition. Reminder text is drawn
-from it, never stored on cards. Open the **Mechanics** page from the overview header.
+from it, never stored on cards. Open **Mechanics** from the rail (`/set?open=mechanics&id=<id>`).
 
 ## The definition (`model.Mechanic`)
 

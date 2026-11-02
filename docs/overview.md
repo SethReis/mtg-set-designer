@@ -1,9 +1,14 @@
 # The set overview
 
-The home page of an open set (`/set`): every card, grouped so you can see the shape of
-the set and its gaps. Clicking a card opens it in the editor (`/set/card/<id>`). The
-editor's back button returns here, with the grouping, filters and collapsed sections
-unchanged.
+The home of an open set (`/set`): every card, grouped so you can see the shape of the set
+and its gaps. It sits in the app shell (the left rail and the top bar, see
+`design/layout.md`), and everything else opens over it as a modal: clicking a card opens
+the editor (`/set?card=<id>`), and closing it returns here with the grouping, filters and
+collapsed sections unchanged.
+
+The toolbar holds the view (Rows / Matrix), Group and Sort, the layout (Grid / Stacks),
+what tiles show (Images / Text), the **Filters** popover and the card size. Active filters
+show as removable chips under it. The card search is in the top bar (Ctrl+K).
 
 ## What it shows
 
@@ -11,8 +16,9 @@ unchanged.
   "Common · 41 / 60". Empty groups are shown too, because a gap is information. Sections
   collapse.
 - **Matrix:** rows by one factor and columns by another, e.g. archetype × rarity. Each cell
-  shows its count, in orange when below target, and small tiles. Clicking a count shows
-  just that cell's cards in Rows mode; remove the chip to go back to all of them.
+  shows its count, in the warning color when below target, and small tiles. Clicking a
+  count shows just that cell's cards in Rows mode; remove the chip to go back to all of
+  them.
 - **Factors:** color (W, U, B, R, G, multicolor, colorless, land), rarity, archetype (a card
   can be in several), card type, mana value (0–6, 7+) and status. Like the planned set
   health rules, they look at the front face.
@@ -22,7 +28,8 @@ unchanged.
   filter is active, because the counts are then partial.
 - **Filters:** text (name, type, rules), status, rarity, color. **Sort:** collector number,
   name, mana value.
-- **Layout:** *Grid* places tiles side by side. *Stacks* overlaps them so only each name
+- **Layout:** *Grid* fills each row with tiles (each at least the card size, all growing
+  alike, so rows reach the window's edge). *Stacks* overlaps them so only each name
   bar shows; hovering a card slides the cards below it down to reveal it fully. In Rows
   mode each group is a column (long groups split into several stacks), and in the matrix
   each cell is one stack.
@@ -31,7 +38,7 @@ unchanged.
   also the starting point for the planned printer-friendly print mode (HANDOFF.md,
   "Printing"). Choose a size with the slider; the layout, what is shown and the size are
   all remembered between sessions.
-- **Archetypes** (header button): name, colors, description and targets per rarity, saved
+- **Archetypes** (in the rail): name, colors, description and targets per rarity, saved
   as you type. Deleting an archetype removes its tag from cards. You tag cards in the
   editor's Archetypes field.
 
@@ -60,10 +67,12 @@ Until a card's picture exists, its tile shows the compact version.
 | `app/thumbnails.py` | `ThumbnailCache`, `ThumbnailWorker` |
 | `app/session.py` | archetype editing, `thumbnails`, `using_renderer` |
 | `render/mse_service.py` | `render_keys`, `MSERenderer.render_many` |
-| `ui/overview_page.py` | the page |
-| `ui/archetypes.py` | the archetype manager dialog |
-| `ui/widgets.py` | the compact tile, color pips, rarity letters (shared with the editor) |
+| `ui/overview_page.py` | the workspace: toolbar, tiles, matrix; hosts the modals and the `/set?…` deep links |
+| `ui/shell.py` | the rail and the top bar |
+| `ui/archetypes.py` | the archetype manager (an `lg` modal) |
+| `ui/widgets.py` | the text tile, rarity letters, `served_url`, `responsive_grid` |
+| `ui/components.py` | the design's building blocks (buttons, modals, tables, pips, …; `design/components.md`) |
 
 Tests: `tests/app/test_overview.py`, `tests/app/test_thumbnails.py`,
-`tests/ui/test_overview_page.py`, and `test_batch_equals_single_renders` in
-`tests/render/test_mse_service.py`.
+`tests/ui/test_overview_page.py`, `tests/ui/test_shell.py` (rail, deep links, filters), and
+`test_batch_equals_single_renders` in `tests/render/test_mse_service.py`.

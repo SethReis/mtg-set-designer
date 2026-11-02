@@ -14,6 +14,7 @@ from PIL import Image
 from ..app.art import crop_box, nudge, zoomed
 from ..app.assets import AssetError, import_art, remove_art
 from ..model import Card
+from . import components as c
 from .widgets import served_url
 
 DROP_HINT = "Drop an image here, paste one with Ctrl+V, or click to choose"
@@ -37,17 +38,16 @@ def art_editor(session, card: Card, on_changed: Callable[[], None], face: int = 
         path = session.project.resolve(art_face.art_path)
         has_art = path is not None and path.is_file()
         with ui.column().classes("w-full gap-1").props(f'data-art-card="{card.id}"'):
-            ui.label("Art").classes("text-xs text-gray-500")
             picker = ui.upload(label=DROP_HINT, on_upload=picked, auto_upload=True, max_files=1) \
                 .props('accept="image/*" flat bordered').classes("w-full")
             if not has_art:
                 if art_face.art_path:
-                    ui.label(f"The art file {art_face.art_path} is missing.").classes("text-sm text-amber-700")
+                    c.status(f"The art file {art_face.art_path} is missing.", "warning")
                 return
             picker.classes("hidden")                     # still used by "Replace"
             box = session.art_box(card, face)
             if box is None:                              # first card in this frame: look it up
-                ui.label("Measuring the frame's art box…").classes("text-sm text-gray-500")
+                c.hint("Measuring the frame's art box…")
 
                 async def measure() -> None:
                     await run.io_bound(session.find_art_box, card, face)
@@ -68,7 +68,7 @@ def art_editor(session, card: Card, on_changed: Callable[[], None], face: int = 
             return (f'<path d="M0 0H{w}V{h}H0Z M{left} {top}V{bottom}H{right}V{top}Z" '
                     f'fill="black" fill-opacity="0.5" fill-rule="evenodd"/>'
                     f'<rect x="{left}" y="{top}" width="{right - left}" height="{bottom - top}" '
-                    f'fill="none" stroke="#facc15" stroke-width="{stroke}"/>')
+                    f'fill="none" style="stroke: var(--accent)" stroke-width="{stroke}"/>')
 
         def apply(crop) -> None:
             state["crop"] = crop
@@ -102,16 +102,16 @@ def art_editor(session, card: Card, on_changed: Callable[[], None], face: int = 
                                      events=["mousedown", "mousemove", "mouseup", "mouseleave"],
                                      on_mouse=on_mouse) \
             .classes("w-full").style("max-width:520px;cursor:move")
-        ui.label("Drag the yellow box to choose what shows on the card.").classes("text-xs text-gray-500")
+        c.hint("Drag the box to choose what shows on the card.")
         with ui.row().classes("w-full items-center gap-2"):
-            ui.label("Zoom").classes("text-sm")
+            ui.label("Zoom").classes("muted")
             zoom_slider = ui.slider(min=1, max=4, step=0.05,
                                     value=state["crop"].zoom if state["crop"] else 1.0) \
                 .on("update:model-value", lambda e: zoom(e.args), throttle=0.1) \
                 .classes("grow").style("max-width:300px")
-            ui.button("Reset", on_click=reset).props("flat dense no-caps")
-            ui.button("Replace", on_click=lambda: picker.run_method("pickFiles")).props("flat dense no-caps")
-            ui.button("Remove", on_click=remove).props("flat dense no-caps color=negative")
+            c.button("Reset", kind="ghost", on_click=reset).props("dense")
+            c.button("Replace", kind="ghost", on_click=lambda: picker.run_method("pickFiles")).props("dense")
+            c.button("Remove", kind="danger", on_click=remove).props("dense")
 
     panel()
     return panel

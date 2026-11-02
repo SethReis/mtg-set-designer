@@ -168,7 +168,7 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
                 for rid, role in ROLES.items():
                     found, override = rid in detected, overrides.get(rid)
                     if found and override is False:
-                        ui.chip(role.label, icon="undo", on_click=lambda r=rid: set_role(r, None)) \
+                        ui.chip(role.label, icon="undo", color=None, on_click=lambda r=rid: set_role(r, None)) \
                             .props("dense outline clickable").classes("text-xs line-through opacity-60") \
                             .tooltip("Removed by hand; click to restore")
                     elif found or override:
@@ -176,7 +176,7 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
                         icon = "auto_fix_high" if mechanics else None if found else "person"
                         tip = (f"From {', '.join(mechanics)}" if mechanics
                                else "Detected from the rules text" if found else "Added by hand")
-                        ui.chip(role.label, removable=True, icon=icon,
+                        ui.chip(role.label, removable=True, icon=icon, color=None,
                                 on_value_change=lambda e, r=rid, f=found: set_role(r, False if f else None)) \
                             .props("dense").classes("text-xs").tooltip(tip)
                 missing = [rid for rid in ROLES if rid not in detected and not overrides.get(rid)]

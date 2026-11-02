@@ -22,6 +22,11 @@ NAME = "minmax(120px, 1.4fr)"            # a table's name column
 NUMBER = "minmax(48px, 1fr)"             # and its number columns
 
 
+def rarity_counts(by_rarity: dict[str, int]) -> str:
+    """Counts per rarity, as "C 2 · U 1"."""
+    return " · ".join(f"{RARITY_LETTERS_BY_VALUE[r]} {n}" for r, n in by_rarity.items()) or "—"
+
+
 def color_cell(key: str) -> Callable[[], None]:
     def build() -> None:
         with ui.row().classes("items-center gap-2 no-wrap"):
@@ -54,6 +59,10 @@ def health_panel(state, m: c.Modal, *, open_card: Callable[[Card], None],
             else:
                 c.hint("No cards.")
         shown.open()
+
+    def card_link(card: Card) -> Callable[[], None]:
+        return lambda: c.button(card.faces[0].name, kind="ghost", on_click=lambda: open_card(card)) \
+            .props("dense").classes("truncate max-w-full")
 
     def number(n: int, wanted: int | None = None) -> Callable[[], None]:
         text = f"{n} / {wanted}" if wanted else str(n)
@@ -164,7 +173,8 @@ def health_panel(state, m: c.Modal, *, open_card: Callable[[Card], None],
                               for color, (n, total) in stats.creature_ratio(project, "common").items() if total])
             with ui.column().classes("gap-2 min-w-0"):
                 ui.label("Average common creature").classes("ds-form-h")
-                c.data_table([c.Column("Mana value", NUMBER), c.Column("Power / tough.", "minmax(90px, 1fr)", "right"),
+                c.data_table([c.Column("Mana value", NUMBER),
+                              c.Column("Power / tough.", "minmax(90px, 1fr)", "right"),
                               c.Column("Cards", NUMBER, "right")],
                              [[mv, f"{power:.1f} / {tough:.1f}", str(n)]
                               for mv, (power, tough, n) in stats.creature_size(project).items()])
@@ -187,7 +197,7 @@ def health_panel(state, m: c.Modal, *, open_card: Callable[[Card], None],
         rows = [[color_cell(color), *[cell(color, rid, row[rid]) for rid in role_ids]]
                 for color, row in table.items() if color in "WUBRG" or any(row.values())]
         with ui.element("div").classes("w-full overflow-x-auto"):
-            c.data_table([c.Column("Color", NAME), *[c.Column(ROLES[rid].label, "minmax(64px, 1fr)", "right")
+            c.data_table([c.Column("Color", NAME), *[c.Column(ROLES[rid].label, "minmax(112px, 1fr)", "right")
                                                      for rid in role_ids]], rows)
 
     # ---------------------------------------------------------------- mechanics & archetypes
@@ -201,12 +211,12 @@ def health_panel(state, m: c.Modal, *, open_card: Callable[[Card], None],
                               *[c.Column(x, "minmax(30px, .5fr)", "right") for x in cols],
                               c.Column("By rarity", "minmax(120px, 1.4fr)"), c.Column("Cards", NUMBER, "right")],
                              [[s.mechanic.name, *[str(s.by_color.get(x, "")) or "·" for x in cols],
-                               " · ".join(f"{RARITY_LETTERS_BY_VALUE[r]} {n}" for r, n in s.by_rarity.items()) or "—",
-                               str(s.cards)] for s in spreads])
+                               rarity_counts(s.by_rarity), str(s.cards)] for s in spreads])
         coverage = stats.archetype_coverage(project)
         if coverage:
             ui.label("Archetypes").classes("ds-form-h")
-            c.data_table([c.Column("Archetype", NAME), *[c.Column(r.title(), NUMBER, "right") for r in stats.RARITIES]],
+            c.data_table([c.Column("Archetype", NAME),
+                          *[c.Column(r.title(), NUMBER, "right") for r in stats.RARITIES]],
                          [[cov.archetype.name,
                            *[number(cov.counts[r], cov.targets.get(r)) if cov.targets.get(r) or cov.counts[r]
                              else "·" for r in stats.RARITIES]] for cov in coverage])
@@ -247,9 +257,7 @@ def health_panel(state, m: c.Modal, *, open_card: Callable[[Card], None],
                                  key=lambda cx: -cx.words)[:8]
                 c.data_table([c.Column("Card", "minmax(140px, 2fr)"), c.Column("Words", NUMBER, "right"),
                               c.Column("Abilities", NUMBER, "right")],
-                             [[lambda x=cx.card: c.button(x.faces[0].name, kind="ghost", on_click=lambda: open_card(x))
-                               .props("dense").classes("truncate max-w-full"),
-                               str(cx.words), str(cx.abilities)] for cx in commons])
+                             [[card_link(cx.card), str(cx.words), str(cx.abilities)] for cx in commons])
 
     # ---------------------------------------------------------------- layout
     m.subtitle.text = f"{len(project.cards)} cards"

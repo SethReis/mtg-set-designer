@@ -169,8 +169,8 @@ def mechanics_panel(state, m: c.Modal, *, select_id: str | None = None,
                 w = ui.input("Wording", value=wording).props("dense").classes("grow")
                 n.on("blur", changed)
                 w.on("blur", changed)
-                ui.button(icon="close", on_click=lambda k=key: remove_phrase(k)) \
-                    .props("flat round dense size=sm").tooltip("Remove phrase")
+                c.button(icon="close", kind="icon", on_click=lambda k=key: remove_phrase(k),
+                         tooltip="Remove phrase").props("size=sm")
                 phrase_rows.append((n, w))
         c.button("Phrase", kind="ghost", icon="add", on_click=add_phrase).props("dense").classes("self-start")
 
@@ -185,8 +185,8 @@ def mechanics_panel(state, m: c.Modal, *, select_id: str | None = None,
                         .classes("grow")
                     l.on("blur", changed)
                     t.on("blur", changed)
-                    ui.button(icon="close", on_click=lambda i=i: remove_variant(i)) \
-                        .props("flat round dense size=sm").tooltip("Remove variant")
+                    c.button(icon="close", kind="icon", on_click=lambda i=i: remove_variant(i),
+                             tooltip="Remove variant").props("size=sm")
                     variant_rows.append((l, t))
                 example = build_line(mechanic, template.text)
                 ui.html(f"<i>{html.escape(mechanic.name)}</i>{html.escape(example[len(mechanic.name):])}") \
