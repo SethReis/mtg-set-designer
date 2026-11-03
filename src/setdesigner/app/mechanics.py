@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from ..model import Card, Mechanic, Rarity, SetProject
+from ..model import Card, Mechanic, MechanicKind, Rarity, SetProject
 from ..mse.mechanics import words_pattern
 from .overview import COLOR_LABELS, color_key, number_key
 
@@ -154,3 +154,38 @@ def reminder_preview(mechanic: Mechanic) -> str:
     if mechanic.parameter:
         reminder = re.sub(r"\{(?:param|param1|" + re.escape(mechanic.parameter) + r")\}", value, reminder)
     return f"{head} ({reminder})" if reminder.strip() else head
+
+
+def with_reminders(project: SetProject, card: Card, text: str,
+                   choices: dict[str, bool] | None = None) -> str:
+    """The rules text with each mechanic's reminder text written in, where the card
+    shows it (mse.mechanics.reminder_choices: policies and the card's own choices), as
+    MSE draws it: only the first mention gets it. Keywords get it right after the
+    keyword and its value ("Cycling {2} (...)"), keyword actions at the end of the
+    sentence ("Surveil 2. (...)"). For the printer-friendly print (export/playtest.py)."""
+    from ..mse.mechanics import reminder_choices
+    if choices is None:
+        choices = reminder_choices(project).get(card.id, {})
+    for mechanic in project.mechanics:
+        if not choices.get(mechanic.name) or not mechanic.reminder_text.strip():
+            continue
+        match = words_pattern(mechanic).search(text)
+        if match is None:
+            continue
+        end, value = match.end(), ""
+        if mechanic.parameter:
+            param = re.match(r"[ \t]+([^\n,.;(]+)", text[end:])
+            if param:
+                value = param.group(1).rstrip()
+                end += param.start(1) + len(value)
+        reminder = mechanic.reminder_text
+        if mechanic.parameter:
+            reminder = re.sub(r"\{(?:param|param1|" + re.escape(mechanic.parameter) + r")\}",
+                              lambda _: value, reminder)
+        if mechanic.kind == MechanicKind.KEYWORD_ACTION:
+            line_end = text.find("\n", end)
+            line_end = len(text) if line_end < 0 else line_end
+            stop = text.find(".", end, line_end)
+            end = line_end if stop < 0 else stop + 1
+        text = f"{text[:end]} ({reminder.strip()}){text[end:]}"
+    return text

@@ -85,3 +85,11 @@ def test_real_mse_pictures_print_and_cache(tmp_path) -> None:
         assert first.rendered == 9 and second.rendered == 0 and second.pages == 1
     finally:
         s.close()
+
+
+def test_printer_friendly_needs_no_renderer(session, tmp_path) -> None:
+    cards = [session.new_card(f"Card {i}") for i in range(3)]
+    session.update(cards[0], "rules_text", "Flying. " * 500)
+    result = export_pdf(session, cards, PrintOptions(style="friendly"), tmp_path / "out.pdf")
+    assert result.pages == 1 and result.rendered == 0 and result.overflow == ["Card 0"]
+    assert session._renderer is None                          # never started
