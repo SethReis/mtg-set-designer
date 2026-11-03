@@ -68,6 +68,7 @@ class ExportResult:
     rendered: int = 0                     # cards drawn now (the rest came from the cache)
     overflow: list[str] = field(default_factory=list)   # printer-friendly: text cut short
     builtin: bool = False                 # drawn by our own renderer, not MSE
+    renderer_note: str = ""               # why, when it's known (e.g. Windows blocked MSE)
 
 
 def print_cache(session) -> PrintCache:
@@ -121,13 +122,14 @@ def export_pdf(session, cards: list[Card], options: PrintOptions, target: Path |
     sheets = pages(faces, grid)
     unique = list({f.card.id: f.card for f in faces}.values())
     overflow: list[str] = []
-    rendered, builtin = 0, False
+    rendered, builtin, note = 0, False, ""
     if options.style == "friendly":
         from ..export.playtest import playtest_drawer
         draw = playtest_drawer(session.project, overflow)
     else:
         found, rendered, builtin = pictures(session, unique, progress, cancel)
         draw = image_drawer(found)
+        note = session.mse_problem() if builtin else ""
     if cancel is not None and cancel.is_set():
         raise Cancelled
 
@@ -142,5 +144,5 @@ def export_pdf(session, cards: list[Card], options: PrintOptions, target: Path |
     count = write_pdf(target, sheets, grid, draw, crop_marks=options.crop_marks, label=label,
                       title=info.name, author=info.copyright or "", progress=page_done)
     return ExportResult(target if isinstance(target, Path) else None, count, len(faces),
-                        rendered, sorted(set(overflow)), builtin)
+                        rendered, sorted(set(overflow)), builtin, note)
 

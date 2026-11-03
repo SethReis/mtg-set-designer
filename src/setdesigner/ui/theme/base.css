@@ -339,6 +339,7 @@ mark { background: var(--accent-soft); color: var(--text); border-radius: 2px; p
 .ds-print-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ds-print-card .ds-text-tile { height: 100%; font-size: 8px; }
 .ds-print-progress { width: 160px; flex: none; }
+.ds-print-warning { display: block; margin-bottom: var(--space-4); white-space: normal; }
 @media (max-width: 900px) {
   .ds-print { grid-template-columns: 1fr; }
 }

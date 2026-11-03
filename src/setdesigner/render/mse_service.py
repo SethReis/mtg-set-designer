@@ -42,8 +42,19 @@ MSE_CANDIDATES = (REPO / "Full-Magic-Pack-main" / "magicseteditor.com",
                   REPO / "resources" / "mse" / "magicseteditor.com")
 
 
+# Windows refusing to run the program: Smart App Control or another app control policy
+# (ERROR_SYSTEM_INTEGRITY_POLICY_VIOLATION), or a software restriction policy
+BLOCKED_ERRORS = {4551, 1260}
+BLOCKED_MESSAGE = ("Windows blocked Magic Set Editor (Smart App Control or an app control policy), "
+                   "so the built-in renderer draws the cards")
+
+
 class MSEError(Exception):
     """MSE reported an error, crashed, or did not answer in time."""
+
+
+class MSEBlocked(MSEError):
+    """Windows won't let MSE run at all: retrying is pointless until the user allows it."""
 
 
 def find_mse() -> Path | None:
@@ -96,6 +107,8 @@ class MSEProcess:
                                          stderr=subprocess.DEVNULL, text=True, encoding="utf-8",
                                          bufsize=1, creationflags=flags)
         except OSError as e:
+            if getattr(e, "winerror", None) in BLOCKED_ERRORS:
+                raise MSEBlocked(BLOCKED_MESSAGE) from None
             raise MSEError(f"could not start Magic Set Editor: {e}") from None
         threading.Thread(target=self._read, args=(self.proc, self.lines), daemon=True).start()
 
@@ -282,6 +295,8 @@ class MSERenderer:
                         out[card.id, face] = self.add_symbol(image, card, face)
                 self._loaded = None
                 return out
+            except MSEBlocked:
+                raise                                        # retrying would be blocked too
             except MSEError:
                 self._loaded = None
                 if attempt == 2 or self.process.alive:
@@ -306,6 +321,8 @@ class MSERenderer:
                 self._load(path, digest)
                 image = self._write_image(face)
                 break
+            except MSEBlocked:
+                raise                                        # retrying would be blocked too
             except MSEError:
                 self._loaded = None
                 if attempt == 2 or self.process.alive:     # a real error, or a second failure

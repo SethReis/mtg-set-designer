@@ -33,8 +33,16 @@ the footer shows progress and a **Cancel** button.
 Cards are drawn by Magic Set Editor at full size (about 150 dpi for M15), in batches like
 the overview's pictures, and cached under the overview's picture cache
 (`%LOCALAPPDATA%/setdesigner/thumbnails/<set>/print/`), so exporting an unchanged set again
-renders nothing. If MSE can't run, the built-in renderer draws them and the dialog says so;
-those pictures aren't kept, so MSE redraws them once it works again.
+renders nothing. If MSE can't run, the built-in renderer draws them and the dialog says so
+(when it opens, and after the export); those pictures aren't kept, so MSE redraws them once
+it works again.
+
+Windows' **Smart App Control** (or another app control policy) may block
+`magicseteditor.com`, which isn't code-signed. The dialog then says "Windows blocked Magic
+Set Editor", and the app stops trying to start it for that session. Smart App Control has no
+per-program exceptions, so MSE renders need it turned off (Windows Security → App & browser
+control → Smart App Control) or MSE allowed by your policy. The overview may still show
+older MSE pictures from its cache, so a print can look different from the tiles.
 
 Each card's rounded corners are filled with its border color, so the cards print square
 and cut cleanly. Bleed repeats the card's outermost pixels outward. Each distinct face is

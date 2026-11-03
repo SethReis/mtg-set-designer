@@ -93,3 +93,32 @@ def test_printer_friendly_needs_no_renderer(session, tmp_path) -> None:
     result = export_pdf(session, cards, PrintOptions(style="friendly"), tmp_path / "out.pdf")
     assert result.pages == 1 and result.rendered == 0 and result.overflow == ["Card 0"]
     assert session._renderer is None                          # never started
+
+
+def test_a_blocked_mse_is_reported_and_not_retried(tmp_path, monkeypatch) -> None:
+    """Windows' app control refusing MSE (WinError 4551): one try, then a clear reason."""
+    import subprocess
+
+    from setdesigner.render import CardRenderer
+
+    starts = []
+
+    def blocked(*args, **kwargs):
+        starts.append(args)
+        error = OSError(22, "An Application Control policy has blocked this file")
+        error.winerror = 4551
+        raise error
+
+    exe = tmp_path / "magicseteditor.com"
+    exe.write_bytes(b"")
+    monkeypatch.setattr(subprocess, "Popen", blocked)
+    s = SetSession.create(tmp_path / "set", "My Set", "mys", "m15", thumbnail_dir=tmp_path / "thumbs",
+                          renderer_factory=lambda p: CardRenderer(p, mse_exe=exe))
+    try:
+        cards = [s.new_card(f"Card {i}") for i in range(3)]
+        result = export_pdf(s, cards, PrintOptions(), tmp_path / "out.pdf")
+        assert result.builtin and "Windows blocked Magic Set Editor" in result.renderer_note
+        assert len(starts) == 1
+        assert "Windows blocked" in s.mse_problem() and len(starts) == 1
+    finally:
+        s.close()

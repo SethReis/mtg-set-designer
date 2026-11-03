@@ -25,7 +25,7 @@ from .draw import draw
 from .layout import CardLayout
 from .mse_layout import MSELayoutBuilder, mse_layout
 from ..mse.mapping import face_uid
-from .mse_service import MSEError, MSERenderer, find_mse, render_keys
+from .mse_service import MSEBlocked, MSEError, MSERenderer, find_mse, render_keys
 
 
 def card_layout(env: ScriptEnvironment, card: Card, face: int = 0) -> CardLayout:
@@ -46,6 +46,7 @@ class CardRenderer:
         self.mse: MSERenderer | None = None
         self.last_backend = ""
         self.warnings: list[str] = []
+        self.blocked = ""                # Windows won't run MSE: why (then MSE isn't tried again)
         if use_mse:
             try:
                 self.mse = MSERenderer(project, self.env, mse_exe)
@@ -56,14 +57,38 @@ class CardRenderer:
         """Call after editing a card (its text, rarity, frame, ...)."""
         self.env.refresh_card(card)
 
+    @property
+    def _use_mse(self) -> bool:
+        return self.mse is not None and not self.blocked
+
+    def _failed(self, e: MSEError, what: str) -> None:
+        if isinstance(e, MSEBlocked):
+            self.blocked = str(e)
+            self.warnings.append(str(e))
+        else:
+            self.warnings.append(f"MSE could not render {what}: {e}; used the built-in renderer")
+
+    def mse_problem(self) -> str:
+        """Why MSE can't draw the cards ("" when it can). Starts MSE if it isn't running."""
+        if self.mse is None:
+            return "Magic Set Editor wasn't found, so the built-in renderer draws the cards"
+        if not self.blocked and not self.mse.process.alive:
+            try:
+                self.mse.process.start()
+            except MSEBlocked as e:
+                self.blocked = str(e)
+            except MSEError as e:
+                return f"Magic Set Editor could not start ({e}), so the built-in renderer draws the cards"
+        return self.blocked
+
     def render(self, card: Card, face: int = 0) -> Image.Image:
-        if self.mse is not None:
+        if self._use_mse:
             try:
                 image = self.mse.render(card, face)
                 self.last_backend = "mse"
                 return image
             except MSEError as e:
-                self.warnings.append(f"MSE could not render {card.id}: {e}; used the built-in renderer")
+                self._failed(e, card.id)
         self.last_backend = "builtin"
         return render_card(self.env, card, face)
 
@@ -85,24 +110,24 @@ class CardRenderer:
 
     def render_many(self, cards: list[Card]) -> dict[tuple[str, int], Image.Image]:
         """Every face of several cards: {(card id, face index): image}."""
-        if self.mse is not None:
+        if self._use_mse:
             try:
                 images = self.mse.render_many(cards)
                 self.last_backend = "mse"
                 return images
             except MSEError as e:
-                self.warnings.append(f"MSE could not render a batch: {e}; used the built-in renderer")
+                self._failed(e, "a batch")
         self.last_backend = "builtin"
         return {(card.id, face): render_card(self.env, card, face)
                 for card in cards for face in range(len(card.faces))}
 
     def render_set(self, out_dir: Path) -> list[Path]:
         """Every face to PNG files (for printing)."""
-        if self.mse is not None:
+        if self._use_mse:
             try:
                 return self.mse.render_set(out_dir)
             except MSEError as e:
-                self.warnings.append(f"MSE could not render the set: {e}; used the built-in renderer")
+                self._failed(e, "the set")
         out_dir = Path(out_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
         written = []

@@ -59,6 +59,8 @@ def print_dialog(state, *, cards: list[Card], filtered: list[Card] | None, paren
 
     with c.modal("lg", "Print", parent=parent, footer=True, persistent=False, on_close=on_close,
                  subtitle="Paper proxies: every face is its own card") as m:
+        renderer_warning = c.status("", "warning").classes("ds-print-warning")
+        renderer_warning.set_visibility(False)
         with ui.element("div").classes("ds-print"):
             # ---- options
             with ui.element("div").classes("ds-print-options"):
@@ -171,6 +173,15 @@ def print_dialog(state, *, cards: list[Card], filtered: list[Card] | None, paren
 
     ui.timer(POLL, show_progress)
 
+    async def check_renderer() -> None:
+        """Say up front when rendered prints won't come from MSE (e.g. Windows blocks it)."""
+        problem = await run.io_bound(session.mse_problem)
+        if problem and not renderer_warning.is_deleted:
+            renderer_warning.text = f"{problem}. Rendered prints will look slightly different from MSE's."
+            renderer_warning.set_visibility(True)
+
+    ui.timer(0, check_renderer, once=True)
+
     def report(text: str, fraction: float) -> None:          # from the export thread
         job["text"], job["fraction"] = text, fraction
 
@@ -228,8 +239,9 @@ def print_dialog(state, *, cards: list[Card], filtered: list[Card] | None, paren
         save_options()
         status.text = f"Saved {result.pages} page{'s' * (result.pages != 1)} to {path.name}"
         if result.builtin:
-            ui.notify("Magic Set Editor couldn't draw the cards, so the built-in renderer did "
-                      "(text may differ slightly).", type="warning", multi_line=True)
+            ui.notify((result.renderer_note or "Magic Set Editor couldn't draw the cards, so the built-in "
+                       "renderer did") + ". Text may sit slightly differently than in MSE's pictures.",
+                      type="warning", multi_line=True, timeout=0, close_button="OK")
         if result.overflow:
             ui.notify(f"Text cut short on: {', '.join(result.overflow[:5])}"
                       + (f" and {len(result.overflow) - 5} more" if len(result.overflow) > 5 else ""),

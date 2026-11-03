@@ -532,6 +532,10 @@ class SetSession:
             self._thumbnails = ThumbnailWorker(self, ThumbnailCache(self.cache_folder))
         return self._thumbnails
 
+    def mse_problem(self) -> str:
+        """Why Magic Set Editor can't draw the cards ("" when it can; see CardRenderer)."""
+        return self.using_renderer(lambda r: r.mse_problem() if hasattr(r, "mse_problem") else "")
+
     @property
     def uses_builtin_renderer(self) -> bool:
         """True when our own renderer draws the cards: MSE is missing, or its last
