@@ -66,8 +66,45 @@ def test_shrinks_to_fit_down_to_scale_down_to() -> None:
 
 @needs_fonts
 def test_single_line_squeezes_instead_of_wrapping() -> None:
-    result = layout_text(layer("A very long card name indeed", width=60, multi_line=False))
+    shrink = Alignment.parse("left shrink-overflow")
+    result = layout_text(layer("A very long card name indeed", width=60, multi_line=False, alignment=shrink))
     assert len(result.lines) == 1 and result.stretch < 1
+    assert layout_text(layer("Short", width=60, multi_line=False, alignment=shrink)).stretch == 1
+    # as in MSE, only "shrink"/"stretch" alignments squeeze; other text runs past the box
+    plain = layout_text(layer("A very long card name indeed", width=60, multi_line=False))
+    assert plain.stretch == 1 and plain.fits
+    assert draw_text(layer("A very long card name indeed", width=60, multi_line=False)).width > 60
+
+
+@needs_fonts
+def test_text_is_measured_like_windows_gdi() -> None:
+    from setdesigner.render.fonts import advance, load_font, scaled_px
+    assert scaled_px(14) == 75                      # 14 pt at 4x: round(14 * 4 * 96 / 72)
+    plantin = load_font("MPlantin", scaled_px(14))
+    assert (plantin.ascent, plantin.descent) == (68, 20)      # OS/2 win metrics, not hhea
+    one = layout_text(layer("x", size=14)).lines[0]
+    assert one.height == 22                         # 88 / 4
+    fake = load_font("Relay-Medium", 40, bold=True)             # no bold file
+    assert fake.fake_bold and advance(fake, "ORC") == fake.font.getlength("ORC") + 3
+
+
+@needs_fonts
+def test_trailing_space_that_overflows_ends_the_line() -> None:
+    # MSE counts a word's trailing space when checking the width: if only that space
+    # doesn't fit, the line still ends there, and a following break gets a line of its own
+    text = "aaa bbb"
+    width = layout_text(layer(text, width=1000)).content_width
+    fits = layout_text(layer(text + "\nc", width=width + 0.5))
+    assert [len(fits.lines), fits.lines[0].brk] == [2, HARD]
+    tight = layout_text(layer(text + " \nc", width=width + 0.5))
+    assert [l.brk for l in tight.lines] == [SOFT, HARD, ""]
+
+
+def test_downsample_averages_blocks() -> None:
+    from setdesigner.render.fonts import downsample
+    mask = Image.new("L", (8, 4), 0)
+    mask.paste(255, (0, 0, 4, 2))                   # half of the first 4x4 block
+    assert downsample(mask).tolist() == [[127, 0]]
 
 
 @needs_fonts

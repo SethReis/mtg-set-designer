@@ -101,6 +101,17 @@ def test_invert_and_saturate() -> None:
 
 # --------------------------------------------------------------- geometry
 
+def test_resize_averages_areas_like_mse() -> None:
+    row = I.Raster(np.array([[[0] * 3, [100] * 3, [200] * 3, [40] * 3]], np.uint8))
+    assert row.resized(2, 1).rgb[0, :, 0].tolist() == [50, 120]           # pairs averaged
+    assert row.resized(8, 1).rgb[0, :, 0].tolist() == [0, 0, 100, 100, 200, 200, 40, 40]
+    assert row.resized(3, 1).rgb[0, :, 0].tolist() == [25, 150, 80]       # 1 1/3 pixels each
+    # colours are weighted by alpha: a transparent pixel's colour doesn't bleed in
+    seen = I.Raster(np.array([[[200] * 3, [0] * 3]], np.uint8), np.array([[255, 0]], np.uint8))
+    half = seen.resized(1, 1)
+    assert half.rgb[0, 0, 0] == 200 and half.alpha[0, 0] == 127
+
+
 def test_flip_and_crop() -> None:
     row = img((1, 1, 1), (2, 2, 2), (3, 3, 3))
     assert px(I.Flip(row, True)) == [[3, 3, 3], [2, 2, 2], [1, 1, 1]]

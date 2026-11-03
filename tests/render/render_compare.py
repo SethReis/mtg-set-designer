@@ -45,6 +45,12 @@ class Comparison:
     outside_text: float                 # mean channel diff outside text and symbol boxes
     text_regions: list[dict]            # per text layer: box, mean diff, ink row spans
 
+    @property
+    def inside_text(self) -> float:
+        """Mean channel diff inside the text boxes (all of them, weighted by area)."""
+        areas = [(r["box"][2] - r["box"][0]) * (r["box"][3] - r["box"][1]) for r in self.text_regions]
+        return sum(r["mean"] * a for r, a in zip(self.text_regions, areas)) / max(1, sum(areas))
+
 
 def ink_rows(region: np.ndarray) -> tuple[int, int] | None:
     """First and last row with clear ink (far from the region's typical color)."""

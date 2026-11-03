@@ -106,6 +106,10 @@ class SymbolProvider(Protocol):
 
     def image(self, piece, px: float) -> "Image.Image | None": ...
 
+    def size(self, piece, px: float) -> tuple[float, float]:
+        """The room the piece takes in a line (without spacing)."""
+        ...
+
 
 @dataclass
 class SymbolFontSpec:
@@ -113,7 +117,8 @@ class SymbolFontSpec:
     size: float = 12.0                   # points
     scale_down_to: float = 1.0
     alignment: Alignment = field(default_factory=lambda: Alignment("center", "middle"))
-    spacing: float = 1.0                 # extra pixels after each symbol
+    spacing: float = 1.0                 # extra pixels beside each symbol
+    vertical_spacing: float = 1.0        # extra pixels of line height
 
 
 @dataclass

@@ -204,14 +204,12 @@ class MSELayoutBuilder:
             return None
         renderer = SymbolRenderer(font, lambda node: self.evaluate(entry, node), self.root)
         size = self.number(entry, "size", 12.0, "symbol font") or 12.0
-        # spacing is in the symbol images' own units, scaled like them (fits MSE's output)
-        spacing = font.horizontal_space * size / max(1.0, font.image_font_size)
         return SymbolFontSpec(renderer, size=size,
                               scale_down_to=self.number(entry, "scale down to", 1.0, "symbol font"),
                               alignment=Alignment.parse(self.text_prop(entry, "alignment", "",
                                                                        "symbol font"),
                                                         Alignment("center", "middle")),
-                              spacing=spacing)
+                              spacing=font.horizontal_space, vertical_spacing=font.vertical_space)
 
     def mask(self, entry: EntryStyle, box: Box) -> Image.Image | None:
         """The style's mask at the box size, as an "L" image (white = inside)."""

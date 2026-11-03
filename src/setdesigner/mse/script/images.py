@@ -72,12 +72,50 @@ class Raster:
         return cls(np.zeros((h, w, 3), np.uint8), np.zeros((h, w), np.uint8))
 
     def resized(self, width: int, height: int) -> "Raster":
-        # MSE has its own resampler; Pillow's Hamming filter came closest in the
-        # oracle comparisons (tests/script/test_image_oracle.py).
+        """MSE's resampler (gfx/resample_image.cpp): area averaging, columns first, then
+        rows (only if the height changes); colors weighted by alpha."""
+        width, height = max(1, width), max(1, height)
         if (width, height) == self.size:
             return self
-        return Raster.from_pil(self.to_pil().resize((max(1, width), max(1, height)),
-                                                    Image.Resampling.HAMMING))
+        out = _resample_pass(self, width, axis=1)
+        return out if height == self.height else _resample_pass(out, height, axis=0)
+
+
+RESAMPLE_SHIFT = 32 - 10 - 8               # MSE's fixed point: one output pixel = 1 << shift
+
+
+def _resample_weights(n_in: int, n_out: int) -> tuple[np.ndarray, np.ndarray]:
+    """For each output pixel, the input pixels it covers and by how much (fixed point):
+    every input pixel is worth (n_out << shift) / n_in, the first also gets the rest."""
+    fact, rest = divmod(n_out << RESAMPLE_SHIFT, n_in)
+    edges = fact * np.arange(n_in + 1, dtype=np.int64) + rest
+    edges[0] = 0
+    bounds = np.arange(n_out + 1, dtype=np.int64) << RESAMPLE_SHIFT
+    first = np.searchsorted(edges, bounds[:-1], side="right") - 1
+    span = int((np.searchsorted(edges, bounds[1:], side="left") - first).max())
+    index = np.minimum(first[:, None] + np.arange(span), n_in - 1)
+    weight = np.clip(np.minimum(edges[index + 1], bounds[1:, None])
+                     - np.maximum(edges[index], bounds[:-1, None]), 0, None)
+    weight[first[:, None] + np.arange(span) >= n_in] = 0
+    return index, weight
+
+
+def _resample_pass(img: Raster, n_out: int, axis: int) -> Raster:
+    """MSE's resample_pass along one axis (1 = columns, 0 = rows)."""
+    index, weight = _resample_weights(img.rgb.shape[axis], n_out)
+    rgb = np.moveaxis(img.rgb, axis, 0).astype(np.int64)        # (n_in, other, 3)
+    if img.alpha is None:
+        total = sum(rgb[index[:, j]] * weight[:, j, None, None] for j in range(index.shape[1]))
+        out_rgb, out_alpha = total >> RESAMPLE_SHIFT, None
+    else:
+        a = np.moveaxis(img.alpha, axis, 0).astype(np.int64)    # (n_in, other)
+        tot_a = sum(a[index[:, j]] * weight[:, j, None] for j in range(index.shape[1]))
+        tot_c = sum(rgb[index[:, j]] * (a[index[:, j]] * weight[:, j, None])[..., None]
+                    for j in range(index.shape[1]))
+        out_rgb = np.where(tot_a[..., None] > 0, tot_c // np.maximum(tot_a, 1)[..., None], 0)
+        out_alpha = np.moveaxis((tot_a >> RESAMPLE_SHIFT).astype(np.uint8), 0, axis)
+    return Raster(np.ascontiguousarray(np.moveaxis(out_rgb.astype(np.uint8), 0, axis)),
+                  None if out_alpha is None else np.ascontiguousarray(out_alpha))
 
 
 # ------------------------------------------------------------------- options

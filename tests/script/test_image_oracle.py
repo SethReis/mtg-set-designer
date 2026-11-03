@@ -16,10 +16,11 @@ CASES = [c for c in json.loads((HERE / "oracle" / "images.json").read_text(encod
          if "image" in c]
 SIZE = re.compile(r"^\[(\d+)x(\d+)\]\s*")
 
-# Point-wise operations must match exactly. Where MSE resamples, blurs or rounds with
-# its own algorithms, allow small differences: (max channel difference, mean difference).
+# Point-wise operations must match exactly. Where MSE blurs or rounds with its own
+# algorithms, allow small differences: (max channel difference, mean difference).
+# Resampling is MSE's own algorithm, ported (measured: exact).
 EXACT = (0, 0.0)
-RESAMPLED = (16, 0.8)
+RESAMPLED = (1, 0.05)
 TOLERANCE_BY_FUNCTION = {
     "resize_image": RESAMPLED, "nine_slice_image": RESAMPLED, "[": RESAMPLED,
     "drop_shadow": (16, 0.2),               # also add_drop_shadow

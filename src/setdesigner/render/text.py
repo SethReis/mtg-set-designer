@@ -11,7 +11,9 @@ Follows MSE's text viewer (src/render/text/*.cpp in MagicSetEditor2):
   4. vertical alignment (gaps may stretch up to the *_max line heights), then
      horizontal alignment per line;
   5. draw: shadow, stroke and fill for text; symbol images inline.
-Font sizes are points drawn at 96/72 pixels per point, like MSE on Windows.
+Font sizes are points drawn at 96/72 pixels per point, like MSE on Windows. Text is
+drawn at 4x and averaged down, and every run hangs from its line's top (MSE draws
+each run at the top left of its line, not on a shared baseline).
 """
 from __future__ import annotations
 
@@ -19,13 +21,12 @@ import math
 from dataclasses import dataclass, field, replace
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw
 
 from ..mse.script.tokens import ESCAPED_LANGLE
-from .fonts import LoadedFont, load_font
-from .layout import FontSpec, TextLayer
+from .fonts import TEXT_SCALING, LoadedFont, advance, downsample, load_font, scaled_px
+from .layout import Box, TextLayer
 
-PX_PER_PT = 96 / 72
 SOFT, HARD, LINE = "soft", "hard", "line"
 
 
@@ -164,52 +165,48 @@ def parse_tagged(text: str, symbols=None, always_symbol: bool = False) -> list[P
 class Measured:
     piece: Piece
     width: float
-    ascent: float
-    descent: float
+    height: float                       # the line height this piece asks for
     font: LoadedFont | None = None
-    image: Image.Image | None = None
+    image: Image.Image | None = None    # symbols
 
 
 class Measurer:
-    """Fonts and symbol images for one layer at one scale."""
+    """Fonts and symbol images for one layer at one scale. Like MSE, text is measured
+    at TEXT_SCALING times the size (Windows line metrics, no kerning) and divided back."""
 
     def __init__(self, layer: TextLayer, scale: float):
         self.layer = layer
         self.scale = scale
         self._fonts: dict[tuple, LoadedFont] = {}
 
-    def font_px(self, st: Style) -> float:
-        size = st.size if st.size is not None else self.layer.font.size
-        return size * self.scale * PX_PER_PT
+    def points(self, st: Style) -> float:
+        return (st.size if st.size is not None else self.layer.font.size) * self.scale
 
     def font(self, st: Style) -> LoadedFont:
         spec = self.layer.font
         italic = st.italic or spec.italic
         name = st.font or (spec.italic_name if italic and spec.italic_name else spec.name)
         use_italic = italic and not (spec.italic_name and not st.font)
-        key = (name, round(self.font_px(st), 2), st.bold or spec.bold, use_italic)
+        key = (name, scaled_px(self.points(st)), st.bold or spec.bold, use_italic)
         if key not in self._fonts:
-            self._fonts[key] = load_font(name, max(1, round(self.font_px(st))),
-                                         st.bold or spec.bold, use_italic)
+            self._fonts[key] = load_font(*key)
         return self._fonts[key]
 
     def measure(self, piece: Piece) -> Measured:
         if piece.kind == "symbol":
             sf = self.layer.symbol_font
             # MSE sizes symbols by the font size itself (no points -> pixels conversion)
-            px = sf.size * self.scale if sf else self.font_px(piece.style)
+            px = sf.size * self.scale if sf else 0
             img = sf.provider.image(piece.symbol, px) if sf else None
             if img is None:
-                return Measured(piece, 0, 0, 0)
-            # symbols sit on the baseline region of the text around them
-            ascent = img.height * 0.8
-            return Measured(piece, img.width + (sf.spacing if sf else 0), ascent,
-                            img.height - ascent, image=img)
+                return Measured(piece, 0, 0)
+            w, h = sf.provider.size(piece.symbol, px)
+            return Measured(piece, w + sf.spacing, h + sf.vertical_spacing, image=img)
         lf = self.font(piece.style)
-        ascent, descent = lf.font.getmetrics()
+        height = (lf.ascent + lf.descent) / TEXT_SCALING
         if piece.kind == "break":
-            return Measured(piece, 0, ascent, descent, lf)
-        return Measured(piece, lf.font.getlength(piece.text), ascent, descent, lf)
+            return Measured(piece, 0, height, lf)
+        return Measured(piece, advance(lf, piece.text) / TEXT_SCALING, height, lf)
 
 
 # ------------------------------------------------------------------- layout
@@ -218,21 +215,10 @@ class Measurer:
 class Line:
     items: list[Measured]
     top: float
-    brk: str                            # how the line ended
+    brk: str                            # how the line ended ("" for the last line)
+    height: float = 0.0
     left: float = 0.0                   # x of the line's start (after alignment)
     xs: list[float] = field(default_factory=list)
-
-    @property
-    def ascent(self) -> float:
-        return max((m.ascent for m in self.items), default=0.0)
-
-    @property
-    def descent(self) -> float:
-        return max((m.descent for m in self.items), default=0.0)
-
-    @property
-    def height(self) -> float:
-        return self.ascent + self.descent
 
     @property
     def bottom(self) -> float:
@@ -282,7 +268,13 @@ def _row_edges(layer: TextLayer, top: float, height: float) -> tuple[float, floa
 
 def _multiplier(layer: TextLayer, brk: str) -> float:
     return {SOFT: layer.line_height_soft, HARD: layer.line_height_hard,
-            LINE: layer.line_height_line}[brk]
+            LINE: layer.line_height_line}.get(brk, 1.0)
+
+
+def _line_height(items: list[Measured]) -> float:
+    # MSE doesn't count <line> breaks, so a line holding only one takes no room
+    return max((x.height for x in items if not (x.piece.kind == "break" and x.piece.brk == LINE)),
+               default=0.0)
 
 
 def layout_at(layer: TextLayer, pieces: list[Piece], scale: float) -> TextResult:
@@ -292,22 +284,16 @@ def layout_at(layer: TextLayer, pieces: list[Piece], scale: float) -> TextResult
     lines: list[Line] = []
     top = pt
     current: list[Measured] = []
-    prev_height = None
-
-    def default_height() -> tuple[float, float]:
-        lf = m.font(Style())
-        a, d = lf.font.getmetrics()
-        return a, d
+    carried = 0.0           # MSE: an empty line is as high as the one above (0 after <line>)
 
     def end_line(brk: str) -> None:
-        nonlocal top, current, prev_height
-        line = Line(current, top, brk)
-        if not current or line.height == 0:
-            a, d = default_height()
-            line.items = current + [Measured(Piece("break"), 0, a, d)]
-        lines.append(line)
-        prev_height = line.height
-        top = line.top + line.height * _multiplier(layer, brk)
+        nonlocal top, current, carried
+        height = _line_height(current)
+        if height < 0.01 and lines:
+            height = carried
+        lines.append(Line(current, top, brk, height))
+        top += height * _multiplier(layer, brk)
+        carried = 0.0 if brk == LINE else height
         current = []
 
     # words: consecutive text/symbol pieces form one unbreakable unit
@@ -323,6 +309,14 @@ def layout_at(layer: TextLayer, pieces: list[Piece], scale: float) -> TextResult
         if kind == "space":
             current.append(item)
             i += 1
+            # MSE counts a word's trailing space too: if that overflows, the line ends
+            # after the word (so a later break starts a line of its own)
+            if layer.multi_line and any(x.piece.kind != "space" for x in current):
+                left, right = _row_edges(layer, top, _line_height(current))
+                if sum(x.width for x in current) > right - left:
+                    while current[-1].piece.kind == "space":
+                        current.pop()
+                    end_line(SOFT)
             continue
         j = i
         while j < len(measured) and measured[j].piece.kind in ("text", "symbol"):
@@ -331,110 +325,125 @@ def layout_at(layer: TextLayer, pieces: list[Piece], scale: float) -> TextResult
         word_w = sum(w.width for w in word)
         if layer.multi_line and current:
             line_w = sum(x.width for x in current)
-            h = max([x.ascent + x.descent for x in current + word] or [0])
-            left, right = _row_edges(layer, top, h)
+            left, right = _row_edges(layer, top, _line_height(current + word))
             if line_w + word_w > right - left and any(x.piece.kind != "space" for x in current):
                 while current and current[-1].piece.kind == "space":
                     current.pop()
                 end_line(SOFT)
         current.extend(word)
         i = j
-    end_line(HARD)
+    end_line("")
     # a trailing empty line only exists if the text ended with a break
     if len(lines) > 1 and not any(x.piece.kind in ("text", "symbol") for x in lines[-1].items) \
             and lines[-2].brk == HARD and not (pieces and pieces[-1].kind == "break"):
         lines.pop()
+        lines[-1].brk = ""
 
-    avail_w = layer.box.width - layer.padding[0] - layer.padding[2]
+    # MSE (TextStyle::getStretch): "stretch" / "shrink" alignments fit the text's width
+    # to the box, with "overflow" only when it is too wide; other text just overflows
     stretch = 1.0
-    if not layer.multi_line and lines and lines[0].width > avail_w > 0:
-        stretch = max(0.01, avail_w / lines[0].width)
-    fits = (lines[-1].bottom <= layer.box.height - pb + 0.5) if lines else True
-    if not layer.multi_line:
-        fits = fits and stretch >= 1.0
+    content_w = max((l.width for l in lines if l.height > 0), default=0.0)
+    avail_w = layer.box.width - layer.padding[0] - layer.padding[2]
+    if content_w > 0 and (layer.alignment.horizontal == "stretch" or layer.alignment.shrink_overflow):
+        factor = avail_w / content_w
+        if not layer.alignment.shrink_overflow or factor < 1.0:
+            stretch = max(0.01, factor)
+    fits = (lines[-1].bottom <= layer.box.height - pb + 1e-6) if lines else True
     return TextResult(lines, scale, stretch, fits)
 
 
-def min_scale(layer: TextLayer) -> float:
-    font = layer.font
-    smallest = 1.0
-    if font.scale_down_to < font.size:
-        smallest = font.scale_down_to / font.size
+def scale_limits(layer: TextLayer, pieces: list[Piece]) -> tuple[float, float]:
+    """MSE's smallest scale and scale step: per font, `scale down to` / size and a
+    quarter point; the symbol font counts when the text has symbols."""
+    sizes = [(layer.font.size, layer.font.scale_down_to)]
     sf = layer.symbol_font
-    if sf is not None and sf.scale_down_to < sf.size:
-        smallest = max(smallest, sf.scale_down_to / sf.size) if smallest < 1 else smallest
-    return smallest
+    if sf is not None and any(p.kind == "symbol" for p in pieces):
+        sizes.append((sf.size, sf.scale_down_to))
+    lowest = max(min(size, down) / max(0.01, size) for size, down in sizes)
+    step = min(1.0 / max(size * 4, 1.0) for size, _ in sizes)
+    return lowest, max(0.01, step)
 
 
 def layout_text(layer: TextLayer) -> TextResult:
-    """Lay out with MSE's scale search: the largest scale (step ~1 point) that fits."""
+    """Lay out with MSE's scale search (TextViewer::prepareLinesTryScales, from scale 1):
+    a binary search, narrowed by how far each attempt over- or underflows."""
     pieces = parse_tagged(layer.text, layer.symbol_font.provider if layer.symbol_font else None,
                           layer.always_symbol)
-    lowest = min_scale(layer)
-    first = layout_at(layer, pieces, 1.0)
-    if first.fits or lowest >= 1.0:
-        return _finish(layer, first)
-    step = max(0.01, 1.0 / max(layer.font.size, 1.0))
-    lo, hi = lowest, 1.0
-    best = layout_at(layer, pieces, lo)
-    if not best.fits:
-        return _finish(layer, best)
-    while lo + step < hi:
-        mid = (lo + hi) / 2
-        attempt = layout_at(layer, pieces, mid)
-        if attempt.fits:
-            lo, best = mid, attempt
-        else:
-            hi = mid
-    return _finish(layer, best)
+    lowest, step = scale_limits(layer, pieces)
+    result = layout_at(layer, pieces, 1.0)
+    if lowest < 1.0 and not result.fits:
+        _, _, _, pb = layer.padding
+        box_h = layer.box.height
+
+        def bound_max(r: TextResult) -> float:      # it fits at r.scale
+            height = min(box_h + 1, r.lines[-1].bottom + pb)
+            return r.scale * (box_h + 1) / height if height >= 1 else 1.0
+
+        def bound_min(r: TextResult) -> float:      # it doesn't fit at r.scale
+            height = r.lines[-1].bottom + pb
+            return r.scale * box_h / height if height >= 1 else 0.0
+
+        lo = max(lowest, bound_min(result))
+        result = layout_at(layer, pieces, lo)
+        hi = min(1.0, bound_max(result))
+        best = lo
+        while lo + step < hi:
+            attempt = layout_at(layer, pieces, (lo + hi) / 2)
+            if attempt.fits:
+                lo = best = attempt.scale
+                hi = min(hi, bound_max(attempt))
+                result = attempt
+            else:
+                hi = attempt.scale
+                lo = max(lo, bound_min(attempt))
+        if best != lo:
+            result = layout_at(layer, pieces, lo)
+    lines = result.lines
+    if len(lines) == 1 and lines[0].width < 0.0001 and not layer.always_symbol:
+        lf = Measurer(layer, result.scale).font(Style())     # no text: one line of the font
+        lines[0].height = (lf.ascent + lf.descent) / TEXT_SCALING
+    return _finish(layer, result)
 
 
 def _finish(layer: TextLayer, result: TextResult) -> TextResult:
-    """Vertical then horizontal alignment."""
+    """Vertical then horizontal alignment (TextViewer::alignParagraph)."""
     lines = result.lines
     if not lines:
         return result
     pl, pt, pr, pb = layer.padding
-
-    def empty(line: Line) -> bool:
-        return not any(m.piece.kind in ("text", "symbol") and not m.piece.style.soft
-                       for m in line.items)
-
-    # MSE: an empty first line before a <line> break (no rules text, only flavor) takes
-    # no room; trailing empty lines don't count when aligning vertically
-    if len(lines) > 1 and empty(lines[0]) and lines[0].brk == LINE:
-        shift = lines[1].top - lines[0].top
-        lines.pop(0)
-        for line in lines:
-            line.top -= shift
-    visible = lines
-    while len(visible) > 1 and empty(visible[-1]):
-        visible = visible[:-1]
     avail_h = layer.box.height - pt - pb
-    height = visible[-1].bottom - visible[0].top
-    # stretch gaps after hard/line breaks up to their *_max line heights
-    extra = avail_h - height
-    if extra > 0:
-        gaps = []
-        for n, line in enumerate(visible[:-1]):
-            base = _multiplier(layer, line.brk)
-            top_max = {SOFT: layer.line_height_soft_max, HARD: layer.line_height_hard_max,
-                       LINE: layer.line_height_line_max}[line.brk]
-            if top_max > base:
-                gaps.append((n, (top_max - base) * line.height))
-        total = sum(g for _, g in gaps)
-        if total > 0:
-            factor = min(1.0, extra / total)
-            shift = 0.0
-            for n, line in enumerate(lines):
-                line.top += shift
-                for gn, g in gaps:
-                    if gn == n:
-                        shift += g * factor
-            height = visible[-1].bottom - visible[0].top
+    # the text's height; trailing lines without height don't count
+    height = 0.0
+    for line in reversed(lines):
+        height = line.bottom
+        if line.height:
+            break
+    height -= lines[0].top
+    # stretch the gaps between lines up to the *_max line heights: every kind that can
+    # still grow gets the same extra, one stop at a time
+    if height < avail_h:
+        room = {SOFT: max(0.0, layer.line_height_soft_max - layer.line_height_soft),
+                HARD: max(0.0, layer.line_height_hard_max - layer.line_height_hard),
+                LINE: max(0.0, layer.line_height_line_max - layer.line_height_line)}
+        stops = [0.0] + sorted(room.values())
+        for n in range(1, 4):
+            if height >= avail_h:
+                break
+            stop = stops[n] - stops[n - 1]
+            if stop <= 0:
+                continue
+            kinds = {k for k, r in room.items() if r >= stop}
+            total = sum(l.height for l in lines if l.brk in kinds)
+            if total == 0:
+                break
+            to_add = min(stop, (avail_h - height) / total)
+            add = 0.0
+            for line in lines:
+                line.top += add
+                if line.brk in kinds:
+                    add += to_add * line.height
+            height += add
     dy = {"middle": (avail_h - height) / 2, "bottom": avail_h - height}.get(layer.alignment.vertical, 0)
-    if layer.alignment.vertical != "top":
-        dy = max(dy, 0) if result.fits else dy
     for line in lines:
         line.top += dy
         left, right = _row_edges(layer, line.top, line.height)
@@ -454,53 +463,99 @@ def _rgba(c: tuple) -> tuple:
     return tuple(int(v) for v in c) if len(c) == 4 else (*[int(v) for v in c], 255)
 
 
+def _blur(alpha: np.ndarray) -> np.ndarray:
+    """MSE's blur_image_alpha: the centre twice plus the four neighbours, over six."""
+    p = np.pad(alpha.astype(np.int32), 1, mode="edge")
+    return ((2 * p[1:-1, 1:-1] + p[1:-1, :-2] + p[:-2, 1:-1] + p[1:-1, 2:] + p[2:, 1:-1]) // 6
+            ).astype(np.uint8)
+
+
+class Ink:
+    """Text drawn as MSE does: masks at TEXT_SCALING times the size, one per (color,
+    blur), averaged down and painted in the order they were first used."""
+
+    def __init__(self, width: int, height: int):
+        self.size = (width * TEXT_SCALING, height * TEXT_SCALING)
+        self.masks: dict[tuple, tuple[Image.Image, ImageDraw.ImageDraw]] = {}
+
+    def text(self, x: float, y: float, text: str, lf: LoadedFont, color: tuple, blur: int = 0,
+             stroke: int = 0) -> None:
+        """`text` with its cell's top left at (x, y) in pixels, snapped to the fine grid."""
+        key = (color, blur)
+        if key not in self.masks:
+            mask = Image.new("L", self.size, 0)
+            self.masks[key] = (mask, ImageDraw.Draw(mask))
+        draw = self.masks[key][1]
+        n = TEXT_SCALING
+        x4, baseline = math.floor(x * n), math.floor(y * n) + lf.ascent
+        if not lf.fake_bold:
+            draw.text((x4, baseline), text, font=lf.font, anchor="ls", fill=255, stroke_width=stroke * n)
+            return
+        # no bold file: Windows overstrikes each glyph one pixel to the right and makes
+        # its advance a pixel wider (at the 4x size)
+        for ch in text:
+            for dx in (0, 1):
+                draw.text((x4 + dx, baseline), ch, font=lf.font, anchor="ls", fill=255,
+                          stroke_width=stroke * n)
+            x4 += advance(lf, ch)
+
+    def paint(self, out: Image.Image, width: int | None = None) -> None:
+        """Onto `out` (1x); `width` squeezes the masks horizontally to that many pixels."""
+        for (color, blur), (mask, _) in self.masks.items():
+            alpha = downsample(mask, width)
+            for _ in range(blur):
+                alpha = _blur(alpha)
+            alpha = (alpha.astype(np.int32) * color[3] // 255).astype(np.uint8)
+            layer = Image.new("RGBA", (alpha.shape[1], alpha.shape[0]), color)
+            layer.putalpha(Image.fromarray(alpha, "L"))
+            out.alpha_composite(layer.crop((0, 0, out.width, out.height)))
+
+
 def draw_text(layer: TextLayer, result: TextResult | None = None) -> Image.Image:
-    """The layer drawn on a transparent image of the box's size."""
+    """The layer drawn on a transparent image of the box's size, which goes at the box's
+    rounded corner; text keeps the box's fractional position, as in MSE. Text too wide
+    for its box runs on to the right (wider image), as in MSE."""
     result = result or layout_text(layer)
     w, h = max(1, math.ceil(layer.box.width)), max(1, math.ceil(layer.box.height))
+    w = max([w] + [math.ceil(l.left + l.width * result.stretch) + 2 for l in result.lines])
     font = layer.font
     shadow = font.shadow_color[3] > 0 and (font.shadow_dx or font.shadow_dy)
     pad = 4                                     # room for shadow/stroke at the edges
-    canvas_w = math.ceil(w / min(1.0, result.stretch)) + 2 * pad
-    fill = Image.new("RGBA", (canvas_w, h + 2 * pad), (0, 0, 0, 0))
-    shade = Image.new("RGBA", fill.size, (0, 0, 0, 0)) if shadow else None
-    df, ds = ImageDraw.Draw(fill), ImageDraw.Draw(shade) if shadow else None
-    inv = 1.0 / min(1.0, result.stretch)
+    squeeze = result.stretch
+    inv = 1.0 / squeeze
+    canvas_w = math.ceil(w * inv) + 2 * pad
+    ink = Ink(canvas_w, h + 2 * pad)
+    ox = layer.box.left - round(layer.box.left) + pad
+    oy = layer.box.top - round(layer.box.top) + pad
+    stroke = round(font.stroke_radius * result.scale) if font.stroke_radius else 0
+    symbols = []
 
     for line in result.lines:
-        baseline = line.top + line.ascent + pad
         for item, x in zip(line.items, line.xs):
-            x = x * inv + pad                   # unsqueezed canvas; squeezed below
             piece = item.piece
             if piece.style.soft or piece.kind in ("space", "break"):
                 continue
             if piece.kind == "symbol":
+                # centred (by the symbol font's alignment) in its slot: as wide as the
+                # symbol plus spacing, as high as the line
                 if item.image is not None:
-                    y = round(baseline - item.ascent)
-                    fill.alpha_composite(item.image, (round(x), y))
+                    slot = Box(x + ox - pad * (1 - squeeze), line.top + oy,
+                               item.width * result.stretch, line.height)
+                    sx, sy = layer.symbol_font.alignment.place(item.image.size, slot)
+                    symbols.append((item.image, round(sx), round(sy)))
                 continue
-            color = _rgba(piece.style.color or font.color)
-            stroke = round(font.stroke_radius * result.scale) if font.stroke_radius else 0
-            # no bold file: overstrike 1 px to the right, as Windows does
-            offsets = (0, 1) if item.font and item.font.fake_bold else (0,)
-            kwargs = dict(font=item.font.font, anchor="ls")
-            for dx in offsets:
-                if shadow:
-                    ds.text((x + dx + font.shadow_dx, baseline + font.shadow_dy), piece.text,
-                            fill=_rgba(font.shadow_color), **kwargs)
-                if stroke:
-                    df.text((x + dx, baseline), piece.text, fill=color, stroke_width=stroke,
-                            stroke_fill=_rgba(font.stroke_color), **kwargs)
-                else:
-                    df.text((x + dx, baseline), piece.text, fill=color, **kwargs)
-    if shade is not None:
-        if font.shadow_blur:
-            shade = shade.filter(ImageFilter.GaussianBlur(font.shadow_blur))
-        shade.alpha_composite(fill)
-        fill = shade
-    left_pad = pad
-    if result.stretch < 1:                      # squeeze horizontally to fit
-        fill = fill.resize((max(1, round(fill.width * result.stretch)), fill.height),
-                           Image.Resampling.LANCZOS)
-        left_pad = round(pad * result.stretch)
-    return fill.crop((left_pad, pad, left_pad + w, pad + h))
+            x = x * inv + ox                    # unsqueezed canvas; squeezed below
+            y = line.top + oy
+            if shadow:
+                ink.text(x + font.shadow_dx, y + font.shadow_dy, piece.text, item.font,
+                         _rgba(font.shadow_color), int(font.shadow_blur))
+            if stroke:
+                ink.text(x, y, piece.text, item.font, _rgba(font.stroke_color), stroke=stroke)
+            ink.text(x, y, piece.text, item.font, _rgba(piece.style.color or font.color))
+
+    out = Image.new("RGBA", (max(1, round(canvas_w * squeeze)), h + 2 * pad), (0, 0, 0, 0))
+    ink.paint(out, out.width if squeeze != 1 else None)
+    for image, x, y in symbols:
+        out.paste(image, (x, y), image) if x < 0 or y < 0 else out.alpha_composite(image, (x, y))
+    left_pad = round(pad * squeeze)
+    return out.crop((left_pad, pad, left_pad + w, pad + h))

@@ -73,17 +73,27 @@ We reuse MSE's *template packages* (frames, fonts, mana symbols, their scripts),
   are never cached.
 - **Images:** choice-like fields draw their `image` / `choice images` at box size (stretch,
   or fit when aligned), masked, with their blend mode; art is our image (cover-fit) or the
-  style's default; color fields fill a border ring or tint their mask.
+  style's default; color fields fill a border ring or tint their mask. Resizing is MSE's own
+  area-averaging resampler (`gfx/resample_image.cpp`), ported bit for bit.
 - **Text** (port of MSE's text viewer): tags → styled pieces (`<b…>`, `<i…>`, `<sym…>`,
   `<soft>`, `<line>`, `<soft-line>`, `<size:>`, `<color:>`, `<font:>`), greedy wrapping, line
-  heights per break kind, scale search down to `scale down to`, horizontal squeeze for
-  single-line overflow, vertical centering ignoring trailing empty lines (and MSE's
-  "empty first line before `<line>`" rule), gap stretching up to the `*_max` heights, shadow,
-  stroke, synthetic bold as a 1 px overstrike.
+  heights per break kind (a line is as high as its tallest piece; an empty line keeps the
+  height of the one above, 0 after `<line>`; a word whose trailing space overflows still ends
+  the line), MSE's scale search (quarter-point steps), horizontal squeeze only for
+  `shrink`/`stretch` alignments (other text runs past its box), vertical centering, gap
+  stretching up to the `*_max` heights stop by stop, shadow (MSE's blur), stroke.
+- **Drawing text like Windows GDI does for MSE** (`gfx/resample_text.cpp`): every run is drawn
+  at 4× size on a quarter-pixel grid and box-averaged down; its cell hangs from the line's top
+  (no shared baseline). Font sizes are `round(points × scale × 4 × 96/72)` pixels at 4×; line
+  heights come from the fonts' Windows metrics (OS/2 `usWinAscent + usWinDescent`, ~17% more
+  than `hhea` for MPlantin); widths have no kerning. A missing bold file is simulated the
+  Windows way: each glyph overstruck by one 4× pixel and its advance one 4× pixel wider.
 - **Mana symbols:** `.mse-symbol-font` packages, symbols tried in file order (literal or
-  regex), images at `natural × int(size) // int(image font size)` (no points-to-pixels
-  conversion, as MSE does), spacing scaled the same way, numbers drawn on generic circles.
-- **Fonts:** points × 96/72 pixels; files found by family, full or PostScript name.
+  regex). A symbol takes `natural × int(size) // int(image font size)` plus `horizontal space`
+  / `vertical space` pixels in the line, and is drawn at `natural × size / image font size`,
+  centred (by the symbol font's alignment) in that slot as high as the line. Numbers on
+  generic circles are MSE text: a cell that must fit the margins, shrunk by quarter points.
+- **Fonts:** files found by family, full or PostScript name.
 - **Set symbol (our own):** the user's SVG/PNG shape, filled per rarity (common black with a
   white outline; uncommon silver, rare gold, mythic orange-red, special purple gradients) via the
   `symbol_variation` built-in that the frames already call. A rounded square is used when no
@@ -92,10 +102,12 @@ We reuse MSE's *template packages* (frames, fonts, mana symbols, their scripts),
 ## Verified
 
 `tests/render/test_render_oracle.py` compares 16 whole cards (both fixture sets) with
-`write_image_file(input: card)` renders from real MSE. Outside text boxes the mean difference is
-≤ 2.5 / 255 (measured 0.5–1.7); in every text box the first and last inked rows are within 4 px
-(mostly 0–1). Text is not pixel-identical, because FreeType and Windows GDI antialias
-differently. All five frames (M15, 8th, Old, 4th, Alpha/Beta) render without warnings.
+`write_image_file(input: card)` renders from real MSE. Outside text boxes (rarity symbol
+excluded) the mean difference is ≤ 0.25 / 255 (measured 0.00–0.01: the same pixels); inside
+text boxes ≤ 6 / 255 (measured 0.3–4.5), and in every text box the first and last inked rows
+are within 1 px. Text is not pixel-identical because FreeType's glyph outlines and hinting
+differ a little from GDI's; positions match to a quarter pixel. All five frames (M15, 8th,
+Old, 4th, Alpha/Beta) render without warnings.
 
 ## Known gaps
 
@@ -103,4 +115,7 @@ differently. All five frames (M15, 8th, Old, 4th, Alpha/Beta) render without war
   rotates for sideways cards.
 - Not implemented: justified alignment, `<li>` bullets, `paragraph height` slots, per-card
   styling options in the UI, hyphenation.
-- Kerning and hinting follow FreeType, so long lines can wrap differently from MSE in rare cases.
+- Glyph shapes come from FreeType, not GDI: widths can differ by a fraction of a pixel per
+  line, so a line that only just fits can wrap differently from MSE in rare cases.
+- A word too long for a whole line is not broken mid-word (MSE breaks it).
+- MSE draws a see-through image area as a checkerboard; ours stays transparent.

@@ -8,6 +8,7 @@ matches; unmatched characters are dropped (as in MSE). Images are drawn at
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
@@ -196,48 +197,69 @@ class SymbolRenderer:
         return self._images[key]
 
     def image(self, piece: PlacedSymbol, px: float) -> Image.Image | None:
-        """The symbol at font size `px` (MSE: natural size * int(size) // int(image font size);
-        the size is the symbol font's size as given, not converted to pixels)."""
+        """The symbol drawn at font size `px` (MSE: natural size * size / image font size,
+        the size being the symbol font's size as given, not converted to pixels)."""
         sym = piece.symbol
-        key = (id(sym), int(px), piece.label)
+        key = (id(sym), round(px, 4), piece.label)
         if key not in self._sized:
             raster = self.natural_image(sym)
             if raster is None:
                 self._sized[key] = None
             else:
-                size, authored = max(1, int(px)), max(1, int(sym.image_font_size))
-                w = max(1, raster.width * size // authored)     # integer maths, as in MSE
-                h = max(1, raster.height * size // authored)
+                w = max(1, int(raster.width * px / sym.image_font_size))
+                h = max(1, int(raster.height * px / sym.image_font_size))
                 image = raster.resized(w, h).to_pil().convert("RGBA")
                 if piece.label and sym.overlay is not None:
                     draw_overlay(image, piece.label, sym.overlay, px)
                 self._sized[key] = image
         return self._sized[key]
 
+    def size(self, piece: PlacedSymbol, px: float) -> tuple[float, float]:
+        """The room the symbol takes in a line: MSE measures it in whole numbers
+        (natural size * int(size) // int(image font size)), unlike the picture."""
+        raster = self.natural_image(piece.symbol)
+        if raster is None:
+            return 0.0, 0.0
+        size, authored = max(1, int(px)), max(1, int(piece.symbol.image_font_size))
+        return float(raster.width * size // authored), float(raster.height * size // authored)
+
 
 def draw_overlay(image: Image.Image, label: str, overlay: TextOverlay, px: float) -> None:
-    """Draw a symbol's text (e.g. "12" on a generic mana circle), shrinking it until it
-    fits the margins, and squeezing it horizontally down to `max stretch`."""
-    from PIL import ImageDraw
-    from .fonts import load_font
+    """Draw a symbol's text (e.g. "12" on a generic mana circle) as MSE does: a font of
+    `overlay.size * px` points, shrunk a quarter point at a time until its cell fits the
+    margins (squeezed down to `max stretch` if only the width is too much), centred."""
+    from .fonts import TEXT_SCALING, advance, load_font, scaled_px
+    from .text import Ink
     ml, mt, mr, mb = (m * px for m in overlay.margins)
     box_w, box_h = image.width - ml - mr, image.height - mt - mb
-    size = overlay.size * px
-    while size >= 1:
-        font = load_font(overlay.font_name, max(1, round(size))).font
-        left, top, right, bottom = font.getbbox(label)
-        tw, th = right - left, bottom - top
-        if th <= box_h and tw * overlay.max_stretch <= box_w:
-            break
-        size -= 1
-    else:
-        return
-    stretch = min(1.0, box_w / tw) if tw > 0 else 1.0
-    layer = Image.new("RGBA", (max(1, int(tw + 2)), max(1, int(th + 2))), (0, 0, 0, 0))
-    ImageDraw.Draw(layer).text((1 - left, 1 - top), label, font=font, fill=overlay.color)
-    if stretch < 1:
-        layer = layer.resize((max(1, round(layer.width * stretch)), layer.height),
-                             Image.Resampling.LANCZOS)
-    x = ml + (box_w - layer.width) / 2
-    y = mt + (box_h - layer.height) / 2
-    image.alpha_composite(layer, (round(x), round(y)))
+    size, stretch = overlay.size * px, 1.0
+    while True:
+        if size <= 0:
+            return
+        lf = load_font(overlay.font_name, scaled_px(size))
+        tw = advance(lf, label) / TEXT_SCALING
+        th = (lf.ascent + lf.descent) / TEXT_SCALING
+        if th <= box_h:
+            if tw <= box_w:
+                break
+            if tw * overlay.max_stretch <= box_w:
+                stretch = box_w / tw
+                break
+        size -= 1 / TEXT_SCALING
+    width = tw * stretch
+    x = {"left": ml, "right": ml + box_w - width}.get(_horizontal(overlay.alignment), ml + (box_w - width) / 2)
+    y = {"top": mt, "bottom": mt + box_h - th}.get(_vertical(overlay.alignment), mt + (box_h - th) / 2)
+    ink = Ink(math.ceil(tw) + 2, math.ceil(th) + 2)
+    ink.text(1, 1, label, lf, overlay.color)
+    layer = Image.new("RGBA", (max(1, math.ceil(width) + 2), math.ceil(th) + 2), (0, 0, 0, 0))
+    ink.paint(layer, layer.width if stretch < 1 else None)
+    image.alpha_composite(layer, (int(x) - 1, int(y) - 1)) if x >= 1 and y >= 1 \
+        else image.paste(layer, (int(x) - 1, int(y) - 1), layer)
+
+
+def _horizontal(alignment: str) -> str:
+    return next((w for w in alignment.split() if w in ("left", "center", "right")), "center")
+
+
+def _vertical(alignment: str) -> str:
+    return next((w for w in alignment.split() if w in ("top", "middle", "bottom")), "middle")
