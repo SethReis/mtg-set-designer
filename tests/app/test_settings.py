@@ -17,3 +17,11 @@ def test_round_trip(tmp_path) -> None:
     Settings(layout="stacks", tiles="text", tile_width=220).save(path)
     loaded = Settings.load(path)
     assert (loaded.layout, loaded.tiles, loaded.tile_width) == ("stacks", "text", 220)
+
+
+def test_print_options_round_trip(tmp_path) -> None:
+    path = tmp_path / "settings.json"
+    Settings(print_options={"paper": "letter", "bleed_mm": 1.0}, print_folder="C:/prints").save(path)
+    loaded = Settings.load(path)
+    assert loaded.print_options == {"paper": "letter", "bleed_mm": 1.0}
+    assert loaded.print_folder == "C:/prints"

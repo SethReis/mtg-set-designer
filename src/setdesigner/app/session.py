@@ -35,7 +35,7 @@ FACE_FIELDS = {"name", "mana_cost", "type_line", "rules_text", "flavor_text", "p
                "toughness", "loyalty", "artist"}
 TYPE_PARTS = {"types", "subtypes"}      # the two halves of type_line, edited separately
 ART_FIELDS = {"art_path", "art_crop"}
-CARD_FIELDS = {"rarity", "collector_number", "frame", "status", "notes", "archetypes"}
+CARD_FIELDS = {"rarity", "collector_number", "frame", "status", "notes", "archetypes", "print_copies"}
 OPTIONAL = {"power", "toughness", "loyalty"}            # "" means "not set"
 
 
@@ -158,6 +158,8 @@ class SetSession:
                 value = value or None                       # "" = use the set's default
             elif field == "archetypes":
                 value = list(value or [])
+            elif field == "print_copies":                   # None / "" = follow the rarity
+                value = None if value in (None, "") else max(0, int(value))
             setattr(card, field, value)
         else:
             raise SessionError(f"Unknown field {field!r}")
@@ -517,13 +519,25 @@ class SetSession:
         return f"{stylesheet_package(frame, planeswalker=planeswalker)} {frame_styling(frame, planeswalker)}"
 
     @property
+    def cache_folder(self) -> Path:
+        """Where this set's card pictures are cached (outside the set folder)."""
+        from .thumbnails import default_cache_dir
+        return Path(self._thumbnail_dir or default_cache_dir(self.folder))
+
+    @property
     def thumbnails(self):
         """Card pictures for the overview, made in the background (see thumbnails.py)."""
         if self._thumbnails is None:
-            from .thumbnails import ThumbnailCache, ThumbnailWorker, default_cache_dir
-            folder = self._thumbnail_dir or default_cache_dir(self.folder)
-            self._thumbnails = ThumbnailWorker(self, ThumbnailCache(folder))
+            from .thumbnails import ThumbnailCache, ThumbnailWorker
+            self._thumbnails = ThumbnailWorker(self, ThumbnailCache(self.cache_folder))
         return self._thumbnails
+
+    @property
+    def uses_builtin_renderer(self) -> bool:
+        """True when our own renderer draws the cards: MSE is missing, or its last
+        render failed (e.g. Windows blocked it)."""
+        return self.using_renderer(lambda r: getattr(r, "mse", None) is None
+                                   or getattr(r, "last_backend", "") == "builtin")
 
     def close(self) -> None:
         if self._thumbnails is not None:

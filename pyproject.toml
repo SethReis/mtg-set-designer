@@ -17,6 +17,7 @@ dependencies = [
     "numpy",            # pixel math for MSE's image functions
     "regex",            # MSE scripts use Perl regex features Python's re lacks ([[:space:]])
     "fonttools",        # font names (family / PostScript) for matching stylesheet fonts
+    "reportlab",        # print export: the PDF sheets
 ]
 
 [project.optional-dependencies]

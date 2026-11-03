@@ -100,6 +100,8 @@ class Card(BaseModel):
     # set-health roles (removal, card draw, ...) beyond what's detected from the rules text:
     # role id -> True (add) / False (the detector was wrong; remove)
     role_overrides: dict[str, bool] = Field(default_factory=dict)
+    # copies in a print by rarity (setdesigner.export.selection); None = the rarity's count
+    print_copies: int | None = None
 
     def iter_faces(self) -> Iterator[tuple[int, Face]]:
         return iter(enumerate(self.faces))
