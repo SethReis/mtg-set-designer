@@ -4,7 +4,7 @@ rows or in a matrix, inside the app shell. Everything else opens over it.
     /set                          the workspace
     /set?card=<id>                ... with a card open in the editor
     /set?open=mechanics&id=<id>   ... with a rail item open (mechanics, cycles, health,
-                                  archetypes, settings)
+                                  archetypes, settings, print)
 """
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ THUMB_POLL = 0.5                         # seconds between checks for newly rend
 COLOR_CHOICES = {k: v for k, v in ov.COLOR_LABELS.items()}
 # the views that open over the workspace: workspace-size modals and the two dialogs
 WORKSPACE_VIEWS = {"mechanics": "Mechanics", "cycles": "Cycles", "health": "Set health"}
-VIEWS = {*WORKSPACE_VIEWS, "archetypes", "settings"}
+VIEWS = {*WORKSPACE_VIEWS, "archetypes", "settings", "print"}
 
 
 def thumbnail_url(folder, path) -> str:
@@ -459,6 +459,11 @@ def register(state) -> None:
                 from .app import FRAME_LABELS
                 from .set_settings import set_settings
                 m = set_settings(session, FRAME_LABELS, parent=shell.dialogs, on_close=lambda: closed(m))
+            elif name == "print":
+                from .print_dialog import print_dialog
+                m = print_dialog(state, cards=list(session.project.cards),
+                                 filtered=workspace_order() if view.filters.active else None,
+                                 parent=shell.dialogs, on_close=lambda: closed(m))
             else:
                 with c.modal("workspace", WORKSPACE_VIEWS.get(name, ""), parent=shell.dialogs,
                              on_close=lambda: closed(m)) as m:

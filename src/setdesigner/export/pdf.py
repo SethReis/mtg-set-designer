@@ -6,9 +6,9 @@ Each distinct face is drawn once into a PDF form (an XObject) and placed on the 
 often as it is printed, so copies don't make the file bigger. A face's form covers its
 bleed box: the 63 x 88 mm card plus `grid.bleed` on every side.
 
-Rendered pictures (`image_drawer`) have rounded, transparent corners, which are filled
-with the card's border color; bleed repeats the outermost pixels outward (renders have
-no real bleed area). Pictures go in as high-quality JPEG to keep the file small.
+Rendered pictures (`image_drawer`) have rounded corners, which are filled with the
+card's border color; bleed repeats the outermost pixels outward (renders have no real
+bleed area). Pictures go in as high-quality JPEG to keep the file small.
 """
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Callable
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 from reportlab.lib.units import mm
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen.canvas import Canvas
@@ -29,6 +29,7 @@ from .sheet import Grid, Slot
 MARK = 4.0                              # crop mark length, mm
 MARK_GAP = 1.0                          # between the bleed edge and a mark
 JPEG_QUALITY = 92
+CORNER = 3 / 63                         # a card's corner radius, as a share of its width
 
 # draw(canvas, face, width, height, bleed): draw one face with its bleed box at (0, 0), in
 # points; the card itself is at (bleed, bleed) and is width x height
@@ -53,10 +54,17 @@ def border_color(image: Image.Image) -> tuple[int, int, int]:
 
 
 def print_picture(image: Image.Image, bleed_px: int) -> Image.Image:
-    """An RGB picture ready to print: corners filled, `bleed_px` of edge added all round."""
+    """An RGB picture ready to print: corners filled, `bleed_px` of edge added all round.
+    Corners outside the card's rounding are filled whatever they hold (MSE leaves them
+    transparent; our own renderer paints them white), so the bleed doesn't copy them."""
     image = image.convert("RGBA")
-    filled = Image.new("RGBA", image.size, border_color(image) + (255,))
+    border = border_color(image) + (255,)
+    filled = Image.new("RGBA", image.size, border)
     filled.alpha_composite(image)
+    inside = Image.new("L", image.size, 0)
+    ImageDraw.Draw(inside).rounded_rectangle((0, 0, image.width - 1, image.height - 1),
+                                             radius=round(CORNER * image.width), fill=255)
+    filled = Image.composite(filled, Image.new("RGBA", image.size, border), inside)
     rgb = np.asarray(filled.convert("RGB"))
     if bleed_px > 0:
         rgb = np.pad(rgb, ((bleed_px, bleed_px), (bleed_px, bleed_px), (0, 0)), mode="edge")

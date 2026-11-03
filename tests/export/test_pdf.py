@@ -81,3 +81,11 @@ def test_labels() -> None:
     from setdesigner.export.selection import PrintFace
     assert label_text(PrintFace(single, 0, 0), "TST") == "TST 1"
     assert label_text(PrintFace(dfc, 1, 0), "TST") == "TST 1 · back"
+
+
+def test_painted_corners_are_filled_too() -> None:
+    """Our own renderer paints the corners white instead of leaving them transparent."""
+    image = Image.new("RGBA", (375, 523), "white")
+    ImageDraw.Draw(image).rounded_rectangle((0, 0, 374, 522), radius=18, fill="black")
+    bled = print_picture(image, 12)
+    assert bled.getpixel((0, 0)) == (0, 0, 0) and bled.getpixel((14, 14)) == (0, 0, 0)

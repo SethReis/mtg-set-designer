@@ -60,6 +60,9 @@ views open over the cards as modals.
 - **Set health:** warnings ("Blue has no common removal"), the mana curve, roles per color,
   mechanic spread and complexity, with a warnings badge in the rail, are in
   `docs/health.md`.
+- **Printing:** paper proxies as a PDF (Print in the rail): one of each card, or copies by
+  rarity, either as the real card images or printer-friendly text cards, on A4 or Letter
+  with bleed and crop marks, in `docs/print.md`.
 - **Design language:** the look, the layout rules and the shared components every screen
   is built from are in `docs/design/` (start with its README).
 

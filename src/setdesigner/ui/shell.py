@@ -23,7 +23,8 @@ NAV = [("cards", "Cards", "view_module", "The set's cards"),
        ("cycles", "Cycles", "donut_large", "Cards made as a cycle"),
        ("archetypes", "Archetypes", "hub", "Draft archetypes and their targets"),
        ("health", "Health", "monitor_heart", "Curves, roles per color, mechanics, complexity")]
-FOOT = [("settings", "Set", "tune", "The set's name, frame, symbol and rarity targets"),
+FOOT = [("print", "Print", "print", "Print the set as paper proxies"),
+        ("settings", "Set", "tune", "The set's name, frame, symbol and rarity targets"),
         ("sets", "Sets", "arrow_back", "Back to sets")]
 
 

@@ -393,6 +393,9 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
                         .classes("w-full")
                     ui.input("Number", value=card.collector_number,
                              on_change=lambda e: changed("collector_number", e.value)).classes("w-full")
+                    ui.number("Print copies", value=card.print_copies, min=0, format="%d",
+                              on_change=lambda e: changed("print_copies", e.value)).classes("w-full") \
+                        .tooltip("Copies in a print by rarity; empty follows the card's rarity")
                 with responsive_grid(180):
                     ui.select({"": "Set default", **FRAME_LABELS}, value=card.frame or "",
                               label="Frame", on_change=lambda e: changed("frame", e.value)) \

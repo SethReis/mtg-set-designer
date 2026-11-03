@@ -67,6 +67,7 @@ class ExportResult:
     faces: int
     rendered: int = 0                     # cards drawn now (the rest came from the cache)
     overflow: list[str] = field(default_factory=list)   # printer-friendly: text cut short
+    builtin: bool = False                 # drawn by our own renderer, not MSE
 
 
 def print_cache(session) -> PrintCache:
@@ -81,11 +82,13 @@ def summary(cards: list[Card], options: PrintOptions) -> tuple[int, int, tuple[i
 
 
 def pictures(session, cards: list[Card], progress: Progress | None = None,
-             cancel: threading.Event | None = None) -> tuple[dict[tuple[str, int], Path], int]:
-    """Full-size pictures of every face: ({(card id, face): file}, cards rendered now)."""
+             cancel: threading.Event | None = None) -> tuple[dict[tuple[str, int], Path], int, bool]:
+    """Full-size pictures of every face: ({(card id, face): file}, cards rendered now,
+    whether any came from our own renderer rather than MSE)."""
     cache = print_cache(session)
     keys = session.using_renderer(lambda r: (session.refresh_edited(r), r.render_keys(cards))[1])
     found: dict[tuple[str, int], Path] = {}
+    builtin = any(key.startswith("builtin") for key in keys.values())
     missing = []
     for card in cards:
         paths = [cache.get(card.id, face, keys[card.id]) for face in range(len(card.faces))]
@@ -100,12 +103,15 @@ def pictures(session, cards: list[Card], progress: Progress | None = None,
             progress(f"Rendering cards {start + 1}–{min(start + BATCH, len(missing))} of {len(missing)}",
                      start / len(missing))
         batch = missing[start:start + BATCH]
-        images = session.using_renderer(lambda r: r.render_many(batch))
+        images, backend = session.using_renderer(lambda r: (r.render_many(batch), r.last_backend))
         for card in batch:
-            stored = cache.put(card.id, keys[card.id],
-                               {face: images[card.id, face] for face in range(len(card.faces))})
+            key = keys[card.id]
+            if backend == "builtin" and not key.startswith("builtin"):
+                key = f"builtin-{key}"             # MSE failed: don't pass these off as its pictures
+            builtin = builtin or backend == "builtin"
+            stored = cache.put(card.id, key, {face: images[card.id, face] for face in range(len(card.faces))})
             found.update({(card.id, face): p for face, p in stored.items()})
-    return found, len(missing)
+    return found, len(missing), builtin
 
 
 def export_pdf(session, cards: list[Card], options: PrintOptions, target: Path | io.BytesIO,
@@ -115,12 +121,12 @@ def export_pdf(session, cards: list[Card], options: PrintOptions, target: Path |
     sheets = pages(faces, grid)
     unique = list({f.card.id: f.card for f in faces}.values())
     overflow: list[str] = []
-    rendered = 0
+    rendered, builtin = 0, False
     if options.style == "friendly":
         from ..export.playtest import playtest_drawer
         draw = playtest_drawer(session.project, overflow)
     else:
-        found, rendered = pictures(session, unique, progress, cancel)
+        found, rendered, builtin = pictures(session, unique, progress, cancel)
         draw = image_drawer(found)
     if cancel is not None and cancel.is_set():
         raise Cancelled
@@ -136,5 +142,5 @@ def export_pdf(session, cards: list[Card], options: PrintOptions, target: Path |
     count = write_pdf(target, sheets, grid, draw, crop_marks=options.crop_marks, label=label,
                       title=info.name, author=info.copyright or "", progress=page_done)
     return ExportResult(target if isinstance(target, Path) else None, count, len(faces),
-                        rendered, sorted(set(overflow)))
+                        rendered, sorted(set(overflow)), builtin)
 

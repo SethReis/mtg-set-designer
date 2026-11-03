@@ -40,13 +40,13 @@ def test_summary_counts_faces_pages_and_the_grid(session) -> None:
 @needs_packages
 def test_pictures_are_cached_full_size(session) -> None:
     cards = [session.new_card("Alpha"), session.new_card("Beta")]
-    found, rendered = pictures(session, cards)
-    assert rendered == 2 and set(found) == {(c.id, 0) for c in cards}
+    found, rendered, builtin = pictures(session, cards)
+    assert rendered == 2 and builtin and set(found) == {(c.id, 0) for c in cards}
     assert all(p.parent == print_cache(session).folder for p in found.values())
-    again, rendered = pictures(session, cards)
+    again, rendered, _ = pictures(session, cards)
     assert rendered == 0 and again == found
     session.update(cards[0], "rules_text", "Flying")          # only the edited card is redrawn
-    changed, rendered = pictures(session, cards)
+    changed, rendered, _ = pictures(session, cards)
     assert rendered == 1 and changed[cards[1].id, 0] == found[cards[1].id, 0]
     assert not found[cards[0].id, 0].exists()                  # its old picture is gone
 
