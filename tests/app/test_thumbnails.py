@@ -78,3 +78,36 @@ def test_render_many_matches_single_renders(session) -> None:
     many = session.using_renderer(lambda r: (session.refresh_edited(r), r.render_many(cards))[1])
     for card in cards:
         assert many[card.id, 0].tobytes() == session.render(card).tobytes()
+
+
+@needs_packages
+def test_stand_in_pictures_are_redrawn_once_mse_works(tmp_path, monkeypatch) -> None:
+    """While Windows blocks MSE, the built-in renderer's pictures are kept apart from MSE's,
+    so they're drawn again by MSE once it works."""
+    import subprocess
+
+    from setdesigner.render import CardRenderer
+
+    def blocked(*args, **kwargs):
+        error = OSError(22, "An Application Control policy has blocked this file")
+        error.winerror = 4551
+        raise error
+
+    exe = tmp_path / "magicseteditor.com"
+    exe.write_bytes(b"")
+    monkeypatch.setattr(subprocess, "Popen", blocked)
+    s = SetSession.create(tmp_path / "set", "My Set", "mys", "m15", thumbnail_dir=tmp_path / "thumbs",
+                          renderer_factory=lambda p: CardRenderer(p, mse_exe=exe))
+    try:
+        card = s.new_card("Bear")
+        worker = s.thumbnails
+        worker.request([card])
+        assert worker.wait_idle(), worker.error
+        stand_in = worker.get(card)
+        key = keys(s, [card])[card.id]
+        assert key.startswith("mse-") and worker.cache.get(card.id, key) is None
+        assert worker.cache.get(card.id, f"builtin-{key}") == stand_in
+        worker.request([card])                                # still blocked: reused, not redrawn
+        assert worker.wait_idle() and worker.get(card) == stand_in
+    finally:
+        s.close()

@@ -534,7 +534,25 @@ class SetSession:
 
     def mse_problem(self) -> str:
         """Why Magic Set Editor can't draw the cards ("" when it can; see CardRenderer)."""
-        return self.using_renderer(lambda r: r.mse_problem() if hasattr(r, "mse_problem") else "")
+        return self.mse_status()[1]
+
+    def mse_status(self) -> tuple[str, str]:
+        """("ok" | "off" | "missing" | "blocked" | "failed", why): see CardRenderer.mse_status.
+        May start MSE: call it off the UI thread."""
+        return self.using_renderer(lambda r: r.mse_status() if hasattr(r, "mse_status") else ("off", ""))
+
+    @property
+    def mse_blocked(self) -> bool:
+        """Windows blocked MSE (cheap: starts nothing, for the UI's timers)."""
+        return bool(getattr(self._renderer, "blocked", ""))
+
+    def retry_mse(self) -> tuple[str, str]:
+        """Try MSE again after the user renewed Windows' trust; the new status."""
+        return self.using_renderer(lambda r: r.retry_mse() if hasattr(r, "retry_mse") else ("off", ""))
+
+    def mse_gui(self) -> Path | None:
+        """MSE's windowed program (for renewing Windows' trust), if there is one."""
+        return self.using_renderer(lambda r: r.gui_exe() if hasattr(r, "gui_exe") else None)
 
     @property
     def uses_builtin_renderer(self) -> bool:

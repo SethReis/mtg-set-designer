@@ -18,6 +18,7 @@ from . import components as c
 from .cycles_page import cycles_panel
 from .editor_page import editor_panel
 from .health_page import health_panel
+from . import renderer_notice
 from .mechanics_page import mechanics_panel
 from .shell import set_shell
 from .uploads import add_art_script, set_paste_target
@@ -211,6 +212,7 @@ def register(state) -> None:
             else:
                 box.tooltip(card.faces[0].name)
             box.card, box.width = card, width
+            box.shown = worker.get(card) if settings.tiles == "images" else None
             tiles.setdefault(card.id, []).append(box)
             with box:
                 picture(card, width)
@@ -222,15 +224,17 @@ def register(state) -> None:
                     tile(card, width, fixed=True, stacked=True)
 
         def update_tiles() -> None:
-            """Swap text tiles for pictures that have been rendered meanwhile."""
+            """Show pictures rendered meanwhile: in place of text tiles, or of stand-in
+            pictures once Magic Set Editor has redrawn them."""
             if worker.version == seen["version"]:
                 return
             seen["version"] = worker.version
             for boxes in tiles.values():
                 for box in boxes:
-                    has_picture = any(c.tag == "img" for c in box.default_slot.children)
-                    if not has_picture and worker.get(box.card) is not None:
+                    path = worker.get(box.card)
+                    if path is not None and path != box.shown:
                         box.clear()
+                        box.shown = path
                         with box:
                             picture(box.card, box.width)
 
@@ -402,6 +406,12 @@ def register(state) -> None:
         # ------------------------------------------------------------ timers
         def tick() -> None:
             session.flush_due()
+            renderer_health = renderer_notice.health(session)
+            if renderer_health.version != renderer_seen["version"]:
+                renderer_seen["version"] = renderer_health.version
+                shell.renderer_chip.set_visibility(renderer_health.problem and renderer_health.dismissed)
+                if renderer_health.phase == "fixed":
+                    content.refresh()                    # stand-in pictures get redrawn by MSE
             if session.art_notice is not None:           # from a dropped file
                 kind, message = session.art_notice
                 session.art_notice = None
@@ -421,6 +431,11 @@ def register(state) -> None:
             else:
                 shell.set_status("All changes saved")
 
+        renderer_seen = {"version": -1}
+        with shell.banner:
+            renderer_notice.notice(session)
+        shell.renderer_chip.on_click(lambda: renderer_notice.health(session).update(dismissed=False))
+        ui.timer(0, lambda: renderer_notice.check(session), once=True)
         ui.timer(THUMB_POLL, tick)
 
         # ------------------------------------------------------------ views over the workspace

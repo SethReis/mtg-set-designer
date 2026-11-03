@@ -38,6 +38,8 @@ class Shell:
     health_badge: ui.label
     dark: ui.dark_mode
     refresh_title: Callable[[], None]     # after the set's name, code or symbol change
+    banner: ui.element = None              # full-width notices under the top bar (renderer_notice)
+    renderer_chip: ui.button = None        # "Stand-in renderer" once its notice is put away
     busy: Callable[[], bool] = lambda: False   # a modal is open: the shell's keys rest
 
     def set_health(self, warnings: int) -> None:
@@ -122,6 +124,9 @@ def set_shell(state, *, active: str = "cards", open_view: Callable[[str], None],
                 if on_search:
                     search.on_value_change(lambda e: on_search(e.value or ""))
                 ui.element("div").classes("grow")
+                renderer_chip = c.button("Stand-in renderer", kind="ghost", icon="warning",
+                                         tooltip="Cards aren't drawn by Magic Set Editor right now")                     .props("dense").classes("ds-renderer-chip").mark("renderer-chip")
+                renderer_chip.set_visibility(False)
                 status = c.status("All changes saved")
                 c.button("New card", kind="primary", icon="add", on_click=new_card,
                          tooltip="New card · Ctrl+N")
@@ -132,6 +137,7 @@ def set_shell(state, *, active: str = "cards", open_view: Callable[[str], None],
                             ui.menu_item(label, on_click=lambda v=value: set_theme(v)) \
                                 .classes("text-accent" if value == settings.theme else "") \
                                 .mark(f"theme-{value}")
+            banner = ui.element("div").classes("ds-banner")
             main = ui.element("div").classes("ds-view")
         dialogs = ui.element("div")
 
@@ -152,6 +158,7 @@ def set_shell(state, *, active: str = "cards", open_view: Callable[[str], None],
             new_card()
 
     ui.keyboard(on_key=keys, ignore=["input", "select", "button", "textarea"])
-    shell = Shell(main, dialogs, search, status, health, health_badge, dark, title.refresh)
+    shell = Shell(main, dialogs, search, status, health, health_badge, dark, title.refresh, banner,
+                  renderer_chip)
     shell.set_health(0)
     return shell

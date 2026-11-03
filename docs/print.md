@@ -37,12 +37,31 @@ renders nothing. If MSE can't run, the built-in renderer draws them and the dial
 (when it opens, and after the export); those pictures aren't kept, so MSE redraws them once
 it works again.
 
-Windows' **Smart App Control** (or another app control policy) may block
-`magicseteditor.com`, which isn't code-signed. The dialog then says "Windows blocked Magic
-Set Editor", and the app stops trying to start it for that session. Smart App Control has no
-per-program exceptions, so MSE renders need it turned off (Windows Security → App & browser
-control → Smart App Control) or MSE allowed by your policy. The overview may still show
-older MSE pictures from its cache, so a print can look different from the tiles.
+### When Windows blocks Magic Set Editor
+Windows' **Smart App Control** trusts the unsigned `magicseteditor.com` for about a day
+after it was opened through Windows' own launcher (a double-click, for example). It stores
+that trust on the file itself, with an expiry. When it lapses, the app's background MSE is
+blocked, and cards are drawn by the built-in renderer (the "stand-in"), which gets the
+layout right but not every detail of the text and symbols.
+
+The app says so wherever cards show:
+- a banner under the top bar;
+- a line under the editor's preview;
+- the Print dialog, where Export becomes **Export with stand-in pictures** and asks first.
+
+All three offer **Renew Magic Set Editor** (`app/mse_trust.py`). It runs MSE once through
+Windows' launcher, hidden, with `--version` (which just prints and exits), so nothing opens:
+first the `.com`, then the `.exe`. It ends anything it started, then tries the app's own MSE
+again.
+
+If Windows wants a real double-click instead, the banner opens MSE's folder and asks for
+one. The app closes that MSE window itself once MSE works. Which route worked is logged.
+Stand-in pictures are kept apart from MSE's in the caches, so they're redrawn by MSE once
+it works.
+
+This is a stopgap; the aim is a renderer that doesn't need the MSE program at all. For
+trying the blocked path without Windows, set `SETDESIGNER_FAKE_MSE_BLOCK=1`: MSE then acts
+blocked until **Renew** is pressed.
 
 Each card's rounded corners are filled with its border color, so the cards print square
 and cut cleanly. Bleed repeats the card's outermost pixels outward. Each distinct face is

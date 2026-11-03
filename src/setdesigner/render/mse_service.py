@@ -57,6 +57,11 @@ class MSEBlocked(MSEError):
     """Windows won't let MSE run at all: retrying is pointless until the user allows it."""
 
 
+# a dev switch to try the blocked path without Windows blocking anything: while it's on,
+# MSE "is blocked"; app/mse_trust.renew turns it off, as a successful renewal would
+FAKE_BLOCK = {"on": os.environ.get("SETDESIGNER_FAKE_MSE_BLOCK") == "1"}
+
+
 def find_mse() -> Path | None:
     """The MSE command-line program: $SETDESIGNER_MSE, else a bundled copy."""
     configured = os.environ.get("SETDESIGNER_MSE")
@@ -100,6 +105,8 @@ class MSEProcess:
         self.close()
         self.lines = queue.Queue()
         register_fonts()
+        if FAKE_BLOCK["on"]:
+            raise MSEBlocked(BLOCKED_MESSAGE)
         flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
         try:
             self.proc = subprocess.Popen([str(self.exe), "--cli", "--quiet", "--raw"],

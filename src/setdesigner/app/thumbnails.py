@@ -138,8 +138,11 @@ class ThumbnailWorker:
         keys = self.session.using_renderer(lambda r: (self.session.refresh_edited(r),
                                                       r.render_keys(cards))[1])
         missing = []
+        blocked = self.session.mse_blocked           # stand-in pictures do until MSE is back
         for card in cards:
             path = self.cache.get(card.id, keys[card.id])
+            if path is None and blocked:
+                path = self.cache.get(card.id, f"builtin-{keys[card.id]}")
             if path is not None:
                 self._ready[card.id] = path
             else:
@@ -151,8 +154,12 @@ class ThumbnailWorker:
             if self._stop or generation != self._generation:
                 return                          # a newer request takes over
             batch = missing[start:start + BATCH]
-            images = self.session.using_renderer(lambda r: r.render_many(batch))
+            images, backend = self.session.using_renderer(
+                lambda r: (r.render_many(batch), getattr(r, "last_backend", "")))
             for card in batch:
-                self._ready[card.id] = self.cache.put(card.id, keys[card.id], images[card.id, 0])
+                key = keys[card.id]
+                if backend == "builtin" and not key.startswith("builtin"):
+                    key = f"builtin-{key}"             # MSE failed: redraw with it once it works
+                self._ready[card.id] = self.cache.put(card.id, key, images[card.id, 0])
             self.version += 1
         self.error = ""

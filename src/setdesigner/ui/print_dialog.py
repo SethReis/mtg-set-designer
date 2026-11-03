@@ -22,6 +22,7 @@ from ..export.selection import (BLEEDS, DISTRIBUTIONS, SORTS, STYLES, PrintOptio
 from ..export.sheet import PAPERS, fit, pages
 from ..model import Card, Rarity
 from . import components as c
+from . import renderer_notice
 from .widgets import compact_tile, served_url
 
 PREVIEW_WIDTH = 120                     # px of a card in the page preview (text size)
@@ -59,8 +60,7 @@ def print_dialog(state, *, cards: list[Card], filtered: list[Card] | None, paren
 
     with c.modal("lg", "Print", parent=parent, footer=True, persistent=False, on_close=on_close,
                  subtitle="Paper proxies: every face is its own card") as m:
-        renderer_warning = c.status("", "warning").classes("ds-print-warning")
-        renderer_warning.set_visibility(False)
+        renderer_notice.notice(session, dismissable=False)
         with ui.element("div").classes("ds-print"):
             # ---- options
             with ui.element("div").classes("ds-print-options"):
@@ -173,14 +173,16 @@ def print_dialog(state, *, cards: list[Card], filtered: list[Card] | None, paren
 
     ui.timer(POLL, show_progress)
 
-    async def check_renderer() -> None:
-        """Say up front when rendered prints won't come from MSE (e.g. Windows blocks it)."""
-        problem = await run.io_bound(session.mse_problem)
-        if problem and not renderer_warning.is_deleted:
-            renderer_warning.text = f"{problem}. Rendered prints will look slightly different from MSE's."
-            renderer_warning.set_visibility(True)
+    def stand_in() -> bool:
+        """Rendered prints would come from the stand-in renderer (Windows blocks MSE)."""
+        return options.style == "rendered" and renderer_notice.health(session).problem
 
-    ui.timer(0, check_renderer, once=True)
+    def label_export() -> None:
+        if not export_button.is_deleted:
+            export_button.text = "Export with stand-in pictures" if stand_in() else "Export PDF"
+
+    ui.timer(POLL, label_export)
+    ui.timer(0, lambda: renderer_notice.check(session), once=True)   # opened by a link: check now
 
     def report(text: str, fraction: float) -> None:          # from the export thread
         job["text"], job["fraction"] = text, fraction
@@ -208,6 +210,17 @@ def print_dialog(state, *, cards: list[Card], filtered: list[Card] | None, paren
         if not print_faces(selected, options):
             ui.notify("Nothing to print", type="warning")
             return
+        if stand_in():
+            choice = await c.confirm(
+                parent, "These cards won't match Magic Set Editor",
+                "Windows is blocking Magic Set Editor, so the PDF would get the stand-in renderer's "
+                "pictures. Renew Magic Set Editor first to print the real ones.",
+                confirm_label="Export anyway", kind="primary", extra="Renew Magic Set Editor")
+            if choice == "extra":
+                await renderer_notice.renew(session)
+                return
+            if choice is None:
+                return
         path = await target()
         if path is None:
             return

@@ -47,6 +47,7 @@ class CardRenderer:
         self.last_backend = ""
         self.warnings: list[str] = []
         self.blocked = ""                # Windows won't run MSE: why (then MSE isn't tried again)
+        self.use_mse = use_mse
         if use_mse:
             try:
                 self.mse = MSERenderer(project, self.env, mse_exe)
@@ -68,18 +69,39 @@ class CardRenderer:
         else:
             self.warnings.append(f"MSE could not render {what}: {e}; used the built-in renderer")
 
-    def mse_problem(self) -> str:
-        """Why MSE can't draw the cards ("" when it can). Starts MSE if it isn't running."""
+    def mse_status(self) -> tuple[str, str]:
+        """Whether MSE draws the cards: ("ok" | "off" | "missing" | "blocked" | "failed", why).
+        "off": this renderer doesn't use MSE on purpose (tests). Starts MSE if it isn't
+        running, so call it off the UI thread."""
+        if not self.use_mse:
+            return "off", ""
         if self.mse is None:
-            return "Magic Set Editor wasn't found, so the built-in renderer draws the cards"
+            return "missing", "Magic Set Editor wasn't found, so the built-in renderer draws the cards"
         if not self.blocked and not self.mse.process.alive:
             try:
                 self.mse.process.start()
             except MSEBlocked as e:
                 self.blocked = str(e)
             except MSEError as e:
-                return f"Magic Set Editor could not start ({e}), so the built-in renderer draws the cards"
-        return self.blocked
+                return "failed", f"Magic Set Editor could not start ({e}), so the built-in renderer draws the cards"
+        return ("blocked", self.blocked) if self.blocked else ("ok", "")
+
+    def mse_problem(self) -> str:
+        """Why MSE can't draw the cards ("" when it can or isn't meant to)."""
+        return self.mse_status()[1]
+
+    def retry_mse(self) -> tuple[str, str]:
+        """Forget that Windows blocked MSE and try it again (after the user renewed
+        Windows' trust in it, see app/mse_trust.py)."""
+        self.blocked = ""
+        return self.mse_status()
+
+    def gui_exe(self) -> Path | None:
+        """MSE's windowed program, next to the command-line one we run."""
+        if self.mse is None:
+            return None
+        exe = self.mse.process.exe.with_suffix(".exe")
+        return exe if exe.is_file() else None
 
     def render(self, card: Card, face: int = 0) -> Image.Image:
         if self._use_mse:

@@ -339,7 +339,34 @@ mark { background: var(--accent-soft); color: var(--text); border-radius: 2px; p
 .ds-print-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ds-print-card .ds-text-tile { height: 100%; font-size: 8px; }
 .ds-print-progress { width: 160px; flex: none; }
-.ds-print-warning { display: block; margin-bottom: var(--space-4); white-space: normal; }
+.ds-modal-body > .ds-renderer-notice-host:has(.ds-renderer-notice) { margin-bottom: var(--space-4); }
+.ds-editor-preview .ds-renderer-notice-host:has(.ds-renderer-notice) { margin-top: var(--space-2); }
+
+/* ------------------------------------------------------------------ renderer notice (renderer_notice.py) */
+.ds-banner { flex: none; }
+.ds-banner .ds-renderer-notice { border-radius: 0; border-width: 0 0 1px 0; padding: var(--space-3) var(--space-5); }
+.ds-renderer-notice { display: flex; align-items: center; gap: var(--space-3); width: 100%;
+                      padding: var(--space-3) var(--space-4); border: 1px solid var(--warning);
+                      border-radius: var(--radius-md); background: var(--warning-soft); color: var(--text); }
+.ds-renderer-notice > .q-icon { color: var(--warning); font-size: 22px; flex: none; }
+.ds-renderer-notice .text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ds-renderer-notice .title { font-weight: 600; }
+.ds-renderer-notice .detail { color: var(--text-muted); font-size: var(--text-sm); }
+.ds-renderer-notice .actions { flex: none; }
+.ds-renderer-notice.info { border-color: var(--info); background: var(--info-soft); }
+.ds-renderer-notice.info > .q-icon { color: var(--info); }
+.ds-renderer-notice.ok { border-color: var(--success); background: var(--success-soft); }
+.ds-renderer-notice.ok > .q-icon { color: var(--success); }
+.ds-renderer-notice.compact { flex-wrap: wrap; gap: var(--space-2); padding: var(--space-2) var(--space-3);
+                              font-size: var(--text-sm); }
+.ds-renderer-notice.compact .title { font-weight: 500; }
+.ds-renderer-notice.compact .text { flex: 1 1 calc(100% - 40px); }
+.ds-renderer-notice.compact .actions { flex: 1 1 100%; padding-left: 34px; }
+.q-btn.ds-renderer-chip { color: var(--warning); }
+.ds-why-text { margin-bottom: var(--space-3); line-height: 1.5; }
+@media (max-width: 900px) {
+  .ds-renderer-notice { flex-wrap: wrap; }
+}
 @media (max-width: 900px) {
   .ds-print { grid-template-columns: 1fr; }
 }

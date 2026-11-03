@@ -79,3 +79,14 @@ async def test_export_writes_a_pdf(user: User, tmp_path, monkeypatch) -> None:
     await user.should_see("Saved 1 page to TST-print.pdf", retries=40)
     assert (out / "TST-print.pdf").read_bytes().startswith(b"%PDF")
     assert state().settings.print_folder == str(out)
+
+
+async def test_export_asks_first_while_pictures_are_stand_ins(user: User) -> None:
+    from setdesigner.ui import renderer_notice
+    session = await open_set(user, {"style": "rendered"})
+    session.mse_status = lambda: ("blocked", "Windows blocked Magic Set Editor")    # what checks see
+    renderer_notice.health(session).update(kind="blocked", message="Windows blocked Magic Set Editor")
+    await user.open("/set?open=print")
+    await user.should_see("Export with stand-in pictures", retries=20)
+    user.find(marker="print-export").click()
+    await user.should_see("These cards won't match Magic Set Editor", retries=20)

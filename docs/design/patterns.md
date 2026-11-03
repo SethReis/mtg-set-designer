@@ -61,3 +61,18 @@ template):
 - The card that is open in the editor is outlined in accent on the workspace when the
   modal closes, so you can find your place.
 - Filters show as removable chips under the toolbar, with "Clear all" at the end.
+
+## Blocked renderer
+When Magic Set Editor can't draw the cards (usually because Windows' Smart App Control
+stopped trusting it), cards come from the stand-in renderer and look a little off. Say so
+wherever cards show, the same way every time: use `ui/renderer_notice.notice`, never
+your own wording.
+- **Banner:** under the top bar. It leads with what the user sees ("Your cards are being
+  drawn by a stand-in renderer and won't look quite right"), then why, then one primary
+  action: **Renew Magic Set Editor**. "Not now" puts it away into a top-bar chip; it
+  never disappears silently.
+- **Compact:** a single line next to a preview (`compact=True`), with the same button.
+- **Before an export** that would use stand-in pictures, the action says so ("Export with
+  stand-in pictures") and asks first.
+- The fix never asks the user to open or close a window when Windows allows otherwise
+  (`app/mse_trust.py`). "Why is this needed?" explains it in plain words.

@@ -15,6 +15,7 @@ from ..app.health.roles import ROLES, detected_roles, mechanic_roles
 from ..model import Card, MechanicKind, Rarity, Status
 from ..mse.mapping import split_type_line
 from . import components as c
+from . import renderer_notice
 from .art_editor import art_editor
 from .mechanics_page import POLICY_LABELS
 from .uploads import set_paste_target
@@ -427,6 +428,8 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
             with preview_box:
                 preview = ui.image().props("fit=contain no-spinner no-transition").classes("ds-preview")
             preview_note = c.hint("Starting the renderer…")
+            renderer_notice.notice(session, compact=True)
+    renderer_seen = {"version": renderer_notice.health(session).version}
 
     # ------------------------------------------------------ timers
     async def tick() -> None:
@@ -437,6 +440,11 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
             status.text = "All changes saved"
             status.style("--dot: var(--success)")
         session.flush_due()
+        renderer_health = renderer_notice.health(session)
+        if renderer_health.version != renderer_seen["version"]:
+            renderer_seen["version"] = renderer_health.version
+            if renderer_health.phase == "fixed":     # Magic Set Editor works again: redraw
+                schedule_preview(now=True)
         if session.art_notice is not None:           # from a dropped or pasted file
             kind, message = session.art_notice
             session.art_notice = None
@@ -458,8 +466,8 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
                 return
             if generation == view["generation"]:      # skip stale results
                 preview.set_source(image)
-                note = session.renderer_note
-                preview_note.text = f"Drawn by the {note}" if note else ""
+                stand_in = session.renderer_note and not renderer_notice.health(session).problem
+                preview_note.text = "Drawn by the stand-in renderer" if stand_in else ""   # else: the notice
         elif view["card"] is None:
             preview.set_source("")
             preview_note.text = ""

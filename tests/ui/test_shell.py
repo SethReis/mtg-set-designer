@@ -158,3 +158,31 @@ async def test_old_routes_open_their_view(user: User, route: str, expected: str)
     await user.open(route)
     await user.should_see(expected)
     await user.should_see("Group by")                  # over the workspace
+
+
+def block_mse(session) -> None:
+    """As if Windows had blocked Magic Set Editor (these tests draw without it)."""
+    from setdesigner.ui import renderer_notice
+    session.mse_status = lambda: ("blocked", "Windows blocked Magic Set Editor")    # what checks see
+    renderer_notice.health(session).update(kind="blocked", message="Windows blocked Magic Set Editor")
+
+
+async def test_a_blocked_renderer_is_explained_with_one_action(user: User) -> None:
+    session, _ = await open_set(user)
+    block_mse(session)
+    await user.should_see("Your cards are being drawn by a stand-in renderer", retries=20)
+    await user.should_see(marker="renew-mse")
+    user.find(marker="renderer-not-now").click()
+    await user.should_not_see("Your cards are being drawn by a stand-in renderer", retries=20)
+    user.find(marker="renderer-chip").click()                 # the top bar keeps a way back
+    await user.should_see("Your cards are being drawn by a stand-in renderer", retries=20)
+
+
+async def test_renewing_says_when_mse_works_again(user: User, monkeypatch) -> None:
+    from setdesigner.app import mse_trust
+    session, _ = await open_set(user)
+    block_mse(session)
+    monkeypatch.setattr(mse_trust, "renew", lambda s, launcher=None: "hidden-cli")
+    await user.should_see(marker="renew-mse", retries=20)
+    user.find(marker="renew-mse").click()
+    await user.should_see("Magic Set Editor is working again", retries=20)
