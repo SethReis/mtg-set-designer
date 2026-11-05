@@ -47,11 +47,12 @@ def art_editor(session, card: Card, on_changed: Callable[[], None], face: int = 
             picker.classes("hidden")                     # still used by "Replace"
             box = session.art_box(card, face)
             if box is None:                              # first card in this frame: look it up
-                c.hint("Measuring the frame's art box…")
+                measuring = c.hint("Measuring the frame's art box…")
 
                 async def measure() -> None:
                     await run.io_bound(session.find_art_box, card, face)
-                    panel.refresh()
+                    if not measuring.is_deleted:         # the editor may have closed meanwhile
+                        panel.refresh()
                 ui.timer(0.01, measure, once=True)
                 return
             crop_editor(path, box[0] / box[1], picker)

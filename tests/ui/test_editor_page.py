@@ -54,3 +54,22 @@ async def test_reopen_from_recent(user: User, test_dir: Path) -> None:
     await user.should_see("Recent")
     user.find(marker="recent-tst").click()
     await user.should_see("New card")
+
+
+async def test_a_slow_preview_after_the_editor_closed_is_dropped(user: User, caplog) -> None:
+    """At startup the renderer can be busy (card pictures, checking MSE): a preview that
+    finishes after the editor closed mustn't touch the removed preview."""
+    import asyncio
+    import time
+
+    await create_set(user)
+    session = state().session
+    card = session.new_card("Grizzly Bears")
+    render = session.render
+    session.render = lambda c, face=0: (time.sleep(1.0), render(c, face))[1]
+    await user.open(f"/set?card={card.id}")
+    await user.should_see("Rules text")
+    await asyncio.sleep(0.3)                                 # the preview has started
+    user.find(marker="modal-close").click()
+    await asyncio.sleep(1.5)                                 # ...and finishes after the close
+    assert "deleted but is still being used" not in caplog.text

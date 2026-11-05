@@ -462,7 +462,10 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
             try:
                 image = await run.io_bound(session.render, card)
             except Exception as e:                   # never break the editor over a preview
-                preview_note.text = f"Preview failed: {e}"
+                if not preview_note.is_deleted:
+                    preview_note.text = f"Preview failed: {e}"
+                return
+            if preview.is_deleted:                    # the editor closed while the render waited
                 return
             if generation == view["generation"]:      # skip stale results
                 preview.set_source(image)
