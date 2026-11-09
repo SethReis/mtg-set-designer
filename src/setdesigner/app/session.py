@@ -23,9 +23,9 @@ from PIL import Image
 
 from ..model import (LAYOUTS, AbilityTemplate, Archetype, ArtCrop, Card, CheckSetting, Cycle, CycleTemplate,
                      Face, FaceRole, Layout, Mechanic, MechanicKind, Rarity, ReminderPolicy, SetInfo,
-                     SetProject, Status,
+                     SetProject, Skeleton, Slot, Status,
                      delete_card, load_project, new_card_id, save_archetypes, save_card,
-                     save_cycles, save_info, save_mechanics, save_project)
+                     save_cycles, save_info, save_mechanics, save_project, save_skeleton)
 from ..model.project import slug
 from ..mse.mapping import join_type_line, split_type_line
 from .mechanics import mechanic_ids
@@ -172,6 +172,9 @@ class SetSession:
         self._edited.discard(card.id)
         self.project.cards = [c for c in self.project.cards if c.id != card.id]
         self._pending.pop(card.id, None)
+        if self.project.skeleton is not None and (slot := self.project.skeleton.slot_of(card.id)):
+            slot.card_id, slot.cycle = None, None
+            self._save_skeleton()
         delete_card(self.folder, card.id)
         if self._renderer is not None:
             with self._renderer_lock:
@@ -388,10 +391,119 @@ class SetSession:
             card.mechanics = mechanic_ids(self.project, card)
             self._changed(card)
             member.card_id = card.id
+            self._place_in_skeleton(card, cycle=cycle.id)
             made.append(card)
         save_cycles(self.folder, self.project.cycles)
         self.flush()
         return made
+
+    # ------------------------------------------------------------ skeleton
+
+    def create_skeleton(self, preset: str, columns: list[str], counts: dict[str, dict[str, int]]) -> list[Card]:
+        """Make the set's skeleton and put existing cards where they fit. Returns the cards
+        left outside it."""
+        from . import skeleton as sk
+        self.flush()
+        skeleton = Skeleton(preset=preset, columns=list(columns), counts={c: dict(counts.get(c, {})) for c in columns},
+                            slots=sk.generate(columns, counts, self.project.archetypes))
+        self.project.skeleton = skeleton
+        left = sk.place_cards(skeleton, self.project)
+        self._save_skeleton()
+        return left
+
+    def adjust_skeleton(self, columns: list[str], counts: dict[str, dict[str, int]],
+                        remove_filled: bool = False) -> list[Slot]:
+        """New counts (or columns) for the skeleton, in place: see app.skeleton.adjust.
+        Returns filled slots that would have to go (kept unless `remove_filled`)."""
+        from . import skeleton as sk
+        blocked = sk.adjust(self.project.skeleton, columns, counts, self.project.archetypes, remove_filled)
+        self._save_skeleton()
+        return blocked
+
+    def delete_skeleton(self) -> None:
+        self.project.skeleton = None
+        self._save_skeleton()
+
+    def update_slot(self, slot: Slot, **values: object) -> None:
+        """Change a slot's description: types, mana_value, role, archetype, note."""
+        for key, value in values.items():
+            if key not in ("types", "mana_value", "role", "archetype", "note"):
+                raise SessionError(f"Unknown slot field {key!r}")
+            if key == "mana_value":
+                value = None if value in (None, "") else max(0, int(value))
+            elif key in ("role", "archetype"):
+                value = value or None
+            else:
+                value = str(value or "")
+            setattr(slot, key, value)
+        self._save_skeleton()
+
+    def add_slot(self, column: str, rarity: str) -> Slot:
+        """One more slot at the end of a cell (rarity: a Rarity value, or "any" in a cube)."""
+        from . import skeleton as sk
+        skeleton = self.project.skeleton
+        counts = {c: dict(r) for c, r in skeleton.counts.items()}
+        counts.setdefault(column, {})[rarity] = len(sk.cell(skeleton, column, rarity)) + 1
+        columns = skeleton.columns if column in skeleton.columns else             sorted([*skeleton.columns, column], key=sk.column_order)
+        sk.adjust(skeleton, columns, counts, self.project.archetypes)
+        self._save_skeleton()
+        return sk.cell(skeleton, column, rarity)[-1]
+
+    def delete_slot(self, slot: Slot) -> None:
+        skeleton = self.project.skeleton
+        skeleton.slots.remove(slot)
+        key = "any" if slot.rarity is None else slot.rarity.value
+        if slot.column in skeleton.counts and key in skeleton.counts[slot.column]:
+            skeleton.counts[slot.column][key] = max(0, skeleton.counts[slot.column][key] - 1)
+        self._save_skeleton()
+
+    def assign(self, slot: Slot, card: Card | None) -> None:
+        """Fill a slot with a card (or empty it with None). A card is in one slot at most:
+        moving it from another slot leaves that one empty, or holding this slot's card
+        if it was filled (a swap)."""
+        skeleton = self.project.skeleton
+        if card is not None:
+            previous = skeleton.slot_of(card.id)
+            if previous is slot:
+                return
+            if previous is not None:
+                previous.card_id = slot.card_id         # a swap (or empty)
+                previous.cycle = slot.cycle if slot.card_id else None
+        slot.card_id = card.id if card is not None else None
+        slot.cycle = card.cycle if card is not None else None
+        self._save_skeleton()
+
+    def new_card_from_slot(self, slot: Slot) -> Card:
+        """A new card asked for by a slot: its rarity, type, archetype and note, in the slot."""
+        card = self.new_card("New Card")
+        if slot.rarity is not None:
+            self.update(card, "rarity", slot.rarity)
+        if slot.types:
+            self.update(card, "types", slot.types)
+        if slot.archetype:
+            self.update(card, "archetypes", [slot.archetype])
+        if slot.note:
+            self.update(card, "notes", slot.note)
+        self.assign(slot, card)
+        return card
+
+    def _place_in_skeleton(self, card: Card, cycle: str | None = None) -> Slot | None:
+        """Put a new card (e.g. a cycle's) in the empty slot that fits it best, if any."""
+        from . import skeleton as sk
+        skeleton = self.project.skeleton
+        if skeleton is None or skeleton.slot_of(card.id) is not None:
+            return None
+        scored = [(sk.fits(card, s, skeleton.columns, self.project), s) for s in skeleton.slots if s.card_id is None]
+        scored = [(score, s) for score, s in scored if score is not None]
+        if not scored:
+            return None
+        slot = max(scored, key=lambda p: p[0])[1]
+        slot.card_id, slot.cycle = card.id, cycle
+        self._save_skeleton()
+        return slot
+
+    def _save_skeleton(self) -> None:
+        save_skeleton(self.folder, self.project.skeleton)
 
     def delete_cycle(self, cycle: Cycle) -> None:
         """Remove a cycle. Its cards stay in the set, unlinked."""

@@ -217,3 +217,79 @@ def test_interactive_renderer_calls_go_before_waiting_background_work() -> None:
     waiting.join(2)
     preview.join(2)
     assert order == ["interactive", "background"]
+
+
+def make_skeleton(session, counts=None):
+    counts = counts or {"W": {"common": 3}, "U": {"common": 2}}
+    session.create_skeleton("play_booster", list(counts), counts)
+    return session.project.skeleton
+
+
+def test_a_skeleton_places_existing_cards_and_is_saved(session) -> None:
+    from setdesigner.model import load_project
+    bear = session.new_card("Bear")
+    session.update(bear, "mana_cost", "{1}{W}")
+    red = session.new_card("Red Thing")
+    session.update(red, "mana_cost", "{R}")
+    left = session.create_skeleton("play_booster", ["W", "U"], {"W": {"common": 3}, "U": {"common": 2}})
+    assert [c.id for c in left] == [red.id]                       # no red column
+    assert session.project.skeleton.slot_of(bear.id) is not None
+    loaded = load_project(session.folder)
+    assert loaded.skeleton == session.project.skeleton
+    session.delete_skeleton()
+    assert load_project(session.folder).skeleton is None and not (session.folder / "slots.json").exists()
+
+
+def test_assign_moves_and_swaps(session) -> None:
+    a, b = session.new_card("A"), session.new_card("B")
+    for x in (a, b):
+        session.update(x, "mana_cost", "{W}")
+    skeleton = make_skeleton(session, {"W": {"common": 3}})
+    s1, s2, s3 = skeleton.slots
+    session.assign(s1, a)
+    session.assign(s2, b)
+    session.assign(s3, a)                                          # move: s1 empties
+    assert (s1.card_id, s2.card_id, s3.card_id) == (None, b.id, a.id)
+    session.assign(s2, a)                                          # swap
+    assert (s2.card_id, s3.card_id) == (a.id, b.id)
+    session.assign(s2, None)
+    assert s2.card_id is None
+
+
+def test_a_card_from_a_slot_starts_from_its_description(session) -> None:
+    from setdesigner.model import Archetype
+    session.project.archetypes.append(Archetype(id="flyers", name="WU flyers", colors="WU"))
+    skeleton = make_skeleton(session, {"W": {"uncommon": 1}})
+    slot = skeleton.slots[0]
+    session.update_slot(slot, types="Creature", mana_value="2", archetype="flyers", note="2-drop flyer")
+    card = session.new_card_from_slot(slot)
+    assert card.rarity == Rarity.UNCOMMON and card.faces[0].type_line == "Creature"
+    assert card.archetypes == ["flyers"] and card.notes == "2-drop flyer"
+    assert slot.card_id == card.id and slot.mana_value == 2
+
+
+def test_deleting_a_card_empties_its_slot(session) -> None:
+    card = session.new_card("Bear")
+    session.update(card, "mana_cost", "{W}")
+    skeleton = make_skeleton(session, {"W": {"common": 1}})
+    session.delete(card)
+    assert skeleton.slots[0].card_id is None
+
+
+def test_add_and_delete_slots_update_the_counts(session) -> None:
+    skeleton = make_skeleton(session, {"W": {"common": 1}})
+    slot = session.add_slot("W", "common")
+    assert slot.id == "W-C02" and skeleton.counts["W"]["common"] == 2
+    session.add_slot("RW", "uncommon")                             # a new column
+    assert "RW" in skeleton.columns
+    session.delete_slot(slot)
+    assert skeleton.counts["W"]["common"] == 1
+
+
+def test_cycle_cards_land_in_matching_slots(session) -> None:
+    cycle = session.new_cycle("Guardians")
+    cycle.template.mana_cost = "{1}{c}"                            # each member in its color
+    skeleton = make_skeleton(session, {c: {"common": 1} for c in "WUBRG"})
+    made = session.generate_cycle(cycle)
+    placed = [skeleton.slot_of(card.id) for card in made]
+    assert all(placed) and {s.cycle for s in placed} == {cycle.id}
