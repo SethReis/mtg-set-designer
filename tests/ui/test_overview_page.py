@@ -269,3 +269,17 @@ async def test_text_tiles_name_the_back_face(user: User) -> None:
     session.update(card, "name", "Hidden Grotto", face=1)
     await user.open("/set")
     await user.should_see("// Hidden Grotto")
+
+
+async def test_empty_skeleton_slots_show_as_tiles(user: User) -> None:
+    session, bear, angel = await open_set_with_cards(user)
+    counts = {"W": {"uncommon": 2}, "G": {"common": 2}}
+    session.create_skeleton("play_booster", list(counts), counts)
+    await user.open("/set")
+    await user.should_see("Green · 1 / 2")                      # the skeleton's slots are the target
+    await user.should_see(marker="slot-tile-G-C02")            # the bear took G-C01
+    await user.should_not_see(marker="slot-tile-G-C01")
+    user.find(marker="slot-tile-G-C02").click()
+    await user.should_see(marker="slot-create", retries=20)    # its popover
+    user.find(marker="show-slots").elements.pop().value = False
+    await user.should_not_see(marker="slot-tile-G-C02", retries=20)

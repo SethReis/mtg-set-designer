@@ -26,6 +26,7 @@ class Settings:
     tile_width: int = 180                               # overview tile width in pixels
     theme: str = "dark"                                 # "dark", "light" or "system"
     rail_open: bool = False                             # the set's sidebar shows labels
+    show_slots: bool = True                             # overview: empty skeleton slots as tiles
     print_options: dict = field(default_factory=dict)   # export.selection.PrintOptions
     print_folder: str = ""                              # where the last print was saved
 
@@ -42,6 +43,7 @@ class Settings:
                        tile_width=int(data.get("tile_width", 180)),
                        theme=data.get("theme", "dark") if data.get("theme") in THEMES else "dark",
                        rail_open=bool(data.get("rail_open", False)),
+                       show_slots=bool(data.get("show_slots", True)),
                        print_options=dict(data.get("print_options") or {}),
                        print_folder=str(data.get("print_folder", "")))
         except (OSError, ValueError):

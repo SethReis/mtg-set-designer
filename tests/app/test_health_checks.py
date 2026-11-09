@@ -101,3 +101,24 @@ def test_mechanic_roles_fill_the_counts(tmp_path) -> None:
     assert hunt.roles == ["removal"]
     assert not black()
     assert load_project(tmp_path / "s").mechanics[0].roles == ["removal"]
+
+
+def test_skeleton_checks_and_targets() -> None:
+    from setdesigner.app import skeleton as sk
+    from setdesigner.app.overview import rarity_targets
+    from setdesigner.model import Archetype, Skeleton
+    bear, loose = make("Bear", "{1}{G}", "Creature"), make("Bolt", "{R}", "Instant")
+    p = project(bear, loose, rarity_slots={Rarity.COMMON: 99})
+    p.archetypes.append(Archetype(id="ramp", name="Green ramp", colors="G"))
+    counts = {"G": {"common": 3}}
+    p.skeleton = Skeleton(columns=["G"], counts=counts, slots=sk.generate(["G"], counts, p.archetypes))
+    for slot in p.skeleton.slots:
+        slot.archetype = "ramp"
+    sk.place_cards(p.skeleton, p)
+    assert rarity_targets(p) == {Rarity.COMMON: 3}             # the skeleton, not SetInfo
+    found = run_checks(p)
+    assert ids(found, "skeleton_empty")[0].message == "2 skeleton slots empty (2 green commons)"
+    assert ids(found, "skeleton_outside")[0].card_ids == ["bolt"]
+    coverage = ids(found, "archetype_coverage")[0]
+    assert coverage.message == "Green ramp: 1 of 3 skeleton slots filled (common 1/3)"
+    assert ids(found, "rarity_slots")[0].message.startswith("Common: 2 of 3")

@@ -142,6 +142,8 @@ def register(state) -> None:
                     .tooltip("Stacks overlap the cards: hover one to see it")
                 c.segmented({"images": "Images", "text": "Text"}, settings.tiles,
                             lambda e: set_setting(tiles=e.value))
+                slots_switch = ui.switch("Slots", value=settings.show_slots,
+                                         on_change=lambda e: set_setting(show_slots=e.value))                     .props("dense").mark("show-slots")                     .tooltip("The skeleton's empty slots, as tiles in their groups")
                 ui.element("div").classes("grow")
                 count = ui.label().classes("muted num")
                 with c.button("Filters", kind="secondary", icon="filter_list") \
@@ -229,6 +231,57 @@ def register(state) -> None:
             with box:
                 picture(card, width)
 
+        def empty_slots(factor_name: str, key: str, column_factor: str | None = None,
+                        column_key: str | None = None) -> list:
+            """The skeleton's empty slots that belong in a group (or matrix cell), when shown.
+            Grouping by color, rarity or archetype only: other factors don't apply to slots."""
+            skeleton = session.project.skeleton
+            if skeleton is None or not settings.show_slots or view.filters.active:
+                return []
+
+            def keys(slot, name: str) -> list[str] | None:
+                if name == "color":
+                    return [ov.slot_color_key(slot.column)]
+                if name == "rarity":
+                    return [slot.rarity.value] if slot.rarity else []
+                if name == "archetype":
+                    return [slot.archetype or ov.NO_ARCHETYPE]
+                return None
+            out = []
+            for slot in skeleton.slots:
+                if slot.card_id is not None:
+                    continue
+                first = keys(slot, factor_name)
+                if first is None or key not in first:
+                    continue
+                if column_factor is not None:
+                    second = keys(slot, column_factor)
+                    if second is None or column_key not in second:
+                        continue
+                out.append(slot)
+            return out
+
+        def slot_tile(slot, width: int, fixed: bool = False) -> None:
+            """An empty skeleton slot: dashed, saying what it asks for; click to fill it."""
+            from ..app import skeleton as sk
+            from .slot_popover import slot_menu
+            box = ui.element("div").classes("ds-tile ds-slot-tile").mark(f"slot-tile-{slot.id}")
+            if fixed:
+                box.style(f"width:{width}px")
+            with box:
+                ui.label(slot.id).classes("id")
+                ui.label(sk.describe(slot, session.project) or "Empty slot").classes("desc")
+                menu = slot_menu(session, slot, open_card=lambda card: open_card(card), on_change=content.refresh)
+            box.on("click", menu.open)
+
+        def slots_summary(slots: list, width: int) -> None:
+            """Stacks layout: a group's empty slots as one dashed tile, opening the Skeleton."""
+            with ui.element("div").classes("ds-tile ds-slot-tile").style(f"width:{width}px")                     .mark(f"slots-summary-{slots[0].column}") as box:
+                ui.label(str(len(slots))).classes("count")
+                ui.label(f"empty slot{'s' * (len(slots) != 1)}").classes("desc")
+            box.on("click", lambda: show("skeleton"))
+            box.tooltip("Open the Skeleton to fill them")
+
         def stack(cards: list[Card], width: int) -> None:
             with ui.element("div").classes("card-stack").mark("stack") \
                     .style(f"--card-h:{round(width * CARD_RATIO)}px"):
@@ -268,6 +321,7 @@ def register(state) -> None:
         # ------------------------------------------------------------ content
         @ui.refreshable
         def content() -> None:
+            slots_switch.set_visibility(session.project.skeleton is not None)
             factor_selects.refresh()
             show_filters()
             tiles.clear()
@@ -337,12 +391,15 @@ def register(state) -> None:
                                  lambda k=key: toggle_group(k))
                     if not open_:
                         continue
-                    if not g.cards:
+                    slots = [] if view.cell is not None else empty_slots(factor.name, g.key)
+                    if not g.cards and not slots:
                         ui.label("No cards").classes("faint ml-7")
                     # tiles fill the row: each at least the card size, all growing alike
                     with ui.element("div").classes("ds-tiles").style(f"--tile:{width}px"):
                         for card in g.cards:
                             tile(card, width)
+                        for slot in slots:
+                            slot_tile(slot, width)
 
         def stacked_groups(groups, width: int, factor) -> None:
             """Stacks layout: each group is a column of stacks, the columns flowing across."""
@@ -356,11 +413,14 @@ def register(state) -> None:
                                      lambda k=key: toggle_group(k))
                         if not open_:
                             continue
-                        if not g.cards:
+                        slots = [] if view.cell is not None else empty_slots(factor.name, g.key)
+                        if not g.cards and not slots:
                             ui.label("No cards").classes("faint ml-6")
                         with ui.row().classes("gap-3 no-wrap items-start"):
                             for cards_in_stack in ov.stacks(g.cards):
                                 stack(cards_in_stack, width)
+                            if slots:                       # one tile for the group's gaps
+                                slots_summary(slots, width)
 
         def matrix_view(cards: list[Card]) -> None:
             rows, cols = ov.FACTORS[view.rows], ov.FACTORS[view.columns]
@@ -411,6 +471,8 @@ def register(state) -> None:
                                         with ui.row().classes("gap-2 flex-wrap"):
                                             for card in in_cell:
                                                 tile(card, width, fixed=True)
+                                            for slot in empty_slots(rows.name, r, cols.name, col):
+                                                slot_tile(slot, width, fixed=True)
 
         with workspace:
             content()

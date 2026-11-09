@@ -56,12 +56,21 @@ def set_settings(session, frame_labels: dict[str, str], *, parent, on_close=None
             copyright_.on("blur", lambda: save(copyright=copyright_.value))
 
         ui.label("Cards wanted per rarity").classes("ds-form-h")
-        c.hint("Shown as “18 / 20” in the overview.")
-        with ui.row().classes("gap-2"):
-            for rarity in Rarity:
-                field = ui.number(rarity.value.title(), value=info.rarity_slots.get(rarity), min=0,
-                                  format="%d").props("dense").classes("w-24")
-                field.on("blur", lambda f=field, r=rarity: save_slot(r, f.value))
+        if session.project.skeleton is not None:      # the skeleton's slots are the targets
+            from ..app.skeleton import targets
+            wanted = targets(session.project.skeleton)
+            c.hint("Set by the skeleton (its slots per rarity); change them there, with Edit counts.")
+            with ui.row().classes("gap-2").mark("targets-from-skeleton"):
+                for rarity in Rarity:
+                    ui.number(rarity.value.title(), value=wanted.get(rarity, 0), format="%d") \
+                        .props("dense readonly").classes("w-24")
+        else:
+            c.hint("Shown as “18 / 20” in the overview.")
+            with ui.row().classes("gap-2"):
+                for rarity in Rarity:
+                    field = ui.number(rarity.value.title(), value=info.rarity_slots.get(rarity), min=0,
+                                      format="%d").props("dense").classes("w-24")
+                    field.on("blur", lambda f=field, r=rarity: save_slot(r, f.value))
 
         ui.label("Set symbol").classes("ds-form-h")
 

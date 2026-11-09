@@ -5,6 +5,7 @@
 | --- | --- | --- |
 | Start (sets) | Page `/` | App start, "← Sets" in the rail |
 | Cards | The workspace, `/set` | Rail: **Cards** |
+| Skeleton | Workspace modal | Rail: **Skeleton**, an empty slot's tile |
 | Card editor | Workspace modal | Click a tile, **New card**, search result, any card chip |
 | Mechanics | Workspace modal | Rail: **Mechanics** |
 | Cycles | Workspace modal | Rail: **Cycles**, the cycle link in the editor |
@@ -13,7 +14,7 @@
 | Print | `lg` modal | Rail: **Print** (bottom) |
 | Set settings | `md` modal | Rail: **Set** (bottom) |
 
-Rail order, from top to bottom: Cards · Mechanics · Cycles · Archetypes · Health. A divider
+Rail order, from top to bottom: Cards · Skeleton · Mechanics · Cycles · Archetypes · Health. A divider
 follows, then Print, Set and ← Sets. New sections go above the divider in the order a designer
 uses them. The rail scales to about 10 items before it needs groups.
 
@@ -32,7 +33,7 @@ same view:
 - `/set?card=<id>`
 - `/set?open=mechanics&id=<mechanic id>`
 - `/set?open=cycles&id=<cycle id>`
-- `/set?open=health`, `/set?open=archetypes`, `/set?open=settings`, `/set?open=print`
+- `/set?open=skeleton`, `/set?open=health`, `/set?open=archetypes`, `/set?open=settings`, `/set?open=print`
 
 The old routes (`/set/card/<id>`, `/set/mechanics`, `/set/cycles?cycle=`, `/set/health`)
 redirect to these.

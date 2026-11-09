@@ -60,6 +60,10 @@ views open over the cards as modals.
 - **Set health:** warnings ("Blue has no common removal"), the mana curve, roles per color,
   mechanic spread and complexity, with a warnings badge in the rail, are in
   `docs/health.md`.
+- **Skeleton:** plan the set as a grid of slots from a preset (Play Booster, Classic draft,
+  Cube), with multicolor columns from your archetypes; describe each slot, fill it with a
+  card (suggestions, drag and drop), and see the gaps in the overview and Health, in
+  `docs/skeleton.md`.
 - **Printing:** paper proxies as a PDF (Print in the rail): one of each card, or copies by
   rarity, either as the real card images or printer-friendly text cards, on A4 or Letter
   with bleed and crop marks, in `docs/print.md`.

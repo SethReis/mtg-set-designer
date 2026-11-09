@@ -109,8 +109,9 @@ def color_balance(project, threshold):
 
 
 def rarity_slots(project, _threshold):
+    from ..overview import rarity_targets
     out = []
-    for rarity, wanted in project.info.rarity_slots.items():
+    for rarity, wanted in rarity_targets(project).items():
         n = sum(1 for c in project.cards if c.rarity == rarity)
         if n != wanted:
             word = "short of" if n < wanted else "over"
@@ -191,6 +192,57 @@ def fixing(project, threshold):
                     f"{len(cards)} fixing at common/uncommon (wanted ≥ {int(threshold)})", [c.id for c in cards])]
 
 
+def skeleton_empty(project, _threshold):
+    skeleton = project.skeleton
+    if skeleton is None:
+        return []
+    empty = [s for s in skeleton.slots if s.card_id is None]
+    if not empty:
+        return []
+    from ..skeleton import column_label
+    by_cell: dict[str, int] = {}
+    for slot in empty:
+        name = f"{column_label(slot.column).lower()} {slot.rarity.value + 's' if slot.rarity else 'slots'}"
+        by_cell[name] = by_cell.get(name, 0) + 1
+    top = sorted(by_cell.items(), key=lambda kv: -kv[1])[:3]
+    detail = ", ".join(f"{n} {name}" for name, n in top)
+    return [Warning("skeleton_empty", f"{_plural(len(empty), 'skeleton slot')} empty ({detail}"
+                    f"{', …' if len(by_cell) > 3 else ''})", [], "info")]
+
+
+def skeleton_outside(project, _threshold):
+    if project.skeleton is None:
+        return []
+    from ..skeleton import outside
+    loose = outside(project.skeleton, project.cards)
+    if not loose:
+        return []
+    return [Warning("skeleton_outside", f"{_plural(len(loose), 'card')} aren't in the skeleton"
+                    if len(loose) != 1 else "1 card isn't in the skeleton", [c.id for c in loose], "info")]
+
+
+def archetype_coverage(project, threshold):
+    """Per archetype: its skeleton slots against how many of them are filled."""
+    if project.skeleton is None:
+        return []
+    out = []
+    for archetype in project.archetypes:
+        slots = [s for s in project.skeleton.slots if s.archetype == archetype.id]
+        if not slots:
+            continue
+        full = [s for s in slots if s.card_id]
+        if len(full) * 100 < threshold * len(slots):
+            by_rarity = {}
+            for s in slots:
+                key = s.rarity.value if s.rarity else "slots"
+                done, total = by_rarity.get(key, (0, 0))
+                by_rarity[key] = (done + (1 if s.card_id else 0), total + 1)
+            detail = ", ".join(f"{k} {d}/{t}" for k, (d, t) in by_rarity.items())
+            out.append(Warning("archetype_coverage", f"{archetype.name}: {len(full)} of {len(slots)} skeleton "
+                               f"slots filled ({detail})", [s.card_id for s in full], "info"))
+    return out
+
+
 CHECKS: dict[str, Check] = {c.id: c for c in [
     Check("common_removal", "Common removal per color", 2, "cards", common_removal),
     Check("any_removal", "Removal per color at common or uncommon", 1, "cards", any_removal),
@@ -205,6 +257,9 @@ CHECKS: dict[str, Check] = {c.id: c for c in [
     Check("cycles_missing", "Cycles with missing members", None, "", cycles_missing),
     Check("ability_words", "Ability-word lines that follow a variant", None, "", ability_words),
     Check("fixing", "Fixing at common/uncommon when the set has multicolor cards", 5, "cards", fixing),
+    Check("skeleton_empty", "Empty skeleton slots", None, "", skeleton_empty),
+    Check("skeleton_outside", "Cards outside the skeleton", None, "", skeleton_outside),
+    Check("archetype_coverage", "Archetype slots filled in the skeleton", 75, "%", archetype_coverage),
 ]}
 
 

@@ -239,11 +239,25 @@ def sort(cards: list[Card], by: str = "number") -> list[Card]:
 
 # ------------------------------------------------------------------ targets
 
+def rarity_targets(project: SetProject) -> dict[Rarity, int]:
+    """Cards wanted per rarity: the skeleton's slots when there is one, else SetInfo.rarity_slots."""
+    if project.skeleton is not None:
+        from .skeleton import targets
+        return targets(project.skeleton)
+    return dict(project.info.rarity_slots)
+
+
+def slot_color_key(column: str) -> str:
+    """A skeleton column as a color group key (color_key's values: W U B R G M C L)."""
+    return column if len(column) == 1 else "M"
+
+
 def target(project: SetProject, factor: Factor, key: str,
            column: Factor | None = None, column_key: str | None = None) -> int | None:
     """How many cards the user wants in a group (or matrix cell), if they said so.
-    Rarity groups: SetInfo.rarity_slots. Archetype groups: the archetype's targets summed;
-    an archetype x rarity cell: its target for that rarity. Anything else: None."""
+    Rarity groups: rarity_targets (the skeleton, or SetInfo.rarity_slots). Color groups: the
+    skeleton's slots of that color, if there is one. Archetype groups: the archetype's
+    targets summed; an archetype x rarity cell: its target for that rarity. Anything else: None."""
     pairs = {factor.name: key}
     if column is not None:
         pairs[column.name] = column_key
@@ -256,5 +270,7 @@ def target(project: SetProject, factor: Factor, key: str,
             return archetype.targets.get(Rarity(rarity))
         return sum(archetype.targets.values()) if archetype.targets else None
     if rarity is not None and column is None:
-        return project.info.rarity_slots.get(Rarity(rarity))
+        return rarity_targets(project).get(Rarity(rarity))
+    if factor.name == "color" and column is None and project.skeleton is not None:
+        return sum(1 for s in project.skeleton.slots if slot_color_key(s.column) == key) or None
     return None
