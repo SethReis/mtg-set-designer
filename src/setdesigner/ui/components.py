@@ -167,11 +167,21 @@ class Column:
     align: str = "left"                    # "left" or "right" (numbers)
 
 
+def _fit_heading(column: Column) -> str:
+    """The column's track, never narrower than its heading (uppercase, 10.5px, spaced, plus
+    the cell's padding): a long heading widens its column instead of overlapping the next."""
+    need = round(len(column.label) * 7.8 + 22)
+    found = re.fullmatch(r"minmax\((.+?),\s*(.+)\)", column.track.strip())
+    if found:
+        return f"minmax(max({found.group(1)}, {need}px), {found.group(2)})"
+    return f"minmax({need}px, {column.track})"
+
+
 def data_table(columns: list[Column], rows: list[list]) -> ui.element:
     """A table on a CSS grid: sticky header, fluid tracks. A cell is text or a function
     that builds its content."""
-    template = " ".join(c.track for c in columns)
-    with ui.element("div").classes("ds-table").style(f"grid-template-columns:{template}") as table:
+    template = " ".join(_fit_heading(c) for c in columns)
+    with ui.element("div").classes("ds-table-wrap"),             ui.element("div").classes("ds-table").style(f"grid-template-columns:{template}") as table:
         for c in columns:
             ui.label(c.label).classes("ds-th" + (" right" if c.align == "right" else ""))
         for row in rows:

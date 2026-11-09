@@ -38,30 +38,107 @@ VIEWS = {
     "archetypes": "/set?open=archetypes",
     "settings": "/set?open=settings",
     "print": "/set?open=print",
+    # states reached by clicking (overlap_check.js: dev_click, by visible text)
+    "start-new": "/?dev_click=New set",
+    "overview-matrix": "/set?dev_click=Matrix",
+    "overview-stacks": "/set?dev_click=Stacks",
+    "overview-text": "/set?dev_click=Text",
+    "overview-filters": "/set?dev_click=Filters",
+    "skeleton-table": "/set?open=skeleton&dev_click=Table",
+    "skeleton-archetype": "/set?open=skeleton&dev_click=By archetype",
+    "skeleton-counts": "/set?open=skeleton&dev_click=Edit counts…",
+    "mechanics-item": "/set?open=mechanics&dev_click=Flurry",
+    "cycles-item": "/set?open=cycles&dev_click=Allied duals",
+    "health-tune": "/set?open=health&dev_click=Tune checks",
 }
 
 
 def url(base: str, folder: Path, theme: str, path: str, card: str, dfc: str) -> str:
-    if not path:
-        return f"{base}/?theme_={theme}"
+    if not path or path.startswith("/?"):
+        return f"{base}/?theme_={theme}" + ("&" + quote(path[2:], safe="=&") if path else "")
     target = path.format(card=card, dfc=dfc)
     return f"{base}/?open_set={quote(str(folder))}&theme_={theme}&then={quote(target, safe='')}"
 
 
+class Edge:
+    """A headless Edge driven over the DevTools protocol, in real time (so the app's
+    connection stays up through clicks and loading)."""
+
+    def __init__(self, width: int, height: int):
+        import json
+        import socket
+        import urllib.request
+        from websockets.sync.client import connect
+        with socket.socket() as s:
+            s.bind(("127.0.0.1", 0))
+            port = s.getsockname()[1]
+        self.profile = Path(tempfile.mkdtemp(prefix="sweep-edge-"))
+        self.proc = subprocess.Popen([EDGE, "--headless=new", "--disable-gpu", "--hide-scrollbars",
+                                      f"--remote-debugging-port={port}", f"--user-data-dir={self.profile}",
+                                      f"--window-size={width},{height}", "about:blank"],
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for _ in range(80):
+            try:
+                pages = json.load(urllib.request.urlopen(f"http://127.0.0.1:{port}/json"))
+                page = next(p for p in pages if p["type"] == "page")
+                break
+            except Exception:
+                time.sleep(0.25)
+        else:
+            raise RuntimeError("Edge did not start")
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            self.ws = connect(page["webSocketDebuggerUrl"], max_size=None)
+        self.next_id = 0
+        self.call("Emulation.setDeviceMetricsOverride", width=width, height=height,
+                  deviceScaleFactor=1, mobile=False)
+
+    def call(self, method: str, **params):
+        import json
+        self.next_id += 1
+        self.ws.send(json.dumps({"id": self.next_id, "method": method, "params": params}))
+        while True:
+            message = json.loads(self.ws.recv())
+            if message.get("id") == self.next_id:
+                return message.get("result", {})
+
+    def evaluate(self, expression: str):
+        return self.call("Runtime.evaluate", expression=expression, returnByValue=True)["result"].get("value")
+
+    def open(self, address: str, timeout: float = 60) -> str | None:
+        """Load the page and wait for overlap_check.js's report (its JSON, or None)."""
+        self.call("Page.navigate", url=address)
+        end = time.time() + timeout
+        while time.time() < end:
+            time.sleep(0.5)
+            found = self.evaluate("document.getElementById('overlap-report')?.textContent ?? null")
+            if found is not None:
+                return found
+        return None
+
+    def screenshot(self, target: Path) -> None:
+        import base64
+        target.write_bytes(base64.b64decode(self.call("Page.captureScreenshot", format="png")["data"]))
+
+    def close(self) -> None:
+        try:
+            self.ws.close()
+        finally:
+            self.proc.kill()
+            self.proc.wait()
+            shutil.rmtree(self.profile, ignore_errors=True)
+
+
 def shoot(address: str, target: Path, width: int, height: int) -> bool:
-    profile = Path(tempfile.mkdtemp(prefix="sweep-edge-"))
-    target.unlink(missing_ok=True)
+    edge = Edge(width, height)
     try:
-        subprocess.run([EDGE, "--headless=new", "--disable-gpu", "--hide-scrollbars", f"--user-data-dir={profile}",
-                        f"--window-size={width},{height}", "--virtual-time-budget=15000",
-                        f"--screenshot={target}", address], timeout=90, capture_output=True)
-        for _ in range(40):
-            if target.exists() and target.stat().st_size:
-                return True
-            time.sleep(0.25)
-        return False
+        if edge.open(address) is None:
+            return False
+        edge.screenshot(target)
+        return True
     finally:
-        shutil.rmtree(profile, ignore_errors=True)
+        edge.close()
 
 
 def main() -> None:
@@ -69,7 +146,7 @@ def main() -> None:
     parser.add_argument("set_folder", type=Path)
     parser.add_argument("out", type=Path)
     parser.add_argument("--base", default="http://localhost:8765")
-    parser.add_argument("--widths", default="1100,1400,1920")
+    parser.add_argument("--widths", default="900,1100,1400,1920")
     parser.add_argument("--themes", default="dark,light")
     parser.add_argument("--only", default="", help="views whose name starts with this")
     parser.add_argument("--card", default="canopy-stalker")
