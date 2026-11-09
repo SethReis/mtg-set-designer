@@ -57,7 +57,8 @@ def register(state) -> None:
         return RedirectResponse("/set?open=health")
 
     @ui.page("/set")
-    def overview_page(open: str = "", id: str = "", card: str = "", part: str = "") -> None:   # noqa: A002
+    def overview_page(open: str = "", id: str = "", card: str = "", part: str = "",   # noqa: A002
+                      part_outlines: str = "") -> None:
         session = state.session
         if session is None:
             ui.navigate.to("/")
@@ -116,7 +117,7 @@ def register(state) -> None:
         def select(options: dict, value, label: str, prefix: str, on_change) -> ui.select:
             """A compact toolbar select: its label shows as a prefix ("Group  Color")."""
             return ui.select(options, value=value, label=label, on_change=on_change) \
-                .props(f'dense outlined options-dense prefix="{prefix}"').classes("ds-select")
+                .props(f'dense outlined options-dense prefix="{prefix}"').props(remove="stack-label")                 .classes("ds-select")
 
         with shell.main:
             with ui.element("div").classes("ds-toolbar"):
@@ -562,7 +563,8 @@ def register(state) -> None:
                         editor_panel(state, m, item, order=workspace_order,
                                      open_cycle=lambda cid: show("cycles", cid, back=here()),
                                      on_card=lambda card: shown(card.id if card else None),
-                                     open_part_name=part if item == card else None)   # ?part=
+                                     open_part_name=part if item == card else None,   # ?part=
+                                     outlines=bool(part_outlines))                    # dev: all hotspots
                     elif name == "mechanics":
                         mechanics_panel(state, m, select_id=item, on_select=shown,
                                         open_card=lambda card: open_card(card, back=here()))

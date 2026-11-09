@@ -46,7 +46,7 @@ BACK_FIELDS = ("name", "mana_cost", "type_line", "rules_text", "flavor_text", "p
 
 def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Card]],
                  open_cycle: Callable[[str], None], on_card: Callable[[Card | None], None],
-                 open_part_name: str | None = None) -> None:
+                 open_part_name: str | None = None, outlines: bool = False) -> None:
     """Build the editor into the modal `m`, showing `card_id`. `order()` is the workspace's
     card order (previous / next); `on_card` runs when another card is shown;
     `open_part_name` opens that part's editor once the card is shown ("name", "text", ...)."""
@@ -619,9 +619,9 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
             faces_row()
 
             with ui.element("div").classes("ds-card-area"):
-                preview_box = ui.element("div").classes("ds-card-box")
+                preview_box = ui.element("div").classes("ds-card-box" + (" show-outlines" if outlines else ""))
                 with preview_box:
-                    preview = ui.image().props("fit=contain no-spinner").classes("ds-preview")
+                    preview = ui.image().props("fit=fill no-spinner").classes("ds-preview")   # fill: hotspots are fractions of the card
                     ui.element("div").classes("ds-card-progress")
 
                     @ui.refreshable

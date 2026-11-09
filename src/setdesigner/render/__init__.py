@@ -41,6 +41,10 @@ PART_ENTRIES: dict[str, tuple[str, ...]] = {
 }
 
 
+# how far a part's bar reaches past its text box, in card pixels: (above, below)
+PART_PADDING: dict[str, tuple[float, float]] = {"name": (1, 3), "cost": (1, 3), "type": (1, 4)}
+
+
 def card_layout(env: ScriptEnvironment, card: Card, face: int = 0) -> CardLayout:
     return mse_layout(env, env.card_object(card, face))
 
@@ -159,8 +163,13 @@ class CardRenderer:
                     continue
                 box = builder.box(entry) if builder.visible(entry) else None
                 if box is not None and box.width > 0 and box.height > 0:
-                    left, top = max(0.0, box.left / width), max(0.0, box.top / height)
-                    out[part] = (left, top, min(box.width / width, 1 - left), min(box.height / height, 1 - top))
+                    # the stylesheet gives the text's box; the bar drawn around it reaches a
+                    # little further, mostly below (in card pixels)
+                    grow_top, grow_bottom = PART_PADDING.get(part, (0, 0))
+                    top_px = box.top - grow_top
+                    left, top = max(0.0, box.left / width), max(0.0, top_px / height)
+                    out[part] = (left, top, min(box.width / width, 1 - left),
+                                 min((box.height + grow_top + grow_bottom) / height, 1 - top))
                 break
         return out
 

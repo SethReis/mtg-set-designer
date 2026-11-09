@@ -22,6 +22,13 @@ def apply() -> None:
     links = "".join(f'<link rel="stylesheet" href="{URL}/{name}?v={(FOLDER / name).stat().st_mtime_ns}">'
                     for name in STYLESHEETS)          # ?v=: no stale copy after an update
     ui.add_head_html(links, shared=True)
+    # labels sit above fields, always: Quasar's floating labels sit inside empty fields,
+    # so they collide with placeholders and don't line up with filled fields beside them
+    for field in (ui.input, ui.select, ui.number, ui.textarea):
+        field.default_props("stack-label")
+    import os
+    if os.environ.get("SETDESIGNER_DEV") == "1":     # tests/ui_visual: report overlapping text
+        ui.add_head_html(f'<script src="{URL}/overlap_check.js"></script>', shared=True)
 
 
 def dark_value(theme: str) -> bool | None:

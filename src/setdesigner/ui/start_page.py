@@ -89,7 +89,19 @@ def register(state) -> None:
                     ui.label(f"{count} card{'s' * (count != 1)}").classes("muted num")
 
     @ui.page("/")
-    def start_page() -> None:
+    def start_page(open_set: str = "", then: str = "", theme_: str = ""):
+        import os
+        if os.environ.get("SETDESIGNER_DEV") == "1":     # dev only: tools/ui_sweep.py opens views by URL
+            if theme_ in ("dark", "light"):
+                state.settings.theme = theme_
+            if open_set:
+                folder = Path(open_set).resolve()
+                if state.session is None or state.session.folder.resolve() != folder:
+                    if state.session is not None:
+                        state.close()
+                    state.open_session(SetSession.open(folder, renderer_factory=state.renderer_factory))
+                from fastapi.responses import RedirectResponse
+                return RedirectResponse(then or "/set")
         theme.mode(state.settings.theme)
         recent = state.settings.existing_recent()
         dialogs = ui.element("div")
