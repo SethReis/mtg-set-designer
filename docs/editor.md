@@ -46,14 +46,26 @@ The NiceGUI modules in `src/setdesigner/ui/` only arrange widgets and call into 
 - **Planeswalkers.** Write one ability per line, with its cost: `+1: Draw a card.`,
   `−2: ...`. A planeswalker type line switches the card to that frame's planeswalker
   version (see `mse/frames.py`), and the costs go to MSE's loyalty cost fields.
+- **Two-faced cards.** The row at the top of the form sets the layout: *Single*,
+  *Transform* or *Modal DFC* (`session.set_layout`). A two-faced card gets a
+  **Front · Back** switch: the form, the art and the preview show that face (the flip
+  button on the preview and Ctrl+. switch too), and face fields save to it
+  (`session.update(card, field, value, face=1)`). The **Card** section (rarity, number,
+  frame, status, archetypes, print copies) is shared by both faces. Backs get a **color
+  indicator** (W U B R G toggles); transform backs have no mana cost, so that field is
+  hidden. Transform cards pick a **transform symbol** on the front (Triangle, Sun / Moon,
+  Moon / Eldrazi, Fan, Spark, Comedy / Tragedy) and MSE gives the back its pair. Making a
+  card single again, or a transform card from an MDFC with a back cost, asks first. The
+  list and the title show "Front // Back". Problems from `validate_card` (a back with no
+  name, ...) show above the form.
 - **Spelling.** In the desktop window, right-click a text field for spelling suggestions.
   pywebview turns WebView2's right-click menu off, so `ui/native_window.py` turns it back on
   for text fields only.
 - **Layout.** Three columns filling the modal, each scrolling on its own: the card list
   (hide it with the list button; hidden below 1100 px wide), the form in sections
-  (Identity, Text, Art, Stats and set data, Notes), and the preview at the card's ratio.
+  (Identity, Text, Art, Stats, Card, Notes), and the preview at the card's ratio.
 - **Keyboard.** Ctrl+N new card, Ctrl+D duplicate, Ctrl+F search the list, Ctrl+[ / Ctrl+]
-  previous / next card in the overview's order, Esc closes.
+  previous / next card in the overview's order, Ctrl+. the other face, Esc closes.
 
 ## Testing
 

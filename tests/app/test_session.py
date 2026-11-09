@@ -148,3 +148,45 @@ def test_set_info_changes_restart_the_renderer(session) -> None:
     session.update_info(default_frame="8th", rarity_slots={"common": "20", "rare": 0})
     assert session.project.info.rarity_slots == {Rarity.COMMON: 20}
     assert session.render(card).tobytes() != m15.tobytes()        # drawn in the new frame
+
+
+def test_layouts_add_and_drop_the_back_face(session) -> None:
+    from setdesigner.model import FaceRole, Layout, validate_card
+    card = session.new_card("Village Messenger")
+    session.set_layout(card, "transform")
+    assert card.layout == Layout.TRANSFORM and [f.role for f in card.faces] == [FaceRole.FRONT, FaceRole.BACK]
+    session.update(card, "name", "Moonrise Intruder", face=1)
+    session.update(card, "color_indicator", "R", face=1)
+    session.update(card, "transform_symbol", "day")
+    assert card.faces[1].name == "Moonrise Intruder" and card.faces[0].name == "Village Messenger"
+    assert validate_card(card) == []
+
+    session.set_layout(card, "mdfc")                   # faces stay, the symbol goes
+    session.update(card, "mana_cost", "{1}{R}", face=1)
+    assert len(card.faces) == 2 and card.transform_symbol == ""
+    session.set_layout(card, "transform")              # transform backs have no cost
+    assert card.faces[1].mana_cost == ""
+    session.set_layout(card, "normal")
+    assert len(card.faces) == 1 and card.layout == Layout.NORMAL
+    session.flush()
+    saved = json.loads(card_file(session, card).read_text(encoding="utf-8"))
+    assert saved["layout"] == "normal" and len(saved["faces"]) == 1
+
+
+def test_mechanics_on_the_back_face_count(session) -> None:
+    from setdesigner.model import Mechanic
+    session.project.mechanics.append(Mechanic(id="hunt", name="Hunt"))
+    card = session.new_card("Front")
+    session.set_layout(card, "mdfc")
+    session.update(card, "rules_text", "Hunt.", face=1)
+    assert card.mechanics == ["hunt"]
+
+
+@needs_packages
+def test_both_faces_render_after_a_layout_change(session) -> None:
+    card = session.new_card("Front")
+    session.render(card)                               # the renderer knows the single card
+    session.set_layout(card, "mdfc")
+    session.update(card, "name", "Back", face=1)
+    front, back = session.render(card, 0), session.render(card, 1)
+    assert front.size == back.size and front.tobytes() != back.tobytes()

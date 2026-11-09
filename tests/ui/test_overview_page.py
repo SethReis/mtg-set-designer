@@ -257,3 +257,13 @@ async def test_mechanic_roles_show_on_the_card(user: User) -> None:
     assert skyward.roles == ["evasion"]
     await user.open(f"/set/card/{bear.id}")
     await user.should_see("From Skyward")
+
+
+async def test_text_tiles_name_the_back_face(user: User) -> None:
+    await open_set_with_cards(user)
+    session = state().session
+    card = session.project.cards[0]
+    session.set_layout(card, "mdfc")
+    session.update(card, "name", "Hidden Grotto", face=1)
+    await user.open("/set")
+    await user.should_see("// Hidden Grotto")

@@ -111,3 +111,20 @@ def test_stand_in_pictures_are_redrawn_once_mse_works(tmp_path, monkeypatch) -> 
         assert worker.wait_idle() and worker.get(card) == stand_in
     finally:
         s.close()
+
+
+@needs_packages
+def test_two_faced_cards_keep_a_picture_of_each_face(session) -> None:
+    card = session.new_card("Front")
+    session.set_layout(card, "mdfc")
+    session.update(card, "name", "Back", face=1)
+    worker = session.thumbnails
+    worker.request([card])
+    assert worker.wait_idle(), worker.error
+    front, back = worker.get(card), worker.get(card, face=1)
+    assert front is not None and back is not None and front != back and back.name.endswith("-2.webp")
+    session.update(card, "rules_text", "Flying", face=1)     # an edit redraws both
+    worker.request([card])
+    assert worker.wait_idle(), worker.error
+    assert not front.exists() and not back.exists()
+    assert worker.get(card, face=1).is_file()

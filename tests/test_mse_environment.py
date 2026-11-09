@@ -44,6 +44,21 @@ def test_dfc_faces_become_linked_mse_cards() -> None:
     assert "casting cost" not in back.values or back.values["casting cost"] == ""
 
 
+def test_mdfc_and_transform_symbols_set_the_front() -> None:
+    """MSE gives a linked pair the transform triangles; MDFCs and chosen symbols are set
+    on the front, and the back follows (MSE's counterpart)."""
+    from setdesigner.model import FaceRole, Layout
+    project = oracle_project()
+    faces = [Face(name="A"), Face(name="B", role=FaceRole.BACK)]
+    mdfc = Card(id="m", layout=Layout.MDFC, faces=faces)
+    front, back = card_to_mse(mdfc, project.info)
+    assert front.values["transformation"] == "modal front" and "transformation" not in back.values
+    day = Card(id="t", layout=Layout.TRANSFORM, transform_symbol="day", faces=faces)
+    assert card_to_mse(day, project.info)[0].values["transformation"] == "day"
+    plain = card_to_mse(project.card("delver"), project.info)
+    assert all("transformation" not in m.values for m in plain)          # MSE's triangles
+
+
 def test_face_frame_override_picks_stylesheet() -> None:
     project = oracle_project()
     card = Card(id="x", frame="old", faces=[Face(name="A")])

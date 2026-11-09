@@ -193,11 +193,19 @@ def register(state) -> None:
         # ------------------------------------------------------------ tiles
         def picture(card: Card, width: int) -> None:
             path = worker.get(card) if settings.tiles == "images" else None
-            if path is not None:
-                ui.element("img").props(f'src="{thumbnail_url(worker.cache.folder, path)}" '
-                                        f'loading=lazy draggable=false alt=""')
-            else:
+            if path is None:
                 compact_tile(card, width)
+                return
+            ui.element("img").classes("face-front").props(
+                f'src="{thumbnail_url(worker.cache.folder, path)}" loading=lazy draggable=false alt=""')
+            back = worker.get(card, face=1) if len(card.faces) > 1 else None
+            if back is not None:                     # two-faced: the badge shows the back
+                ui.element("img").classes("face-back").props(
+                    f'src="{thumbnail_url(worker.cache.folder, back)}" loading=lazy draggable=false alt=""')
+                with ui.element("div").classes("ds-dfc-badge").mark(f"dfc-{card.id}")                         .tooltip("Two-faced: hover to see the back, click to flip") as badge:
+                    ui.icon("flip")
+                badge.on("click", js_handler="(e) => { e.stopPropagation();"
+                         " e.currentTarget.closest('.ds-tile').classList.toggle('show-back'); }")
 
         def tile(card: Card, width: int, fixed: bool = False, stacked: bool = False) -> None:
             """A card's tile. It fills its grid cell, or is `width` wide when `fixed` (stacks,

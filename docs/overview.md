@@ -33,6 +33,9 @@ show as removable chips under it. The card search is in the top bar (Ctrl+K).
   bar shows; hovering a card slides the cards below it down to reveal it fully. In Rows
   mode each group is a column (long groups split into several stacks), and in the matrix
   each cell is one stack.
+- **Two-faced cards:** a tile shows the front with a round flip badge; hover the badge to
+  see the back, or click it to flip the tile (pictures of both faces are cached). Text
+  tiles add "// Back name" under the name.
 - **Show:** *Images* shows the real MSE render. *Text* shows the name, cost, type, rules,
   P/T, rarity, number, a status dot and a border in the card's color. The text tile is
   also the starting point for the planned printer-friendly print mode (HANDOFF.md,

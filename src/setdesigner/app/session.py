@@ -20,8 +20,9 @@ from typing import Callable
 
 from PIL import Image
 
-from ..model import (AbilityTemplate, Archetype, ArtCrop, Card, CheckSetting, Cycle, CycleTemplate, Face,
-                     Mechanic, MechanicKind, Rarity, ReminderPolicy, SetInfo, SetProject, Status,
+from ..model import (LAYOUTS, AbilityTemplate, Archetype, ArtCrop, Card, CheckSetting, Cycle, CycleTemplate,
+                     Face, FaceRole, Layout, Mechanic, MechanicKind, Rarity, ReminderPolicy, SetInfo,
+                     SetProject, Status,
                      delete_card, load_project, new_card_id, save_archetypes, save_card,
                      save_cycles, save_info, save_mechanics, save_project)
 from ..model.project import slug
@@ -32,10 +33,11 @@ from .overview import matches_text, number_key
 AUTOSAVE_DELAY = 0.5                    # seconds after the last edit
 
 FACE_FIELDS = {"name", "mana_cost", "type_line", "rules_text", "flavor_text", "power",
-               "toughness", "loyalty", "artist"}
+               "toughness", "loyalty", "artist", "color_indicator"}
 TYPE_PARTS = {"types", "subtypes"}      # the two halves of type_line, edited separately
 ART_FIELDS = {"art_path", "art_crop"}
-CARD_FIELDS = {"rarity", "collector_number", "frame", "status", "notes", "archetypes", "print_copies"}
+CARD_FIELDS = {"rarity", "collector_number", "frame", "status", "notes", "archetypes", "print_copies",
+               "transform_symbol"}
 OPTIONAL = {"power", "toughness", "loyalty"}            # "" means "not set"
 
 
@@ -129,6 +131,32 @@ class SetSession:
                 if member.card_id == card.id:
                     member.card_id = None
                     save_cycles(self.folder, self.project.cycles)
+
+    def set_layout(self, card: Card, layout: Layout | str) -> None:
+        """Make a card single-faced, transform or modal double-faced (MDFC). Adds an empty
+        back face, or drops it (ask the user first if it has content); a transform back
+        has no mana cost, so it is cleared."""
+        layout = Layout(layout)
+        if layout == card.layout:
+            return
+        roles = LAYOUTS[layout].face_roles
+        if len(roles) > len(card.faces):
+            card.faces.append(Face(name="", role=FaceRole.BACK))
+        del card.faces[len(roles):]
+        for face, role in zip(card.faces, roles):
+            face.role = role
+        for index, fields in LAYOUTS[layout].forbidden.items():
+            for field in fields:
+                setattr(card.faces[index], field, "")
+        card.layout = layout
+        if layout != Layout.TRANSFORM:
+            card.transform_symbol = ""
+        card.mechanics = mechanic_ids(self.project, card)
+        if self._renderer is not None:              # its MSE cards (one per face) change
+            with self._renderer_lock:
+                self._renderer.env.remove_card(card.id)
+                self._renderer.env.refresh_card(card)
+        self._changed(card)
 
     # ------------------------------------------------------------ editing
 

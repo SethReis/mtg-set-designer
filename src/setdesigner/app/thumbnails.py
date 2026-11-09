@@ -3,12 +3,14 @@
     worker = session.thumbnails            # one per open set
     worker.request(cards)                  # what the overview shows, in display order
     worker.get(card)                       # picture file, or None until it's rendered
+    worker.get(card, face=1)               # a two-faced card's back
     worker.version                         # goes up whenever a picture becomes ready
 
 A picture is stored under a key that changes whenever the card would look different
 (`CardRenderer.render_keys`), so reopening a set shows unchanged cards at once and only
 edited cards are drawn again. Pictures are kept outside the set folder (which may be
-in git): %LOCALAPPDATA%/setdesigner/thumbnails/<set>/<card id>@<key>.webp.
+in git): %LOCALAPPDATA%/setdesigner/thumbnails/<set>/<card id>@<key>.webp, and a back face
+as <card id>@<key>-2.webp.
 
 Rendering happens in batches (one MSE set load each), taking the renderer lock per
 batch only, so a live preview in the editor never waits long.
@@ -44,27 +46,31 @@ class ThumbnailCache:
     def __init__(self, folder: Path):
         self.folder = Path(folder)
 
-    def path(self, card_id: str, key: str) -> Path:
+    def path(self, card_id: str, key: str, face: int = 0) -> Path:
         short = hashlib.sha1(f"{CACHE_VERSION}:{key}".encode("utf-8")).hexdigest()[:16]
-        return self.folder / f"{card_id}@{short}.webp"
+        return self.folder / f"{card_id}@{short}{'' if face == 0 else f'-{face + 1}'}.webp"
 
-    def get(self, card_id: str, key: str) -> Path | None:
-        path = self.path(card_id, key)
+    def get(self, card_id: str, key: str, face: int = 0) -> Path | None:
+        path = self.path(card_id, key, face)
         return path if path.is_file() else None
 
-    def put(self, card_id: str, key: str, image: Image.Image) -> Path:
-        """Store a picture (scaled to WIDTH) and delete the card's older ones."""
+    def put(self, card_id: str, key: str, image: Image.Image | dict[int, Image.Image]) -> Path:
+        """Store a card's pictures (one, or {face: picture}), scaled to WIDTH, and delete
+        its older ones. Returns the front's file."""
         self.folder.mkdir(parents=True, exist_ok=True)
-        path = self.path(card_id, key)
-        height = round(image.height * WIDTH / image.width)
-        image.resize((WIDTH, height), Image.Resampling.LANCZOS).save(path, "WEBP", quality=90)
-        self.remove(card_id, keep=path)
-        return path
+        images = image if isinstance(image, dict) else {0: image}
+        paths = {face: self.path(card_id, key, face) for face in images}
+        for face, picture in images.items():
+            height = round(picture.height * WIDTH / picture.width)
+            picture.resize((WIDTH, height), Image.Resampling.LANCZOS).save(paths[face], "WEBP", quality=90)
+        self.remove(card_id, keep=set(paths.values()))
+        return paths[min(paths)]
 
-    def remove(self, card_id: str, keep: Path | None = None) -> None:
+    def remove(self, card_id: str, keep: Path | set[Path] | None = None) -> None:
+        keep = {keep} if isinstance(keep, Path) else (keep or set())
         if self.folder.is_dir():
             for old in self.folder.glob(f"{card_id}@*.webp"):
-                if old != keep:
+                if old not in keep:
                     old.unlink(missing_ok=True)
 
 
@@ -80,6 +86,7 @@ class ThumbnailWorker:
         self.version = 0                        # read by the UI to spot new pictures
         self.error = ""                         # last rendering problem, for the UI
         self._ready: dict[str, Path] = {}       # card id -> picture of its current version
+        self._backs: dict[str, Path] = {}       # card id -> its back face's picture (two-faced)
         self._wanted: list[Card] = []
         self._generation = 0
         self._wake = threading.Event()
@@ -97,12 +104,13 @@ class ThumbnailWorker:
             self._thread.start()
         self._wake.set()
 
-    def get(self, card: Card) -> Path | None:
-        return self._ready.get(card.id)
+    def get(self, card: Card, face: int = 0) -> Path | None:
+        return self._ready.get(card.id) if face == 0 else self._backs.get(card.id)
 
     def forget(self, card_id: str) -> None:
         """The card changed or was deleted: its picture is out of date."""
         self._ready.pop(card_id, None)
+        self._backs.pop(card_id, None)
 
     def stop(self) -> None:
         self._stop = True
@@ -140,13 +148,16 @@ class ThumbnailWorker:
         missing = []
         blocked = self.session.mse_blocked           # stand-in pictures do until MSE is back
         for card in cards:
-            path = self.cache.get(card.id, keys[card.id])
-            if path is None and blocked:
-                path = self.cache.get(card.id, f"builtin-{keys[card.id]}")
-            if path is not None:
+            key = keys[card.id]
+            if self.cache.get(card.id, key) is None and blocked:
+                key = f"builtin-{key}"
+            path = self.cache.get(card.id, key)
+            back = self.cache.get(card.id, key, 1) if len(card.faces) > 1 else None
+            if path is not None and (back is not None or len(card.faces) == 1):
                 self._ready[card.id] = path
+                self._store_back(card, back)
             else:
-                self._ready.pop(card.id, None)
+                self.forget(card.id)
                 missing.append(card)
         if len(missing) < len(cards):
             self.version += 1
@@ -160,6 +171,14 @@ class ThumbnailWorker:
                 key = keys[card.id]
                 if backend == "builtin" and not key.startswith("builtin"):
                     key = f"builtin-{key}"             # MSE failed: redraw with it once it works
-                self._ready[card.id] = self.cache.put(card.id, key, images[card.id, 0])
+                pictures = {face: images[card.id, face] for face in range(len(card.faces))}
+                self._ready[card.id] = self.cache.put(card.id, key, pictures)
+                self._store_back(card, self.cache.get(card.id, key, 1))
             self.version += 1
         self.error = ""
+
+    def _store_back(self, card: Card, back: Path | None) -> None:
+        if back is None:
+            self._backs.pop(card.id, None)
+        else:
+            self._backs[card.id] = back

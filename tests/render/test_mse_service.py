@@ -172,3 +172,25 @@ def test_falls_back_without_mse(tmp_path) -> None:
         image = r.render(project.card("forest"))
         assert r.last_backend == "builtin" and image.size == (375, 523)
         assert any("built-in renderer" in w for w in r.warnings)
+
+
+def test_mdfc_and_transform_symbols_draw_their_own_nodes(tmp_path) -> None:
+    """The front's transformation picks MSE's node: the transform triangle by default,
+    the pointed modal node for MDFCs, the sun for Sun / Moon."""
+    from setdesigner.app.session import SetSession
+    s = SetSession.create(tmp_path / "set", "Test", "TST", "m15", thumbnail_dir=tmp_path / "thumbs")
+    try:
+        card = s.new_card("Front")
+        s.set_layout(card, "transform")
+        s.update(card, "name", "Back", face=1)
+        node = (0, 0, 60, 70)                               # the top-left corner, where the node is
+        triangle = s.render(card).crop(node)
+        assert s.using_renderer(lambda r: r.last_backend) == "mse"
+        s.set_layout(card, "mdfc")
+        modal = s.render(card).crop(node)
+        s.set_layout(card, "transform")
+        s.update(card, "transform_symbol", "day")
+        sun = s.render(card).crop(node)
+        assert len({triangle.tobytes(), modal.tobytes(), sun.tobytes()}) == 3
+    finally:
+        s.close()

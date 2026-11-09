@@ -29,7 +29,7 @@ if (!window.sdArt) {
   window.sdArt = true;
   const target = (e) => e.target.closest ? e.target.closest('[data-art-card]') : null;
   const hasFiles = (e) => e.dataTransfer && [...e.dataTransfer.types].includes('Files');
-  const send = (cardId, file) => fetch('/api/art/' + encodeURIComponent(cardId), {
+  const send = (cardId, file, face) => fetch('/api/art/' + encodeURIComponent(cardId) + '?face=' + (face || 0), {
     method: 'POST', body: file,
     headers: {'X-Filename': encodeURIComponent(file.name || 'pasted.png')},
   });
@@ -51,7 +51,7 @@ if (!window.sdArt) {
     document.querySelectorAll('.art-drop').forEach((el) => el.classList.remove('art-drop'));
     if (!t || handled) return;
     const file = [...e.dataTransfer.files].find((f) => f.type.startsWith('image/'));
-    if (file) send(t.dataset.artCard, file);
+    if (file) send(t.dataset.artCard, file, t.dataset.artFace);
   });
   document.addEventListener('paste', (e) => {
     const cardId = document.body.dataset.artCard;
@@ -59,7 +59,7 @@ if (!window.sdArt) {
     const file = [...e.clipboardData.files].find((f) => f.type.startsWith('image/'));
     if (!file) return;                        // text pastes as usual
     e.preventDefault();
-    send(cardId, file);
+    send(cardId, file, document.body.dataset.artFace);
   });
 }
 </script>
@@ -71,12 +71,14 @@ def add_art_script() -> None:
     ui.add_body_html(ART_SCRIPT)
 
 
-def set_paste_target(card_id: str | None) -> None:
-    """Which card a pasted image goes to on this page (None: pasting images does nothing)."""
+def set_paste_target(card_id: str | None, face: int = 0) -> None:
+    """Which card (and face) a pasted image goes to on this page (None: pasting images
+    does nothing)."""
     if card_id:
-        ui.run_javascript(f"document.body.dataset.artCard = {card_id!r};")
+        ui.run_javascript(f"document.body.dataset.artCard = {card_id!r}; "
+                          f"document.body.dataset.artFace = {int(face)};")
     else:
-        ui.run_javascript("delete document.body.dataset.artCard;")
+        ui.run_javascript("delete document.body.dataset.artCard; delete document.body.dataset.artFace;")
 
 
 def receive_art(session, card_id: str, data: bytes, filename: str, face: int = 0) -> tuple[int, dict]:

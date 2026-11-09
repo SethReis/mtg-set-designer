@@ -12,7 +12,10 @@
 | `Archetype` | name, colors (any, including none), description, key mechanics, target counts per rarity |
 
 `layouts.py` lists each layout's face roles and rules; `validate_card()` returns readable problems
-(wrong face count, a transform back with a mana cost, P without T, ...).
+(wrong face count, a transform back with a mana cost, P without T, ...). It also lists the
+transform symbols (`TRANSFORM_SYMBOLS`): `Card.transform_symbol` is the front's ("" = the
+triangle), written to MSE's `transformation` field on the front; MDFC fronts get
+"modal front". MSE derives the back's symbol from the front's.
 
 ### On disk (`model/project.py`)
 

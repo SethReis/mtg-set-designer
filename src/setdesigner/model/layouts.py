@@ -24,6 +24,21 @@ LAYOUTS: dict[Layout, LayoutSpec] = {
 }
 
 
+# Transform symbols (MSE's transformation field): label -> (front, back). The front is
+# chosen; MSE gives the back its counterpart (the game's transform_symbol_counterpart).
+TRANSFORM_SYMBOLS: dict[str, tuple[str, str]] = {
+    "": ("front triangle", "back triangle"),
+    "day": ("day", "night"),
+    "moon": ("moon", "eldrazi"),
+    "closed fan": ("closed fan", "open fan"),
+    "sparker": ("sparker", "aetherprint"),
+    "comedy": ("comedy", "tragedy"),
+}
+TRANSFORM_SYMBOL_LABELS = {"": "Triangle", "day": "Sun / Moon", "moon": "Moon / Eldrazi",
+                           "closed fan": "Fan", "sparker": "Spark", "comedy": "Comedy / Tragedy"}
+MODAL_FRONT = "modal front"             # an MDFC's front; MSE makes its back "modal back"
+
+
 def validate_card(card: Card) -> list[str]:
     """Problems with a card's structure, as readable messages (empty if fine)."""
     spec = LAYOUTS[card.layout]

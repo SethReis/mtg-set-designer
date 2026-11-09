@@ -73,3 +73,28 @@ async def test_a_slow_preview_after_the_editor_closed_is_dropped(user: User, cap
     user.find(marker="modal-close").click()
     await asyncio.sleep(1.5)                                 # ...and finishes after the close
     assert "deleted but is still being used" not in caplog.text
+
+
+async def test_two_faced_cards_edit_each_face(user: User) -> None:
+    import asyncio
+
+    await create_set(user)
+    session = state().session
+    card = session.new_card("Village Messenger")
+    await user.open(f"/set?card={card.id}")
+    await user.should_see("Rules text")
+    user.find(marker="card-layout").elements.pop().value = "transform"
+    await user.should_see("Back · (no name)", retries=20)          # the new back is shown
+    await user.should_see("Transform backs have no mana cost")
+    user.find(marker="face-name").type("Moonrise Intruder")
+    await user.should_see("Village Messenger // Moonrise Intruder", retries=20)   # list and title
+    assert card.faces[1].name == "Moonrise Intruder" and card.faces[0].name == "Village Messenger"
+
+    user.find(marker="flip-face").click()                           # back to the front
+    await asyncio.sleep(0.2)
+    assert user.find(marker="face-name").elements.pop().value == "Village Messenger"
+    await user.should_see(marker="transform-symbol")
+
+    user.find(marker="card-layout").elements.pop().value = "normal"  # the back has content
+    await user.should_see("Remove the back face “Moonrise Intruder”?", retries=20)
+    assert len(card.faces) == 2                                      # not before you confirm

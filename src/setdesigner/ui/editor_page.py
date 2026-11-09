@@ -12,17 +12,24 @@ from nicegui import run, ui
 
 from ..app import ability_words, text_input
 from ..app.health.roles import ROLES, detected_roles, mechanic_roles
-from ..model import Card, MechanicKind, Rarity, Status
+from ..model import Card, Layout, MechanicKind, Rarity, Status, validate_card
+from ..model.card import COLOR_NAMES, COLORS
+from ..model.layouts import TRANSFORM_SYMBOL_LABELS
 from ..mse.mapping import split_type_line
 from . import components as c
 from . import renderer_notice
 from .art_editor import art_editor
 from .mechanics_page import POLICY_LABELS
 from .uploads import set_paste_target
-from .widgets import number_label, responsive_grid
+from .widgets import card_name, number_label, responsive_grid
 
 PALETTE = ["W", "U", "B", "R", "G", "C", "X", "T", "Q", "1", "2", "3", "4", "5"]
 PREVIEW_DELAY = 0.3                      # seconds after the last keystroke
+COLOR_WORDS = {letter: name.title() for name, letter in COLOR_NAMES.items()}
+LAYOUT_LABELS = {Layout.NORMAL.value: "Single", Layout.TRANSFORM.value: "Transform",
+                 Layout.MDFC.value: "Modal DFC"}
+BACK_FIELDS = ("name", "mana_cost", "type_line", "rules_text", "flavor_text", "power", "toughness",
+               "loyalty", "art_path")   # a back face with any of these has content to lose
 
 
 def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Card]],
@@ -45,12 +52,15 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
         "roles": None,                # the "Roles" row's refreshable
         "art_version": session.art_version,
         "list_open": True,                # the card list column
+        "face": 0,                        # the face shown in the form and the preview
+        "faces_row": None,                # the layout and Front / Back row's refreshable
     }
 
     # ------------------------------------------------------------ actions
     def select(card: Card | None) -> None:
         session.flush()
         view["card"] = card
+        view["face"] = 0
         card_list.refresh()
         card_form.refresh()
         art_target(card)
@@ -60,7 +70,7 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
 
     def retitle() -> None:
         card = view["card"]
-        m.title.text = (card.faces[0].name or "(no name)") if card else "No cards"
+        m.title.text = card_name(card) if card else "No cards"
         m.subtitle.text = f"{number_label(card)} · {card.rarity.value.title()}" if card else ""
         m.subtitle.set_visibility(card is not None)
 
@@ -75,12 +85,64 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
         select(cards[i % len(cards)])
 
     def art_target(card: Card | None) -> None:
-        """Pasted images and images dropped on the preview go to this card."""
-        set_paste_target(card.id if card else None)
+        """Pasted images and images dropped on the preview go to this card (the face shown)."""
+        set_paste_target(card.id if card else None, view["face"])
         if card is not None:
-            preview_box.props(f'data-art-card="{card.id}"')
+            preview_box.props(f'data-art-card="{card.id}" data-art-face="{view["face"]}"')
         else:
-            preview_box.props(remove="data-art-card")
+            preview_box.props(remove="data-art-card data-art-face")
+
+    def show_face(face: int) -> None:
+        """Show the front (0) or the back (1) in the form and the preview."""
+        card = view["card"]
+        if card is None or not 0 <= face < len(card.faces) or face == view["face"]:
+            return
+        session.flush()
+        view["face"] = face
+        card_form.refresh()
+        art_target(card)
+        schedule_preview(now=True)
+
+    def toggle_indicator(color: str) -> None:
+        card = view["card"]
+        if card is None:
+            return
+        current = set(card.faces[view["face"]].color_indicator)
+        current ^= {color}
+        changed("color_indicator", "".join(x for x in COLORS if x in current))
+        card_form.refresh()
+
+    def flip() -> None:
+        card = view["card"]
+        if card is not None and len(card.faces) > 1:
+            show_face(1 - view["face"])
+
+    async def change_layout(value: str) -> None:
+        """Single / Transform / Modal DFC, asking first when the back would lose content."""
+        card = view["card"]
+        layout = Layout(value)
+        if card is None or layout == card.layout:
+            return
+        back = card.faces[1] if len(card.faces) > 1 else None
+        if back is not None and layout == Layout.NORMAL and any(getattr(back, f) for f in BACK_FIELDS):
+            question = (f"Remove the back face “{back.name or '(no name)'}”?",
+                        "Its name, text and art go; the front stays as it is.", "Remove back face")
+        elif back is not None and layout == Layout.TRANSFORM and back.mana_cost:
+            question = ("Remove the back face's mana cost?",
+                        f"Transform backs have no mana cost, so {back.mana_cost} is removed.", "Remove cost")
+        else:
+            question = None
+        if question and await c.confirm(m.body, question[0], question[1], confirm_label=question[2]) != "confirm":
+            card_form.refresh()                       # put the switch back
+            return
+        new_back = len(card.faces) == 1 and layout != Layout.NORMAL
+        session.set_layout(card, layout)
+        view["face"] = 1 if new_back else min(view["face"], len(card.faces) - 1)
+        card_list.refresh()
+        card_form.refresh()
+        retitle()
+        art_target(card)
+        schedule_preview(now=True)
 
     def new_card() -> None:
         select(session.new_card())
@@ -104,10 +166,12 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
         if card is None:
             return
         used = list(card.mechanics)
-        session.update(card, field, value)
-        if field in ("name", "collector_number", "rarity", "mana_cost"):
+        session.update(card, field, value, face=view["face"])
+        if field in ("name", "collector_number", "rarity", "mana_cost", "color_indicator"):
             card_list.refresh()
             retitle()
+            if field == "name" and view["faces_row"] is not None:
+                view["faces_row"].refresh()       # the Front / Back switch shows the names
         ability_word = any(x.kind == MechanicKind.ABILITY_WORD and x.id in card.mechanics
                            for x in session.project.mechanics)
         if view["mechanics"] is not None and (card.mechanics != used
@@ -337,7 +401,7 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
                         with c.list_row(selected=active, on_click=lambda x=card: select(x)):
                             ui.label(number_label(card)).classes("faint num text-xs w-8")
                             c.pips(card.color_identity)
-                            ui.label(card.faces[0].name or "(no name)").classes("grow truncate")
+                            ui.label(card_name(card)).classes("grow truncate")
                             c.rarity_letter(card.rarity)
             card_list()
 
@@ -349,18 +413,56 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
                 if card is None:
                     c.empty_state("style", "No cards yet", action="New card", on_action=new_card)
                     return
-                face = card.faces[0]
-                if len(card.faces) > 1:
-                    c.hint(f"This is a {card.layout.value} card; editing its other face comes in a "
-                           "later version. Showing the front face.")
+                face = card.faces[view["face"]]
+                back = view["face"] == 1
+                if view.get("flip") is not None:
+                    view["flip"].set_visibility(len(card.faces) > 1)
+                transform_back = back and card.layout == Layout.TRANSFORM
+
+                @ui.refreshable
+                def faces_row() -> None:
+                    """The card's layout, and which face the form shows."""
+                    with ui.row().classes("ds-faces-row w-full items-center gap-3"):
+                        c.segmented(LAYOUT_LABELS, card.layout.value,
+                                    lambda e: change_layout(e.value)).mark("card-layout")
+                        if len(card.faces) > 1:
+                            names = {i: f"{label} · {card.faces[i].name or '(no name)'}"
+                                     for i, label in enumerate(("Front", "Back"))}
+                            c.segmented(names, view["face"], lambda e: show_face(int(e.value))) \
+                                .classes("ds-face-switch").mark("card-face")
+                view["faces_row"] = faces_row
+                faces_row()
+                for problem in validate_card(card):
+                    c.status(problem[0].upper() + problem[1:], "warning")
+
                 form_section("Identity")
                 # field rows are grids: they use the column's width and wrap when narrow
                 with responsive_grid(160, columns="minmax(0, 2fr) minmax(140px, 1fr)"):
                     ui.input("Name", value=face.name,
-                             on_change=lambda e: changed("name", e.value)).classes("w-full")
-                    with ui.column().classes("w-full gap-0"):
-                        text_field("mana_cost", "Mana cost", face.mana_cost, "w-full")
-                symbol_palette("mana_cost", costs_only=True)
+                             on_change=lambda e: changed("name", e.value)).classes("w-full").mark("face-name")
+                    if not transform_back:
+                        with ui.column().classes("w-full gap-0"):
+                            text_field("mana_cost", "Mana cost", face.mana_cost, "w-full")
+                if transform_back:
+                    c.hint("Transform backs have no mana cost; set their color with the indicator below.")
+                else:
+                    symbol_palette("mana_cost", costs_only=True)
+                if back:
+                    with ui.row().classes("items-center gap-1"):
+                        c.label("Color indicator").classes("mb-0 mr-2")
+                        for color in COLORS:
+                            with ui.button(on_click=lambda col=color: toggle_indicator(col)) \
+                                    .props("flat round dense") \
+                                    .classes("ds-color-toggle" + (" on" if color in face.color_indicator else "")) \
+                                    .tooltip(COLOR_WORDS[color]).mark(f"indicator-{color}"):
+                                c.mana_cost(f"{{{color}}}")
+                if card.layout == Layout.TRANSFORM:
+                    if back:
+                        c.hint("The back's transform symbol follows the front's.")
+                    else:
+                        ui.select(TRANSFORM_SYMBOL_LABELS, value=card.transform_symbol, label="Transform symbol",
+                                  on_change=lambda e: changed("transform_symbol", e.value or "")) \
+                            .classes("w-56").mark("transform-symbol")
                 # two fields so nobody has to type the "—" (added when both are filled)
                 types, subtypes = split_type_line(face.type_line)
                 with responsive_grid(200, gap=16):
@@ -379,9 +481,9 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
                     .props("autogrow").classes("w-full")
 
                 form_section("Art")
-                view["art"] = art_editor(session, card, schedule_preview)
+                view["art"] = art_editor(session, card, schedule_preview, face=view["face"])
 
-                form_section("Stats and set data")
+                form_section("Stats")
                 with responsive_grid(110):
                     ui.input("Power", value=face.power or "",
                              on_change=lambda e: changed("power", e.value)).classes("w-full")
@@ -389,6 +491,11 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
                              on_change=lambda e: changed("toughness", e.value)).classes("w-full")
                     ui.input("Loyalty", value=face.loyalty or "",
                              on_change=lambda e: changed("loyalty", e.value)).classes("w-full")
+                    ui.input("Artist", value=face.artist,
+                             on_change=lambda e: changed("artist", e.value)).classes("w-full")
+
+                form_section("Card" if len(card.faces) == 1 else "Card (both faces)")
+                with responsive_grid(110):
                     ui.select({r.value: r.value.title() for r in Rarity}, value=card.rarity.value,
                               label="Rarity", on_change=lambda e: changed("rarity", e.value)) \
                         .classes("w-full")
@@ -401,8 +508,6 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
                     ui.select({"": "Set default", **FRAME_LABELS}, value=card.frame or "",
                               label="Frame", on_change=lambda e: changed("frame", e.value)) \
                         .classes("w-full")
-                    ui.input("Artist", value=face.artist,
-                             on_change=lambda e: changed("artist", e.value)).classes("w-full")
                     ui.select({s.value: s.value.title() for s in Status}, value=card.status.value,
                               label="Status", on_change=lambda e: changed("status", e.value)) \
                         .classes("w-full")
@@ -427,6 +532,11 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
             preview_box = ui.element("div").classes("ds-preview-box")
             with preview_box:
                 preview = ui.image().props("fit=contain no-spinner no-transition").classes("ds-preview")
+                flip_button = c.button(icon="flip", kind="icon", on_click=flip,
+                                       tooltip="Show the other face · Ctrl+.") \
+                    .classes("ds-flip").mark("flip-face")
+                view["flip"] = flip_button
+                flip_button.set_visibility(view["card"] is not None and len(view["card"].faces) > 1)
             preview_note = c.hint("Starting the renderer…")
             renderer_notice.notice(session, compact=True)
     renderer_seen = {"version": renderer_notice.health(session).version}
@@ -458,9 +568,9 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
         if due and time.monotonic() >= due and view["card"] is not None:
             view["preview_due"] = 0.0
             view["generation"] += 1
-            generation, card = view["generation"], view["card"]
+            generation, card, face = view["generation"], view["card"], view["face"]
             try:
-                image = await run.io_bound(session.render, card)
+                image = await run.io_bound(session.render, card, min(face, len(card.faces) - 1))
             except Exception as e:                   # never break the editor over a preview
                 if not preview_note.is_deleted:
                     preview_note.text = f"Preview failed: {e}"
@@ -495,5 +605,7 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
             step(-1)
         elif key in ("]", "bracketright"):
             step(1)
+        elif key in (".", "period"):
+            flip()
 
     ui.keyboard(on_key=on_key, ignore=[])

@@ -61,6 +61,11 @@ def grid_cells() -> ui.element:
     return ui.element("div").style("display:contents")
 
 
+def card_name(card: Card) -> str:
+    """The card's name as cards print it: "Front // Back" for two-faced cards."""
+    return " // ".join(face.name or "(no name)" for face in card.faces)
+
+
 def number_label(card: Card) -> str:
     n = card.collector_number
     return n.zfill(3) if n.isdigit() else n or "—"
@@ -70,10 +75,11 @@ def number_label(card: Card) -> str:
 TILE_BORDERS = {k: f"var(--mana-{k.lower()})" for k in "WUBRGMCL"}     # tokens.css
 
 
-def compact_tile(card: Card, width: int) -> None:
-    """A card as text in a card-shaped box: name, cost, type, start of the rules, P/T. It
-    fills its container's width; `width` (the card size) picks the text size."""
-    face = card.faces[0]
+def compact_tile(card: Card, width: int, face_index: int = 0) -> None:
+    """A card (or one of its faces) as text in a card-shaped box: name, cost, type, start
+    of the rules, P/T. It fills its container's width; `width` (the card size) picks the
+    text size."""
+    face = card.faces[face_index]
     small = width < 140
     stats = (f"{face.power}/{face.toughness}" if face.power or face.toughness
              else face.loyalty or "")
@@ -83,6 +89,8 @@ def compact_tile(card: Card, width: int) -> None:
             ui.label(face.name or "(no name)").classes("name")
             if not small and face.mana_cost:
                 mana_cost(face.mana_cost).classes("shrink-0")
+        if len(card.faces) > 1 and face_index == 0:   # the back's name, as "// Back"
+            ui.label(f"// {card.faces[1].name or '(no name)'}").classes("back")
         if not small:
             ui.label(face.type_line).classes("type")
         ui.label(face.rules_text).classes("rules").style(f"-webkit-line-clamp:{3 if small else 8}")

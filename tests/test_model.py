@@ -20,6 +20,19 @@ def test_round_trip(tmp_path) -> None:
     assert load_project(tmp_path) == project
 
 
+def test_transform_symbol_is_optional_in_old_files(tmp_path) -> None:
+    import json
+    project = oracle_project()
+    project.card("delver").transform_symbol = "moon"
+    save_project(project, tmp_path)
+    assert load_project(tmp_path).card("delver").transform_symbol == "moon"
+    path = tmp_path / "cards" / "delver.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    del data["transform_symbol"]                    # a card saved before the field existed
+    path.write_text(json.dumps(data), encoding="utf-8")
+    assert load_project(tmp_path).card("delver").transform_symbol == ""
+
+
 def test_save_removes_deleted_cards(tmp_path) -> None:
     project = oracle_project()
     save_project(project, tmp_path)

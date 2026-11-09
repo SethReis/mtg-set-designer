@@ -137,17 +137,13 @@ def print_dialog(state, *, cards: list[Card], filtered: list[Card] | None, paren
                     preview.refresh()
 
                 def slot_picture(face) -> None:
-                    """The overview's picture of the face (fronts only), else its text."""
-                    path = session.thumbnails.get(face.card) if face.face == 0 else None
+                    """The overview's picture of the face, else its text."""
+                    path = session.thumbnails.get(face.card, face.face)
                     if options.style == "rendered" and path is not None:
                         ui.element("img").props(f'src="{served_url(session.thumbnails.cache.folder, path)}" '
                                                 f'draggable=false alt=""')
-                    elif face.face == 0:
-                        compact_tile(face.card, PREVIEW_WIDTH)
                     else:
-                        with ui.element("div").classes("ds-text-tile"):
-                            ui.label(face.card.faces[face.face].name or "(back)").classes("name")
-                            ui.label(face.card.faces[face.face].type_line).classes("type")
+                        compact_tile(face.card, PREVIEW_WIDTH, face.face)
 
                 preview()
 

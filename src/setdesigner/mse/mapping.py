@@ -22,6 +22,8 @@ field scripts (run by setdesigner.mse.objects) derive the rest.
     artist                   illustrator
     card.rarity              rarity
     card.notes               notes (a card property, not a field)
+    MDFC / transform_symbol  transformation, on the front ("modal front", "day", ...); the
+                             back's is derived by MSE (its counterpart: "modal back", "night")
 """
 from __future__ import annotations
 
@@ -30,9 +32,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
-from ..model import ArtCrop, Card, Face, Rarity, SetInfo
+from ..model import ArtCrop, Card, Face, Layout, Rarity, SetInfo
 from ..model.card import COLOR_NAMES
-from ..model.layouts import LAYOUTS
+from ..model.layouts import LAYOUTS, MODAL_FRONT
 from .frames import frame_styling, stylesheet_package
 
 TYPE_SEPARATORS = (" — ", " - ", " -- ")
@@ -195,4 +197,8 @@ def card_to_mse(card: Card, set_info: SetInfo, reminders: dict[str, bool] | None
         front, back = out
         front.links.append((back.uid, relations[1]))     # the back is my "Back Face"
         back.links.append((front.uid, relations[0]))     # the front is my "Front Face"
+        # MSE gives a linked pair the transform triangles; the back follows the front
+        symbol = MODAL_FRONT if card.layout == Layout.MDFC else card.transform_symbol
+        if symbol:
+            front.values["transformation"] = symbol
     return out

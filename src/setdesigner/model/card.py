@@ -102,6 +102,9 @@ class Card(BaseModel):
     role_overrides: dict[str, bool] = Field(default_factory=dict)
     # copies in a print by rarity (setdesigner.export.selection); None = the rarity's count
     print_copies: int | None = None
+    # transform cards: the front's symbol (model.layouts.TRANSFORM_SYMBOLS); "" = the triangle.
+    # The back gets the matching one.
+    transform_symbol: str = ""
 
     def iter_faces(self) -> Iterator[tuple[int, Face]]:
         return iter(enumerate(self.faces))
