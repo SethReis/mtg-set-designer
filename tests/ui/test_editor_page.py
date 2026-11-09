@@ -158,3 +158,20 @@ async def test_a_link_can_open_a_part(user: User) -> None:
     session, card = await open_card(user)
     await user.open(f"/set?card={card.id}&part=type")
     await user.should_see(marker="editor-type", retries=100)
+
+
+async def test_the_editor_shows_the_cached_picture_until_the_render(user: User) -> None:
+    import time
+
+    await create_set(user)
+    session = state().session
+    card = session.new_card("Grizzly Bears")
+    session.thumbnails.request([card])
+    assert session.thumbnails.wait_idle()
+    cached = session.thumbnails.get(card)
+    render = session.render
+    session.render = lambda c, face=0: (time.sleep(2.0), render(c, face))[1]
+    await user.open(f"/set?card={card.id}")
+    await user.should_see("On this card")
+    sources = [image.source for image in user.find(kind=ui.image).elements]
+    assert any(cached.name in str(source) for source in sources)       # the overview's picture

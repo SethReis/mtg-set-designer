@@ -75,6 +75,11 @@ def number_label(card: Card) -> str:
 TILE_BORDERS = {k: f"var(--mana-{k.lower()})" for k in "WUBRGMCL"}     # tokens.css
 
 
+def skeleton_tile() -> None:
+    """A card-shaped placeholder with a soft shimmer, while the card's picture is drawn."""
+    ui.element("div").classes("ds-skeleton")
+
+
 def compact_tile(card: Card, width: int, face_index: int = 0) -> None:
     """A card (or one of its faces) as text in a card-shaped box: name, cost, type, start
     of the rules, P/T. It fills its container's width; `width` (the card size) picks the

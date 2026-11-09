@@ -190,3 +190,30 @@ def test_both_faces_render_after_a_layout_change(session) -> None:
     session.update(card, "name", "Back", face=1)
     front, back = session.render(card, 0), session.render(card, 1)
     assert front.size == back.size and front.tobytes() != back.tobytes()
+
+
+def test_interactive_renderer_calls_go_before_waiting_background_work() -> None:
+    import threading
+    import time
+
+    from setdesigner.app.session import PriorityLock
+    lock, order = PriorityLock(), []
+    lock.acquire(background=True)                       # a batch is being drawn
+
+    def background():
+        with lock.background():
+            order.append("background")
+
+    def interactive():
+        with lock:
+            order.append("interactive")
+    waiting = threading.Thread(target=background)
+    waiting.start()
+    time.sleep(0.05)                                    # the next batch is queued first...
+    preview = threading.Thread(target=interactive)
+    preview.start()
+    time.sleep(0.05)
+    lock.release()                                      # ...but the preview goes first
+    waiting.join(2)
+    preview.join(2)
+    assert order == ["interactive", "background"]

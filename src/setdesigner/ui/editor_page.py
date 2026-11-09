@@ -28,7 +28,7 @@ from . import renderer_notice
 from .art_editor import art_editor
 from .mechanics_page import POLICY_LABELS
 from .uploads import set_paste_target
-from .widgets import card_name, number_label, responsive_grid
+from .widgets import card_name, number_label, responsive_grid, served_url
 
 SYMBOLS = ["W", "U", "B", "R", "G", "C", "X", "T", "Q", "S", "0", "1", "2", "3", "4", "5", "6",
            "7", "8", "9", "W/U", "U/B", "B/R", "R/G", "G/W", "W/B", "U/R", "B/G", "R/W", "G/U"]
@@ -86,6 +86,7 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
         refresh_card_view()
         art_target(card)
         retitle()
+        show_provisional()
         schedule_preview(now=True)
         on_card(card)
 
@@ -123,7 +124,19 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
         view["face"] = face
         refresh_card_view()
         art_target(card)
+        show_provisional()
         schedule_preview(now=True)
+
+    def show_provisional() -> None:
+        """Until the face is drawn: its overview picture if there is one (sharp render
+        follows), else a shimmering card, with the progress line along the bottom."""
+        card = view["card"]
+        if card is None:
+            return
+        path = session.thumbnails.get(card, view["face"])
+        preview.set_source(served_url(session.thumbnails.cache.folder, path) if path else "")
+        preview_box.classes(add="pending")
+        preview_box.classes(remove="empty") if path else preview_box.classes(add="empty")
 
     def refresh_card_view() -> None:
         """Another card or face: the layout row, the hotspots (until new boxes come) and
@@ -608,7 +621,8 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
             with ui.element("div").classes("ds-card-area"):
                 preview_box = ui.element("div").classes("ds-card-box")
                 with preview_box:
-                    preview = ui.image().props("fit=contain no-spinner no-transition").classes("ds-preview")
+                    preview = ui.image().props("fit=contain no-spinner").classes("ds-preview")
+                    ui.element("div").classes("ds-card-progress")
 
                     @ui.refreshable
                     def hotspots() -> None:
@@ -633,7 +647,7 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
                         .classes("ds-flip").mark("flip-face")
                     view["flip"] = flip_button
                     flip_button.set_visibility(view["card"] is not None and len(view["card"].faces) > 1)
-            preview_note = c.hint("Starting the renderer…").classes("text-center")
+            preview_note = c.hint("").classes("text-center")
             renderer_notice.notice(session, compact=True)
 
         # ---- side panel: what isn't printed on the card, and a list of what is
@@ -723,6 +737,7 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
         if due and time.monotonic() >= due and view["card"] is not None:
             view["preview_due"] = 0.0
             view["generation"] += 1
+            preview_box.classes(add="pending")
             generation, card, face = view["generation"], view["card"], view["face"]
             face = min(face, len(card.faces) - 1)
             try:
@@ -750,6 +765,7 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
                 return
             if generation == view["generation"]:      # skip stale results
                 preview.set_source(image)
+                preview_box.classes(remove="pending empty")
                 stand_in = session.renderer_note and not renderer_notice.health(session).problem
                 preview_note.text = "Drawn by the stand-in renderer" if stand_in else ""   # else: the notice
         elif view["card"] is None:
@@ -759,6 +775,7 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
     ui.timer(0.1, tick)
     art_target(view["card"])
     retitle()
+    show_provisional()
     schedule_preview(now=True)
 
     # ------------------------------------------------------ keyboard

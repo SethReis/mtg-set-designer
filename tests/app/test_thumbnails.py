@@ -128,3 +128,41 @@ def test_two_faced_cards_keep_a_picture_of_each_face(session) -> None:
     assert worker.wait_idle(), worker.error
     assert not front.exists() and not back.exists()
     assert worker.get(card, face=1).is_file()
+
+
+def test_latest_finds_the_newest_picture_of_each_face(tmp_path) -> None:
+    import os
+    cache = ThumbnailCache(tmp_path)
+    picture = Image.new("RGBA", (375, 523), "red")
+    old = cache.put("bear", "k1", picture)
+    os.utime(old, (1, 1))
+    new = cache.put("bear-2", "k2", {0: picture, 1: picture})
+    assert cache.latest() == {("bear", 0): old, ("bear-2", 0): new, ("bear-2", 1): cache.get("bear-2", "k2", 1)}
+
+
+@needs_packages
+def test_cached_pictures_show_at_once_and_stale_ones_are_redrawn(tmp_path) -> None:
+    """Reopening a set: pictures from the cache are ready before any key is computed; the
+    check afterwards redraws only cards that changed."""
+    def open_session():
+        return SetSession.open(tmp_path / "set", renderer_factory=builtin, thumbnail_dir=tmp_path / "thumbs")
+    s = SetSession.create(tmp_path / "set", "My Set", "mys", "m15", renderer_factory=builtin,
+                          thumbnail_dir=tmp_path / "thumbs")
+    cards = [s.new_card(f"Card {i}") for i in range(3)]
+    s.thumbnails.request(cards)
+    assert s.thumbnails.wait_idle()
+    first = {c.id: s.thumbnails.get(c) for c in cards}
+    s.update(cards[0], "rules_text", "Flying")              # changed while closed, in effect
+    s.close()
+
+    s = open_session()
+    try:
+        cards = s.cards()
+        worker = s.thumbnails
+        worker.request(cards)                                # ready at once: the cached pictures
+        assert {c.id: worker.get(c) for c in cards} == first
+        assert worker.wait_idle()
+        assert worker.get(cards[0]) != first[cards[0].id]    # checked: redrawn
+        assert worker.get(cards[1]) == first[cards[1].id]
+    finally:
+        s.close()

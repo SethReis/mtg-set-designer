@@ -49,18 +49,31 @@ show as removable chips under it. The card search is in the top bar (Ctrl+K).
 
 `app/thumbnails.py`: pictures are made in the background and cached on disk outside the
 set folder, in `%LOCALAPPDATA%/setdesigner/thumbnails/` (or `$SETDESIGNER_CACHE_DIR`).
-Until a card's picture exists, its tile shows the compact version.
+Until a card's picture exists, its tile is a shimmering card-shaped placeholder (the text
+version shows only in Text mode, or if drawing fails); pictures fade in when they arrive.
+
+- **At once from the cache:** when the overview asks for pictures, every card with any
+  cached picture shows it immediately (`ThumbnailCache.latest`), before its key is known.
+  The keys are then worked out in the background and only cards whose picture is out of
+  date are drawn again; their tiles swap in place.
 
 - **Cache key** (`render_keys`): a hash of exactly what a preview set for the card would
   contain, i.e. its fields, its collector number, the set info and the keywords. A card is
   drawn again only when its picture would change. Changing set-wide things, such as the set
   name, redraws every card. Bump `CACHE_VERSION` after a renderer change.
-- **Batches:** `render_many` loads one MSE set holding up to 20 missing cards. That is one
+- **Batches:** `render_many` loads one MSE set holding up to 8 missing cards. That is one
   load per batch, rather than per card, and it gives exactly the preview's pictures (tested
-  against real MSE). The renderer lock is taken per batch, so an editor preview waits at
-  most one batch.
-- **Timing** (30-card set): the first fill takes about 10 s, including MSE starting.
-  Reopening the set takes about 2 s, which is mostly loading the templates.
+  against real MSE). Keys are worked out 6 cards at a time.
+- **Priority:** all of this runs at background priority (`SetSession.using_renderer(...,
+  background=True)`, a `PriorityLock`): the editor's preview and Print take the renderer
+  as soon as it's free, ahead of waiting background work.
+- **Warm-up** (`SetSession.warm_up`, when a set opens): MSE is started and its templates
+  loaded by drawing an empty card, under MSE's own process lock rather than the renderer
+  lock, then every card's set-wide values are worked out. The first card opened is quick.
+- **Timing** (40-card demo set): with a cache, pictures are on screen at once; a card opened
+  a few seconds later is editable in about 0.25 s and sharp in about 0.5 s. Opened at once,
+  it takes about 2 s (MSE's scripts load once per session), showing its cached picture
+  meanwhile.
 
 ## Code
 

@@ -38,7 +38,10 @@ The NiceGUI modules in `src/setdesigner/ui/` only arrange widgets and call into 
   "Saving…" or "All changes saved".
 - **Preview.** The preview is rendered 0.3 s after the last edit, off the UI thread. A
   generation counter drops renders that finished after a newer one started. It uses real
-  MSE (see `renderer.md`). A "built-in renderer" note appears only if MSE wasn't available.
+  MSE (see `renderer.md`). Until a face's first render arrives, the card shows its cached
+  overview picture (or a shimmering card), and a thin progress line under the card shows
+  a render is on its way (only if it takes over 0.25 s). The editor's renders go ahead of
+  the overview's background work (see `overview.md`, "Priority").
 - **Typing helpers.**
   - After an unclosed `{` in the mana cost or rules text, symbol suggestions appear (`{W}`,
     `{2}`, `{T}`, `{W/U}`, …). After two letters that start one of the set's mechanics,

@@ -92,7 +92,9 @@ class CardRenderer:
             return "missing", "Magic Set Editor wasn't found, so the built-in renderer draws the cards"
         if not self.blocked and not self.mse.process.alive:
             try:
-                self.mse.process.start()
+                with self.mse.process_lock:
+                    if not self.mse.process.alive:
+                        self.mse.process.start()
             except MSEBlocked as e:
                 self.blocked = str(e)
             except MSEError as e:

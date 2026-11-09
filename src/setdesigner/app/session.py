@@ -15,8 +15,9 @@ from __future__ import annotations
 import re
 import threading
 import time
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Iterator
 
 from PIL import Image
 
@@ -45,6 +46,54 @@ class SessionError(Exception):
     pass
 
 
+class PriorityLock:
+    """The renderer's lock: callers the user is waiting on (the editor's preview, Print)
+    go before background work (overview pictures, warming up) that is waiting too.
+
+        with lock: ...                       # interactive
+        with lock.background(): ...          # waits while anyone interactive is waiting
+    """
+
+    def __init__(self):
+        self._cond = threading.Condition()
+        self._held = False
+        self._waiting = 0                        # interactive callers waiting for the lock
+
+    def acquire(self, background: bool = False) -> None:
+        with self._cond:
+            if background:
+                while self._held or self._waiting:
+                    self._cond.wait()
+            else:
+                self._waiting += 1
+                try:
+                    while self._held:
+                        self._cond.wait()
+                finally:
+                    self._waiting -= 1
+            self._held = True
+
+    def release(self) -> None:
+        with self._cond:
+            self._held = False
+            self._cond.notify_all()
+
+    def __enter__(self) -> "PriorityLock":
+        self.acquire()
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self.release()
+
+    @contextmanager
+    def background(self) -> Iterator[None]:
+        self.acquire(background=True)
+        try:
+            yield
+        finally:
+            self.release()
+
+
 class SetSession:
     def __init__(self, folder: Path, project: SetProject,
                  renderer_factory: Callable[[SetProject], object] | None = None,
@@ -54,13 +103,14 @@ class SetSession:
         self.project = project
         self._renderer_factory = renderer_factory
         self._renderer = None
-        self._renderer_lock = threading.Lock()
+        self._renderer_lock = PriorityLock()
         self._pending: dict[str, float] = {}     # card id -> time of last edit
         self._edited: set[str] = set()           # edited since the renderer last saw them
         self._art_boxes: dict[str, tuple[float, float]] = {}   # stylesheet -> art box size
         self.art_version = 0                     # goes up when art is added or removed
         self.art_notice: tuple[str, str] | None = None   # (kind, message) for the page to show
         self._thumbnails = None
+        self._warming: threading.Thread | None = None    # see warm_up
 
     # ------------------------------------------------------------ opening
 
@@ -505,11 +555,42 @@ class SetSession:
             return ""
         return "built-in renderer" if r.last_backend == "builtin" else ""
 
-    def using_renderer(self, fn: Callable[[object], object]) -> object:
-        """fn(renderer) under the renderer lock (for background work such as thumbnails)."""
+    def using_renderer(self, fn: Callable[[object], object], background: bool = False) -> object:
+        """fn(renderer) under the renderer lock. `background` work (overview pictures,
+        warming up) lets anything the user is waiting on go first."""
         renderer = self.renderer
+        if background:
+            with self._renderer_lock.background():
+                return fn(renderer)
         with self._renderer_lock:
             return fn(renderer)
+
+    def warm_up(self) -> None:
+        """Get the slow first steps out of the way in the background, while the user looks
+        at the overview: MSE's start and templates (about 2 s, outside the renderer lock, so
+        the editor can work out a card's parts meanwhile), then the set-wide values every
+        preview needs (a few seconds for a big set, once; background priority)."""
+        if self._warming is not None:
+            return
+
+        def work() -> None:
+            from ..render.mse_service import MSEBlocked, MSEError
+            from .thumbnails import chunked_keys
+            try:
+                renderer = self.renderer
+                mse = getattr(renderer, "mse", None)
+                if mse is not None and not getattr(renderer, "blocked", ""):
+                    try:
+                        mse.warm()
+                    except MSEBlocked as e:
+                        renderer.blocked = str(e)
+                    except MSEError:
+                        pass
+                chunked_keys(self, list(self.project.cards))
+            except Exception:                       # only a head start: the real work reports errors
+                pass
+        self._warming = threading.Thread(target=work, name="warm-up", daemon=True)
+        self._warming.start()
 
     def refresh_edited(self, renderer) -> None:
         """Tell the renderer about cards edited since it last drew them (call under the lock)."""

@@ -23,7 +23,7 @@ from . import renderer_notice
 from .mechanics_page import mechanics_panel
 from .shell import set_shell
 from .uploads import add_art_script, set_paste_target
-from .widgets import CARD_RATIO, STACK_CSS, compact_tile, served_url
+from .widgets import CARD_RATIO, STACK_CSS, compact_tile, served_url, skeleton_tile
 
 THUMB_POLL = 0.5                         # seconds between checks for newly rendered pictures
 COLOR_CHOICES = {k: v for k, v in ov.COLOR_LABELS.items()}
@@ -195,7 +195,10 @@ def register(state) -> None:
         def picture(card: Card, width: int) -> None:
             path = worker.get(card) if settings.tiles == "images" else None
             if path is None:
-                compact_tile(card, width)
+                if settings.tiles == "images" and not worker.error:
+                    skeleton_tile()                  # its picture is on its way
+                else:
+                    compact_tile(card, width)
                 return
             ui.element("img").classes("face-front").props(
                 f'src="{thumbnail_url(worker.cache.folder, path)}" loading=lazy draggable=false alt=""')
@@ -445,6 +448,8 @@ def register(state) -> None:
             renderer_notice.notice(session)
         shell.renderer_chip.on_click(lambda: renderer_notice.health(session).update(dismissed=False))
         ui.timer(0, lambda: renderer_notice.check(session), once=True)
+        # a head start for the editor: set-wide values and MSE's start (background priority)
+        ui.timer(0, session.warm_up, once=True)
         ui.timer(THUMB_POLL, tick)
 
         # ------------------------------------------------------------ views over the workspace

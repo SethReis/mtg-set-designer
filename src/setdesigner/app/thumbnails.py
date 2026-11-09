@@ -12,8 +12,12 @@ edited cards are drawn again. Pictures are kept outside the set folder (which ma
 in git): %LOCALAPPDATA%/setdesigner/thumbnails/<set>/<card id>@<key>.webp, and a back face
 as <card id>@<key>-2.webp.
 
-Rendering happens in batches (one MSE set load each), taking the renderer lock per
-batch only, so a live preview in the editor never waits long.
+Cards with any cached picture show it at once when they're requested (provisional), even
+before their keys are known: computing the keys of a whole set takes a few seconds the
+first time. Once the keys are in, only cards whose picture is out of date are drawn again.
+
+Rendering happens in small batches (one MSE set load each) at background priority, taking
+the renderer lock per batch only, so a live preview in the editor never waits long.
 """
 from __future__ import annotations
 
@@ -27,7 +31,8 @@ from PIL import Image
 from ..model import Card
 
 CACHE_VERSION = "1"              # bump to redraw every cached picture (renderer changes)
-BATCH = 20                       # cards per MSE load
+BATCH = 8                        # cards per MSE load (small: the editor's preview may be waiting)
+KEY_CHUNK = 6                    # cards per render-key step (the same reason)
 WIDTH = 300                      # stored picture width in pixels (tiles are smaller)
 
 
@@ -38,6 +43,20 @@ def default_cache_dir(set_folder: Path) -> Path:
                 or (Path(base) / "setdesigner" if base else Path.home() / ".setdesigner"))
     name = hashlib.sha1(str(Path(set_folder).resolve()).encode("utf-8")).hexdigest()[:12]
     return root / "thumbnails" / f"{Path(set_folder).name}-{name}"
+
+
+def chunked_keys(session, cards: list[Card], cancelled=lambda: False) -> dict[str, str] | None:
+    """Render keys for many cards, a few at a time at background priority, so the editor's
+    preview can get the renderer in between (the first keys of a set take seconds).
+    None if `cancelled()` became true on the way."""
+    keys: dict[str, str] = {}
+    for start in range(0, len(cards), KEY_CHUNK):
+        if cancelled():
+            return None
+        chunk = cards[start:start + KEY_CHUNK]
+        keys.update(session.using_renderer(lambda r: (session.refresh_edited(r), r.render_keys(chunk))[1],
+                                           background=True))
+    return keys
 
 
 class ThumbnailCache:
@@ -66,6 +85,20 @@ class ThumbnailCache:
         self.remove(card_id, keep=set(paths.values()))
         return paths[min(paths)]
 
+    def latest(self) -> dict[tuple[str, int], Path]:
+        """The newest picture of every (card id, face) in the cache, whatever its key."""
+        newest: dict[tuple[str, int], tuple[float, Path]] = {}
+        if self.folder.is_dir():
+            for entry in os.scandir(self.folder):
+                if not entry.name.endswith(".webp") or "@" not in entry.name:
+                    continue
+                card_id, rest = entry.name.rsplit("@", 1)
+                face = 1 if rest.endswith("-2.webp") else 0
+                mtime = entry.stat().st_mtime
+                if (card_id, face) not in newest or mtime > newest[card_id, face][0]:
+                    newest[card_id, face] = (mtime, Path(entry.path))
+        return {key: path for key, (_, path) in newest.items()}
+
     def remove(self, card_id: str, keep: Path | set[Path] | None = None) -> None:
         keep = {keep} if isinstance(keep, Path) else (keep or set())
         if self.folder.is_dir():
@@ -87,6 +120,8 @@ class ThumbnailWorker:
         self.error = ""                         # last rendering problem, for the UI
         self._ready: dict[str, Path] = {}       # card id -> picture of its current version
         self._backs: dict[str, Path] = {}       # card id -> its back face's picture (two-faced)
+        self._latest: dict[tuple[str, int], Path] | None = None   # cached pictures at opening
+        self._checked: set[str] = set()         # cards whose picture was checked against its key
         self._wanted: list[Card] = []
         self._generation = 0
         self._wake = threading.Event()
@@ -96,7 +131,16 @@ class ThumbnailWorker:
     # ---------------------------------------------------------------- for the UI
 
     def request(self, cards: list[Card]) -> None:
-        """Make pictures for these cards (replaces the previous request)."""
+        """Make pictures for these cards (replaces the previous request). Cards with a
+        cached picture are ready at once with it (checked in the background)."""
+        if self._latest is None:                 # the cache as it was when the set opened
+            self._latest = self.cache.latest()
+        for card in cards:
+            if card.id not in self._ready and card.id not in self._checked:
+                front = self._latest.get((card.id, 0))
+                if front is not None and front.is_file():
+                    self._ready[card.id] = front
+                    self._store_back(card, self._latest.get((card.id, 1)) if len(card.faces) > 1 else None)
         self._wanted = list(cards)
         self._generation += 1
         if self._thread is None:
@@ -111,6 +155,7 @@ class ThumbnailWorker:
         """The card changed or was deleted: its picture is out of date."""
         self._ready.pop(card_id, None)
         self._backs.pop(card_id, None)
+        self._checked.add(card_id)              # not the provisional picture again
 
     def stop(self) -> None:
         self._stop = True
@@ -119,11 +164,11 @@ class ThumbnailWorker:
             self._thread.join(timeout=30)
 
     def wait_idle(self, timeout: float = 120.0) -> bool:
-        """Block until every requested picture is ready (for tests)."""
+        """Block until every requested picture is ready and checked (for tests)."""
         import time
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
-            if self.error or all(c.id in self._ready for c in self._wanted):
+            if self.error or all(c.id in self._ready and c.id in self._checked for c in self._wanted):
                 return not self.error
             time.sleep(0.05)
         return False
@@ -143,9 +188,10 @@ class ThumbnailWorker:
 
     def _work(self, generation: int) -> None:
         cards = self._wanted
-        keys = self.session.using_renderer(lambda r: (self.session.refresh_edited(r),
-                                                      r.render_keys(cards))[1])
-        missing = []
+        keys = chunked_keys(self.session, cards, lambda: self._stop or generation != self._generation)
+        if keys is None:
+            return                              # a newer request takes over
+        missing, changed = [], False
         blocked = self.session.mse_blocked           # stand-in pictures do until MSE is back
         for card in cards:
             key = keys[card.id]
@@ -153,20 +199,23 @@ class ThumbnailWorker:
                 key = f"builtin-{key}"
             path = self.cache.get(card.id, key)
             back = self.cache.get(card.id, key, 1) if len(card.faces) > 1 else None
+            self._checked.add(card.id)
             if path is not None and (back is not None or len(card.faces) == 1):
-                self._ready[card.id] = path
+                if self._ready.get(card.id) != path:
+                    self._ready[card.id] = path
+                    changed = True
                 self._store_back(card, back)
             else:
                 self.forget(card.id)
                 missing.append(card)
-        if len(missing) < len(cards):
+        if changed:
             self.version += 1
         for start in range(0, len(missing), BATCH):
             if self._stop or generation != self._generation:
                 return                          # a newer request takes over
             batch = missing[start:start + BATCH]
             images, backend = self.session.using_renderer(
-                lambda r: (r.render_many(batch), getattr(r, "last_backend", "")))
+                lambda r: (r.render_many(batch), getattr(r, "last_backend", "")), background=True)
             for card in batch:
                 key = keys[card.id]
                 if backend == "builtin" and not key.startswith("builtin"):

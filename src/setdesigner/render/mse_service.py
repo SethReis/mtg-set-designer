@@ -231,6 +231,15 @@ def render_keys(project: SetProject, env: ScriptEnvironment, cards: list[Card]) 
             for cid, us in uids.items()}
 
 
+def _one_at_a_time(method):
+    """Run an MSERenderer method under its process lock."""
+    def wrapped(self, *args, **kwargs):
+        with self.process_lock:
+            return method(self, *args, **kwargs)
+    wrapped.__name__, wrapped.__doc__ = method.__name__, method.__doc__
+    return wrapped
+
+
 class MSERenderer:
     """Renders our cards with real MSE (see the module docstring)."""
 
@@ -247,6 +256,10 @@ class MSERenderer:
         self.workdir.mkdir(parents=True, exist_ok=True)
         self._loaded: tuple[str, str] | None = None     # (set file path, content hash)
         self._counter = 0
+        # the MSE process does one thing at a time; warm() takes this lock without the
+        # session's, so card values can be worked out while MSE starts
+        self.process_lock = threading.RLock()
+        self._warmed = False
 
     # ---------------------------------------------------------------- loading
 
@@ -275,6 +288,24 @@ class MSERenderer:
         uids = {face_uid(card, i) for i in range(len(card.faces))}
         return (uids, *preview_overrides(self.env, uids))
 
+    def warm(self) -> None:
+        """Start MSE and load its card templates before any card is asked for, by drawing
+        an empty card of the set's default frame. Needs no card values (so no script
+        environment): safe to run while the environment is busy elsewhere."""
+        from ..model import Card as ModelCard, Face, SetProject as Project
+        with self.process_lock:
+            if self._warmed and self.process.alive:
+                return
+            dummy = Project(info=self.project.info.model_copy(), cards=[ModelCard(id="warm", faces=[Face(name="")])])
+            path = self.workdir / "warm.mse-set"
+            write_mse_set(dummy, path, blank_symbol=True)
+            self._loaded = None
+            self._load(path, "warm")
+            self._write_image(0)
+            self._loaded = None
+            self._warmed = True
+
+    @_one_at_a_time
     def render_many(self, cards: list[Card]) -> dict[tuple[str, int], Image.Image]:
         """Every face of several cards from one set load (faster than one by one: the
         load costs about as much as rendering ten faces). Like the preview, set-wide values
@@ -311,6 +342,7 @@ class MSERenderer:
                 self.process.start()
         return {}
 
+    @_one_at_a_time
     def render(self, card: Card, face: int = 0) -> Image.Image:
         """One face, as MSE draws it, with our set symbol on top."""
         uids, set_values, card_values = self.preview_values(card)
@@ -355,6 +387,7 @@ class MSERenderer:
 
     # ------------------------------------------------------------- whole set
 
+    @_one_at_a_time
     def render_set(self, out_dir: Path) -> list[Path]:
         """Every face of every card into out_dir (for print), from one full set load."""
         out_dir = Path(out_dir)
