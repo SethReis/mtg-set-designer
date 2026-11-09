@@ -19,6 +19,7 @@ from .widgets import served_url
 
 # (view, label, icon, tooltip); "cards" is the workspace, the rest open over it
 NAV = [("cards", "Cards", "view_module", "The set's cards"),
+       ("skeleton", "Skeleton", "grid_view", "The slots the set plans to fill"),
        ("mechanics", "Mechanics", "auto_fix_high", "Keywords and ability words"),
        ("cycles", "Cycles", "donut_large", "Cards made as a cycle"),
        ("archetypes", "Archetypes", "hub", "Draft archetypes and their targets"),

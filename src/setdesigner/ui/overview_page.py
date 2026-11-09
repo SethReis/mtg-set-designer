@@ -4,7 +4,7 @@ rows or in a matrix, inside the app shell. Everything else opens over it.
     /set                          the workspace
     /set?card=<id>                ... with a card open in the editor
     /set?card=<id>&part=text      ... and one of its parts open for editing (name, cost, ...)
-    /set?open=mechanics&id=<id>   ... with a rail item open (mechanics, cycles, health,
+    /set?open=mechanics&id=<id>   ... with a rail item open (skeleton, mechanics, cycles, health,
                                   archetypes, settings, print)
 """
 from __future__ import annotations
@@ -28,7 +28,7 @@ from .widgets import CARD_RATIO, STACK_CSS, compact_tile, served_url, skeleton_t
 THUMB_POLL = 0.5                         # seconds between checks for newly rendered pictures
 COLOR_CHOICES = {k: v for k, v in ov.COLOR_LABELS.items()}
 # the views that open over the workspace: workspace-size modals and the two dialogs
-WORKSPACE_VIEWS = {"mechanics": "Mechanics", "cycles": "Cycles", "health": "Set health"}
+WORKSPACE_VIEWS = {"skeleton": "Skeleton", "mechanics": "Mechanics", "cycles": "Cycles", "health": "Set health"}
 VIEWS = {*WORKSPACE_VIEWS, "archetypes", "settings", "print"}
 
 
@@ -507,6 +507,10 @@ def register(state) -> None:
                     elif name == "cycles":
                         cycles_panel(state, m, select_id=item, on_select=shown,
                                      open_card=lambda card: open_card(card, back=here()))
+                    elif name == "skeleton":
+                        from .skeleton_page import skeleton_panel
+                        skeleton_panel(state, m, open_card=lambda card: open_card(card, back=here()),
+                                       on_change=content.refresh)
                     elif name == "health":
                         health_panel(state, m, open_card=lambda card: open_card(card, back=here()),
                                      open_cycle=lambda cid: show("cycles", cid, back=here()),

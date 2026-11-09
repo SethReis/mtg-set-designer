@@ -743,9 +743,9 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
             try:
                 # where the parts are first: it comes from the layout, so the card can be
                 # edited before (and while) its picture is drawn
-                boxes = await run.io_bound(session.field_boxes, card, face) or {}
-                if preview.is_deleted or generation != view["generation"]:
-                    return
+                boxes = await run.io_bound(session.field_boxes, card, face)
+                if boxes is None or preview.is_deleted or generation != view["generation"]:
+                    return                           # None: cancelled (the page or app is closing)
                 if boxes != view["boxes"]:
                     view["boxes"] = boxes
                     if view["open_part"] is None:
@@ -757,6 +757,8 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
                     open_part(view["open_first"])
                     view["open_first"] = None
                 image = await run.io_bound(session.render, card, face)
+                if image is None:
+                    return                           # cancelled
             except Exception as e:                   # never break the editor over a preview
                 if not preview_note.is_deleted:
                     preview_note.text = f"Preview failed: {e}"
