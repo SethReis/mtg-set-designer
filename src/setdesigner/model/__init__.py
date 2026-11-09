@@ -4,8 +4,10 @@ from .card import ArtCrop, Card, Face, FaceRole, Layout, Rarity, Status
 from .cycle import Cycle, CycleMember, CycleTemplate
 from .layouts import LAYOUTS, LayoutSpec, validate_card
 from .mechanic import AbilityTemplate, Mechanic, MechanicKind, ReminderPolicy
+from .notebook import Idea, IdeaLink, IdeaSketch
 from .project import (SetProject, delete_card, load_project, new_card_id, save_archetypes,
-                      save_card, save_cycles, save_info, save_mechanics, save_project, save_skeleton)
+                      save_card, save_cycles, save_info, save_mechanics, save_notebook, save_project,
+                      save_skeleton)
 from .set_info import CheckSetting, SetInfo
 from .skeleton import Skeleton, Slot
 
@@ -14,4 +16,5 @@ __all__ = ["Archetype", "ArtCrop", "Card", "Face", "FaceRole", "Layout", "Rarity
            "SetProject", "load_project", "save_project", "save_card", "delete_card", "save_info",
            "save_archetypes", "save_mechanics", "save_cycles", "Cycle",
            "CycleMember", "CycleTemplate",
-           "new_card_id", "CheckSetting", "SetInfo", "Skeleton", "Slot", "save_skeleton"]
+           "new_card_id", "CheckSetting", "SetInfo", "Skeleton", "Slot", "save_skeleton",
+           "Idea", "IdeaLink", "IdeaSketch", "save_notebook"]

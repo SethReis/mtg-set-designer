@@ -22,10 +22,11 @@ from typing import Callable, Iterator
 from PIL import Image
 
 from ..model import (LAYOUTS, AbilityTemplate, Archetype, ArtCrop, Card, CheckSetting, Cycle, CycleTemplate,
-                     Face, FaceRole, Layout, Mechanic, MechanicKind, Rarity, ReminderPolicy, SetInfo,
+                     Face, FaceRole, Idea, IdeaLink, IdeaSketch, Layout, Mechanic, MechanicKind, Rarity, ReminderPolicy, SetInfo,
                      SetProject, Skeleton, Slot, Status,
                      delete_card, load_project, new_card_id, save_archetypes, save_card,
-                     save_cycles, save_info, save_mechanics, save_project, save_skeleton)
+                     save_cycles, save_info, save_mechanics, save_notebook, save_project,
+                     save_skeleton)
 from ..model.project import slug
 from ..mse.mapping import join_type_line, split_type_line
 from .mechanics import mechanic_ids
@@ -176,6 +177,7 @@ class SetSession:
             slot.card_id, slot.cycle = None, None
             self._save_skeleton()
         delete_card(self.folder, card.id)
+        self._drop_links("card", card.id)
         if self._renderer is not None:
             with self._renderer_lock:
                 self._renderer.env.remove_card(card.id)
@@ -452,6 +454,7 @@ class SetSession:
     def delete_slot(self, slot: Slot) -> None:
         skeleton = self.project.skeleton
         skeleton.slots.remove(slot)
+        self._drop_links("slot", slot.id)
         key = "any" if slot.rarity is None else slot.rarity.value
         if slot.column in skeleton.counts and key in skeleton.counts[slot.column]:
             skeleton.counts[slot.column][key] = max(0, skeleton.counts[slot.column][key] - 1)
@@ -527,6 +530,138 @@ class SetSession:
         else:
             self.update(card, name, value)
 
+    # ----------------------------------------------------------- notebook
+
+    def _save_notebook(self) -> None:
+        save_notebook(self.folder, self.project.notebook)
+
+    def idea(self, idea_id: str) -> Idea | None:
+        return next((i for i in self.project.notebook if i.id == idea_id), None)
+
+    def new_idea(self, kind: str = "card", title: str = "", author: str = "", **values: object) -> Idea:
+        """A new idea at the top of the Inbox. `values`: any Idea field (body, tags, colors,
+        archetypes, sketch, links)."""
+        import uuid
+        from datetime import datetime
+        now = datetime.now().isoformat(timespec="seconds")
+        for key in ("tags", "archetypes"):
+            if key in values:
+                values[key] = [str(v).strip() for v in values[key] or [] if str(v).strip()]
+        if "colors" in values:
+            values["colors"] = "".join(c for c in "WUBRG" if c in str(values["colors"] or "").upper())
+        idea = Idea.model_validate({"id": uuid.uuid4().hex[:10], "kind": kind, "title": title.strip(),
+                                    "author": author, "created": now, "updated": now, **values})
+        self.project.notebook.insert(0, idea)
+        self._save_notebook()
+        return idea
+
+    def update_idea(self, idea: Idea, **values: object) -> None:
+        from datetime import datetime
+        for key, value in values.items():
+            if key == "sketch" and not isinstance(value, IdeaSketch):
+                value = IdeaSketch.model_validate(value or {})
+            elif key in ("tags", "archetypes"):
+                value = [str(v).strip() for v in value or [] if str(v).strip()]
+            elif key == "colors":
+                value = "".join(c for c in "WUBRG" if c in str(value or "").upper())
+            setattr(idea, key, value)
+        idea.updated = datetime.now().isoformat(timespec="seconds")
+        self._save_notebook()
+
+    def move_idea(self, idea: Idea, lane: str, index: int | None = None) -> None:
+        """Put an idea in a lane, at a place among that lane's ideas (None: the end)."""
+        ideas = [i for i in self.project.notebook if i is not idea]
+        idea.lane = lane
+        in_lane = [n for n, i in enumerate(ideas) if i.lane == lane]
+        if index is None or index >= len(in_lane):
+            at = (in_lane[-1] + 1) if in_lane else len(ideas)
+        else:
+            at = in_lane[max(0, index)]
+        ideas.insert(at, idea)
+        self.project.notebook = ideas
+        self._save_notebook()
+
+    def delete_idea(self, idea: Idea) -> None:
+        self.project.notebook = [i for i in self.project.notebook if i is not idea]
+        self._save_notebook()
+
+    def ideas_for(self, kind: str, target_id: str) -> list[Idea]:
+        """The ideas linked to a card, slot or mechanic."""
+        return [i for i in self.project.notebook
+                if any(link.kind == kind and link.id == target_id for link in i.links)]
+
+    def _link(self, idea: Idea, kind: str, target_id: str) -> None:
+        if not any(link.kind == kind and link.id == target_id for link in idea.links):
+            idea.links.append(IdeaLink(kind=kind, id=target_id))
+        if idea.lane != "used":
+            self.move_idea(idea, "used", 0)
+        else:
+            self._save_notebook()
+
+    def _drop_links(self, kind: str, target_id: str) -> None:
+        changed = False
+        for idea in self.project.notebook:
+            kept = [link for link in idea.links if not (link.kind == kind and link.id == target_id)]
+            if len(kept) != len(idea.links):
+                idea.links, changed = kept, True
+        if changed:
+            self._save_notebook()
+
+    def promote_to_card(self, idea: Idea, slot: Slot | None = None) -> Card:
+        """A new card (status Idea) from an idea's sketch, archetypes and notes; in `slot`
+        if given (which also sets its rarity). The idea links to it and goes to Used."""
+        sketch = idea.sketch
+        card = self.new_card(sketch.name or idea.title or "New Card")
+        self.update(card, "status", Status.IDEA)
+        for field in ("mana_cost", "type_line", "rules_text", "power", "toughness"):
+            if getattr(sketch, field):
+                self.update(card, field, getattr(sketch, field))
+        if idea.archetypes:
+            self.update(card, "archetypes", idea.archetypes)
+        notes = "\n\n".join(x for x in (idea.title if sketch.name else "", idea.body) if x)
+        if notes:
+            self.update(card, "notes", notes)
+        if slot is not None:
+            if slot.rarity is not None:
+                self.update(card, "rarity", slot.rarity)
+            if slot.types and not sketch.type_line:
+                self.update(card, "types", slot.types)
+            if slot.archetype and not idea.archetypes:
+                self.update(card, "archetypes", [slot.archetype])
+            self.assign(slot, card)
+            self._link(idea, "slot", slot.id)
+        self._link(idea, "card", card.id)
+        return card
+
+    def slots_for_idea(self, idea: Idea, n: int = 12) -> list[Slot]:
+        """Empty skeleton slots for an idea, best first: its colors' (or its sketch's)
+        column, then the sketch's type and its archetypes."""
+        from . import skeleton as sk
+        skeleton = self.project.skeleton
+        if skeleton is None:
+            return []
+        probe = Card(id="_idea", faces=[Face(name=idea.sketch.name, mana_cost=idea.sketch.mana_cost,
+                                              type_line=idea.sketch.type_line)])
+        column = sk.canonical(idea.colors) if idea.colors else sk.column_of(probe, skeleton.columns)
+        types = split_type_line(idea.sketch.type_line)[0].lower()
+
+        def score(slot: Slot) -> tuple:
+            return (slot.column == column,
+                    bool(types and slot.types and slot.types.lower() in types),
+                    bool(slot.archetype and slot.archetype in idea.archetypes),
+                    len(set(slot.column) & set(column)))
+
+        empty = [s for s in skeleton.slots if s.card_id is None]
+        return sorted(empty, key=score, reverse=True)[:n]
+
+    def promote_to_mechanic(self, idea: Idea) -> Mechanic:
+        """A new mechanic named after the idea, its reminder text from the idea's notes."""
+        mechanic = self.new_mechanic(idea.title or "New mechanic")
+        if idea.body:
+            self.update_mechanic(mechanic, reminder_text=idea.body)
+        self._link(idea, "mechanic", mechanic.id)
+        return mechanic
+
     # ---------------------------------------------------------- mechanics
 
     def new_mechanic(self, name: str = "New mechanic") -> Mechanic:
@@ -590,6 +725,7 @@ class SetSession:
     def delete_mechanic(self, mechanic: Mechanic) -> None:
         """Remove a mechanic. Card text stays; per-card reminder choices for it go."""
         self.project.mechanics = [m for m in self.project.mechanics if m.id != mechanic.id]
+        self._drop_links("mechanic", mechanic.id)
         for card in self.project.cards:
             if mechanic.id in card.reminders:
                 card.reminders.pop(mechanic.id)

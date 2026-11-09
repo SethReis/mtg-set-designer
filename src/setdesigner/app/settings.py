@@ -29,6 +29,7 @@ class Settings:
     show_slots: bool = True                             # overview: empty skeleton slots as tiles
     print_options: dict = field(default_factory=dict)   # export.selection.PrintOptions
     print_folder: str = ""                              # where the last print was saved
+    author: str = ""                                    # your name on notebook ideas
 
     @classmethod
     def load(cls, path: Path | None = None) -> "Settings":
@@ -45,7 +46,8 @@ class Settings:
                        rail_open=bool(data.get("rail_open", False)),
                        show_slots=bool(data.get("show_slots", True)),
                        print_options=dict(data.get("print_options") or {}),
-                       print_folder=str(data.get("print_folder", "")))
+                       print_folder=str(data.get("print_folder", "")),
+                       author=str(data.get("author", "")))
         except (OSError, ValueError):
             return cls()
 

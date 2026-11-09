@@ -6,6 +6,7 @@
       archetypes.json    list of Archetype
       cycles.json        list of Cycle
       slots.json         the Skeleton (absent until one is made)
+      notebook.json      list of Idea (absent until the first idea)
       cards/<id>.json    one Card per file
       assets/            set symbol, custom frames, art (referenced by path)
 
@@ -24,6 +25,7 @@ from .archetype import Archetype
 from .card import Card, Face
 from .cycle import Cycle
 from .mechanic import Mechanic
+from .notebook import Idea
 from .set_info import SetInfo
 from .skeleton import Skeleton
 
@@ -38,6 +40,7 @@ class SetProject(BaseModel):
     folder: Path | None = Field(default=None, exclude=True)
     cards: list[Card] = Field(default_factory=list)
     skeleton: Skeleton | None = None
+    notebook: list[Idea] = Field(default_factory=list)
 
     def card(self, card_id: str) -> Card:
         return next(c for c in self.cards if c.id == card_id)
@@ -79,6 +82,8 @@ def save_project(project: SetProject, folder: Path) -> None:
     _write_json(folder / "cycles.json", [_dump(c) for c in project.cycles])
     if project.skeleton is not None:
         save_skeleton(folder, project.skeleton)
+    if project.notebook:
+        save_notebook(folder, project.notebook)
     cards_dir = folder / "cards"
     for card in project.cards:
         _write_json(cards_dir / f"{card.id}.json", _dump(card))
@@ -113,6 +118,10 @@ def save_skeleton(folder: Path, skeleton: Skeleton | None) -> None:
         path.unlink(missing_ok=True)
     else:
         _write_json(path, _dump(skeleton))
+
+
+def save_notebook(folder: Path, ideas: list[Idea]) -> None:
+    _write_json(Path(folder) / "notebook.json", [_dump(i) for i in ideas])
 
 
 def save_archetypes(folder: Path, archetypes: list[Archetype]) -> None:
@@ -157,6 +166,7 @@ def load_project(folder: Path) -> SetProject:
         cycles=[Cycle.model_validate(c) for c in _read_json(folder / "cycles.json", [])],
         skeleton=Skeleton.model_validate(_read_json(folder / "slots.json", {}))
         if (folder / "slots.json").exists() else None,
+        notebook=[Idea.model_validate(i) for i in _read_json(folder / "notebook.json", [])],
         cards=cards,
         folder=folder,
     )
