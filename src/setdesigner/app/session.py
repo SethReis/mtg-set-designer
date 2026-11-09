@@ -538,6 +538,14 @@ class SetSession:
             self._art_boxes[key] = box
         return self._art_boxes[key]
 
+    def field_boxes(self, card: Card, face: int = 0) -> dict[str, tuple[float, float, float, float]]:
+        """Where the face's editable parts are on the card (the editor's hotspots), as
+        fractions of its size; see CardRenderer.field_boxes. Call it off the UI thread."""
+        def find(renderer):
+            self.refresh_edited(renderer)
+            return renderer.field_boxes(card, face) if hasattr(renderer, "field_boxes") else {}
+        return self.using_renderer(find)
+
     def _stylesheet(self, card: Card, face: int) -> str:
         """A key for the face's frame: its stylesheet plus any styling options it sets."""
         from ..mse.frames import frame_styling, stylesheet_package

@@ -69,7 +69,7 @@ async def test_tile_opens_editor_and_back_keeps_grouping(user: User) -> None:
     select(user, "Group by", "mana_value")
     await user.should_see("Mana value 2 · 1")
     user.find(marker=f"tile-{bear.id}").click()
-    await user.should_see("Rules text")
+    await user.should_see("On this card")
     await user.should_see("Grizzly Bears")
     user.find(marker="modal-close").click()
     await user.should_see("Group by")
@@ -115,7 +115,7 @@ async def test_stacks_in_rows_and_matrix(user: User) -> None:
     choose(user, "Matrix", "rows")
     await user.should_see("Group by")
     user.find(marker=f"tile-{bear.id}").click()        # stacked cards still open the editor
-    await user.should_see("Rules text")
+    await user.should_see("On this card")
 
 
 async def test_set_settings_panel_saves(user: User) -> None:
@@ -153,7 +153,9 @@ async def test_mechanics_page_create_rename_and_editor_reminders(user: User) -> 
     await user.should_see("Used on 1 card")
 
     await user.open(f"/set/card/{bear.id}")
-    await user.should_see("Hunt: reminder as policy (on commons only)")
+    await user.should_see("On this card")
+    user.find(marker="row-text").click()                        # the rules editor holds the reminders
+    await user.should_see("Hunt: reminder as policy (on commons only)", retries=20)
     select = next(iter(user.find(content="Hunt: reminder as policy").elements))
     select.value = "hide"
     assert bear.reminders == {mechanic.id: False}

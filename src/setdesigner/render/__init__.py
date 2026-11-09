@@ -28,6 +28,19 @@ from ..mse.mapping import face_uid
 from .mse_service import MSEBlocked, MSEError, MSERenderer, find_mse, render_keys
 
 
+# the editor's parts -> the stylesheet entries that draw them (the first one a frame has)
+PART_ENTRIES: dict[str, tuple[str, ...]] = {
+    "name": ("name",),
+    "cost": ("casting cost",),
+    "type": ("type", "super type"),
+    "text": ("text", "rule text"),
+    "pt": ("pt", "power"),
+    "loyalty": ("loyalty",),
+    "art": ("image",),
+    "indicator": ("indicator",),
+}
+
+
 def card_layout(env: ScriptEnvironment, card: Card, face: int = 0) -> CardLayout:
     return mse_layout(env, env.card_object(card, face))
 
@@ -129,6 +142,25 @@ class CardRenderer:
         entry = builder.entry("image")
         box = builder.box(entry) if entry is not None else None
         return (box.width, box.height) if box is not None and box.width > 0 and box.height > 0 else None
+
+    def field_boxes(self, card: Card, face: int = 0) -> dict[str, tuple[float, float, float, float]]:
+        """Where each editable part is on the face, for the editor's hotspots:
+        {part: (left, top, width, height)} as fractions of the card's size, for the parts
+        the frame shows (see PART_ENTRIES)."""
+        builder = MSELayoutBuilder(self.env, self.env.card_object(card, face))
+        width, height = builder.ss.card_width, builder.ss.card_height
+        out = {}
+        for part, names in PART_ENTRIES.items():
+            for name in names:
+                entry = builder.entry(name)
+                if entry is None:
+                    continue
+                box = builder.box(entry) if builder.visible(entry) else None
+                if box is not None and box.width > 0 and box.height > 0:
+                    left, top = max(0.0, box.left / width), max(0.0, box.top / height)
+                    out[part] = (left, top, min(box.width / width, 1 - left), min(box.height / height, 1 - top))
+                break
+        return out
 
     def render_many(self, cards: list[Card]) -> dict[tuple[str, int], Image.Image]:
         """Every face of several cards: {(card id, face index): image}."""

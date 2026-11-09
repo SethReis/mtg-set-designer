@@ -63,7 +63,10 @@ def health(session) -> RendererHealth:
 
 async def check(session) -> None:
     """Ask whether MSE can draw the cards (starts it; done in the background)."""
-    kind, message = await run.io_bound(session.mse_status)
+    status = await run.io_bound(session.mse_status)
+    if not status:                               # the set was closed meanwhile
+        return
+    kind, message = status
     h = health(session)
     if h.phase not in ("renewing", "manual") and (kind, message) != (h.kind, h.message):
         h.update(kind=kind, message=message)

@@ -46,7 +46,7 @@ async def test_empty_set_offers_the_first_card(user: User) -> None:
     user.find("Create set").click()
     await user.should_see("No cards yet")
     user.find("Create the first card").click()
-    await user.should_see("Rules text")
+    await user.should_see("On this card")
     assert len(state().session.project.cards) == 1
 
 
@@ -88,7 +88,7 @@ async def test_deep_links_reopen_a_view(user: User, query: str, expected: str) -
 async def test_deep_link_to_a_card_and_to_a_cycle(user: User) -> None:
     session, bear = await open_set(user)
     await user.open(f"/set?card={bear.id}")
-    await user.should_see("Rules text")
+    await user.should_see("On this card")
     cycle = session.new_cycle("Dragons")
     await user.open(f"/set?open=cycles&id={cycle.id}")
     await user.should_see("Dragons")
@@ -119,12 +119,13 @@ async def test_editor_steps_through_the_workspace_order(user: User) -> None:
     session, bear = await open_set(user)
     wolf = session.new_card("Timber Wolf")
     await user.open(f"/set?card={bear.id}")
-    await user.should_see("Rules text")
+    await user.should_see("On this card")
 
     async def showing(name: str) -> None:
-        """Wait for the editor's Name field to show `name` (clicks run as tasks)."""
+        """Wait for the editor's side panel to show `name` (clicks run as tasks)."""
         for _ in range(40):
-            if {e.value for e in user.find(kind=ui.input, content="Name").elements} == {name}:
+            rows = user.find(marker="row-name").elements
+            if {label.text for row in rows for label in row.descendants() if isinstance(label, ui.label)}                     == {"Name", name}:
                 return
             await asyncio.sleep(0.05)
         raise AssertionError(f"the editor doesn't show {name}")
@@ -142,7 +143,7 @@ async def test_a_card_opened_from_mechanics_returns_to_them(user: User) -> None:
     await user.open("/set?open=mechanics")
     await user.should_see("Used on 1 card")
     user.find(kind=ui.button, content="Grizzly Bears").click()
-    await user.should_see("Rules text")
+    await user.should_see("On this card")
     user.find(marker="modal-close").click()
     await user.should_see("Used on 1 card")
     user.find(marker="modal-close").click()

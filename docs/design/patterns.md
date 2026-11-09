@@ -76,3 +76,15 @@ your own wording.
   stand-in pictures") and asks first.
 - The fix never asks the user to open or close a window when Windows allows otherwise
   (`app/mse_trust.py`). "Why is this needed?" explains it in plain words.
+
+## Edit on the card
+When the thing being edited has a picture of itself (a card), the picture is the editor:
+- Every part of it is a hotspot placed from its own layout, never from guessed pixels
+  (`CardRenderer.field_boxes`). Hover shows the outline and the part's name; the cursor is
+  a text cursor.
+- A click opens a small popover with just that part's fields, saving as you type while the
+  picture redraws behind it. Pickers (symbols, mechanics) open on demand from the popover,
+  never as permanent palettes.
+- Tab walks the parts in reading order, so a whole card can be typed without the mouse.
+- A side panel lists the same parts (reaching ones the picture doesn't show) and holds the
+  fields that aren't printed (rarity, status, notes).

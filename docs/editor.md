@@ -3,8 +3,17 @@
 Edit a set's cards with a live preview. It is a workspace modal over the set overview
 (`overview.md`): click a card, press **New card** (Ctrl+N), or follow a card link from
 Mechanics, Cycles or Health. Close it with × or Esc; a card opened from one of those
-returns to it. The URL (`/set?card=<id>`) follows the card shown.
-Double-faced card editing and the problems panel come in a later stage.
+returns to it. The URL (`/set?card=<id>`) follows the card shown; `&part=text` (or name,
+cost, type, pt, art, ...) also opens that part.
+
+**Edit on the card.** The rendered card is the editor. Each part the frame draws (name,
+mana cost, type line, text box, P/T or loyalty, art, color indicator) is a hotspot over the
+picture, placed from the frame's own layout (`CardRenderer.field_boxes`, so it works for
+every frame and before the picture is drawn). Hover shows the part's outline and name;
+click opens a small popover editing just that part, saving as you type while the card
+redraws behind it. Esc or a click outside closes it; Enter closes one-line fields; Tab out
+of the last field (Shift+Tab out of the first) moves to the next (previous) part, so a card
+can be typed in one go: Enter (name), Tab, cost, Tab, type, Tab, rules, Tab, P/T.
 
 ## Where the code is
 
@@ -36,7 +45,8 @@ The NiceGUI modules in `src/setdesigner/ui/` only arrange widgets and call into 
     that mechanic is suggested.
   - Click a suggestion, or press Tab for the first one. Tab moves focus as usual when no
     suggestions are shown.
-  - The symbol palettes and the CARDNAME button insert at the caret.
+  - The symbol picker (the ⊕ button in the cost and rules popovers), CARDNAME and the
+    Mechanic menu (with ability-word variants) insert at the caret.
   - The caret position reaches Python with every keyup and click. QInput doesn't pass
     native `input` events on. Tab's own keyup is skipped, because it would report the
     caret from before the accepted suggestion.
@@ -46,26 +56,30 @@ The NiceGUI modules in `src/setdesigner/ui/` only arrange widgets and call into 
 - **Planeswalkers.** Write one ability per line, with its cost: `+1: Draw a card.`,
   `−2: ...`. A planeswalker type line switches the card to that frame's planeswalker
   version (see `mse/frames.py`), and the costs go to MSE's loyalty cost fields.
-- **Two-faced cards.** The row at the top of the form sets the layout: *Single*,
+- **Two-faced cards.** The row above the card sets the layout: *Single*,
   *Transform* or *Modal DFC* (`session.set_layout`). A two-faced card gets a
-  **Front · Back** switch: the form, the art and the preview show that face (the flip
-  button on the preview and Ctrl+. switch too), and face fields save to it
-  (`session.update(card, field, value, face=1)`). The **Card** section (rarity, number,
-  frame, status, archetypes, print copies) is shared by both faces. Backs get a **color
+  **Front · Back** switch: the card, its parts and the side panel show that face (the flip
+  button beside the card and Ctrl+. switch too), and face fields save to it
+  (`session.update(card, field, value, face=1)`). The panel's **Card** section (rarity,
+  number, frame, status, archetypes, print copies) is shared by both faces. Backs get a **color
   indicator** (W U B R G toggles); transform backs have no mana cost, so that field is
-  hidden. Transform cards pick a **transform symbol** on the front (Triangle, Sun / Moon,
+  hidden. Transform cards pick a **transform symbol** (in the Card section) (Triangle, Sun / Moon,
   Moon / Eldrazi, Fan, Spark, Comedy / Tragedy) and MSE gives the back its pair. Making a
   card single again, or a transform card from an MDFC with a back cost, asks first. The
   list and the title show "Front // Back". Problems from `validate_card` (a back with no
-  name, ...) show above the form.
+  name, ...) show at the top of the side panel.
 - **Spelling.** In the desktop window, right-click a text field for spelling suggestions.
   pywebview turns WebView2's right-click menu off, so `ui/native_window.py` turns it back on
   for text fields only.
-- **Layout.** Three columns filling the modal, each scrolling on its own: the card list
-  (hide it with the list button; hidden below 1100 px wide), the form in sections
-  (Identity, Text, Art, Stats, Card, Notes), and the preview at the card's ratio.
+- **Layout.** Three columns filling the modal: the card list (hide it with the list
+  button; hidden below 1100 px wide), the card as large as the column allows, and the
+  side panel. The panel lists the parts **On this card** with their values (click one to
+  edit it, which also reaches parts this frame doesn't draw, such as the artist), then the
+  **Card** fields, the set-health **Roles**, and **Notes**. Reminder-text choices for the
+  card's mechanics are in the rules popover.
 - **Keyboard.** Ctrl+N new card, Ctrl+D duplicate, Ctrl+F search the list, Ctrl+[ / Ctrl+]
-  previous / next card in the overview's order, Ctrl+. the other face, Esc closes.
+  previous / next card in the overview's order, Ctrl+. the other face, Enter (outside a
+  field) edits the name, Esc closes a part's popover, then the editor.
 
 ## Testing
 

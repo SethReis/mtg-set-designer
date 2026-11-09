@@ -3,6 +3,7 @@ rows or in a matrix, inside the app shell. Everything else opens over it.
 
     /set                          the workspace
     /set?card=<id>                ... with a card open in the editor
+    /set?card=<id>&part=text      ... and one of its parts open for editing (name, cost, ...)
     /set?open=mechanics&id=<id>   ... with a rail item open (mechanics, cycles, health,
                                   archetypes, settings, print)
 """
@@ -56,7 +57,7 @@ def register(state) -> None:
         return RedirectResponse("/set?open=health")
 
     @ui.page("/set")
-    def overview_page(open: str = "", id: str = "", card: str = "") -> None:   # noqa: A002 (query names)
+    def overview_page(open: str = "", id: str = "", card: str = "", part: str = "") -> None:   # noqa: A002
         session = state.session
         if session is None:
             ui.navigate.to("/")
@@ -493,7 +494,8 @@ def register(state) -> None:
                     if name == "card":
                         editor_panel(state, m, item, order=workspace_order,
                                      open_cycle=lambda cid: show("cycles", cid, back=here()),
-                                     on_card=lambda card: shown(card.id if card else None))
+                                     on_card=lambda card: shown(card.id if card else None),
+                                     open_part_name=part if item == card else None)   # ?part=
                     elif name == "mechanics":
                         mechanics_panel(state, m, select_id=item, on_select=shown,
                                         open_card=lambda card: open_card(card, back=here()))
