@@ -77,7 +77,7 @@ TILE_BORDERS = {k: f"var(--mana-{k.lower()})" for k in "WUBRGMCL"}     # tokens.
 
 def skeleton_tile() -> None:
     """A card-shaped placeholder with a soft shimmer, while the card's picture is drawn."""
-    ui.element("div").classes("ds-skeleton")
+    ui.element("div").classes("ds-loading-tile")
 
 
 def compact_tile(card: Card, width: int, face_index: int = 0) -> None:

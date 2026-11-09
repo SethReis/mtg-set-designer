@@ -242,7 +242,7 @@ body { font-family: var(--font-ui); font-size: var(--text-sm); line-height: 18px
 .ds-tile:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); outline-color: var(--border-strong); }
 .ds-tile > img { width: 100%; aspect-ratio: 375 / 523; height: auto; object-fit: cover; display: block;
                  animation: ds-fade-in var(--dur-med) ease-out; }
-.ds-skeleton { width: 100%; aspect-ratio: 375 / 523; border-radius: inherit;
+.ds-loading-tile { width: 100%; aspect-ratio: 375 / 523; border-radius: inherit;
                background: linear-gradient(100deg, var(--surface-2) 30%, var(--surface-3) 50%, var(--surface-2) 70%);
                background-size: 300% 100%; animation: ds-shimmer 1.4s ease-in-out infinite; }
 .ds-tile > img.face-back, .ds-tile.show-back > img.face-front,
@@ -458,7 +458,7 @@ mark { background: var(--accent-soft); color: var(--text); border-radius: 2px; p
 @keyframes ds-fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes ds-progress { from { left: -30%; } to { left: 100%; } }
 @media (prefers-reduced-motion: reduce) {
-  .ds-skeleton, .ds-card-box.empty, .ds-card-progress::after, .ds-tile > img { animation: none; }
+  .ds-loading-tile, .ds-card-box.empty, .ds-card-progress::after, .ds-tile > img { animation: none; }
 }
 
 /* ------------------------------------------------------------------ skeleton (skeleton_page.py) */
