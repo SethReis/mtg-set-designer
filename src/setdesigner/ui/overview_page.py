@@ -28,7 +28,7 @@ from .widgets import CARD_RATIO, STACK_CSS, compact_tile, served_url, skeleton_t
 THUMB_POLL = 0.5                         # seconds between checks for newly rendered pictures
 COLOR_CHOICES = {k: v for k, v in ov.COLOR_LABELS.items()}
 # the views that open over the workspace: workspace-size modals and the two dialogs
-WORKSPACE_VIEWS = {"skeleton": "Skeleton", "mechanics": "Mechanics", "cycles": "Cycles", "health": "Set health"}
+WORKSPACE_VIEWS = {"notebook": "Notebook", "skeleton": "Skeleton", "mechanics": "Mechanics", "cycles": "Cycles", "health": "Set health"}
 VIEWS = {*WORKSPACE_VIEWS, "archetypes", "settings", "print"}
 
 
@@ -89,12 +89,19 @@ def register(state) -> None:
             else:
                 show(name)
 
+        def inbox_changed() -> None:
+            shell.set_inbox(sum(1 for i in session.project.notebook if i.lane == "inbox"))
+
+        def new_idea(prefill: dict | None = None) -> None:
+            from .notebook_capture import capture_idea
+            capture_idea(state, parent=shell.dialogs, prefill=prefill, on_saved=lambda idea: inbox_changed())
+
         def set_filter(**values) -> None:
             for key, value in values.items():
                 setattr(view.filters, key, value)
             content.refresh()
 
-        shell = set_shell(state, open_view=open_view, new_card=new_card,
+        shell = set_shell(state, open_view=open_view, new_card=new_card, new_idea=new_idea,
                           on_search=lambda text: set_filter(text=text), search_text=view.filters.text)
         # the view open over the workspace: its modal, (name, item), and the one to return to
         active = {"modal": None, "view": None, "back": None}
@@ -571,6 +578,12 @@ def register(state) -> None:
                     elif name == "cycles":
                         cycles_panel(state, m, select_id=item, on_select=shown,
                                      open_card=lambda card: open_card(card, back=here()))
+                    elif name == "notebook":
+                        from .notebook_page import notebook_panel
+                        notebook_panel(state, m, select_id=item, on_select=shown,
+                                       open_card=lambda card: open_card(card, back=here()),
+                                       open_mechanic=lambda mid: show("mechanics", mid, back=here()),
+                                       on_change=inbox_changed)
                     elif name == "skeleton":
                         from .skeleton_page import skeleton_panel
                         skeleton_panel(state, m, open_card=lambda card: open_card(card, back=here()),

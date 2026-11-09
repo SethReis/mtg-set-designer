@@ -559,6 +559,12 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
                         .tooltip(COLOR_WORDS[color]).mark(f"indicator-{color}"):
                     c.mana_cost(f"{{{color}}}")
 
+    def spin_off(card: Card) -> None:
+        """A notebook idea that starts from this card (linked to it, in the Inbox)."""
+        from .notebook_capture import capture_idea
+        capture_idea(state, parent=m.body, prefill={"title": f"Variant of {card.faces[0].name}",
+                                                   "links": [{"kind": "card", "id": card.id}]})
+
     # ------------------------------------------------------------ header
     with m.actions:
         status = c.status("All changes saved")
@@ -572,6 +578,7 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
         with c.button(icon="more_horiz", kind="icon", tooltip="More"):
             with ui.menu().props("anchor='bottom right' self='top right'"):
                 ui.menu_item("Duplicate · Ctrl+D", on_click=lambda: view["card"] and duplicate(view["card"]))
+                ui.menu_item("Spin off an idea…", on_click=lambda: view["card"] and spin_off(view["card"]))                     .mark("spin-off-idea")
                 ui.menu_item("Delete…", on_click=lambda: view["card"] and delete(view["card"])) \
                     .classes("text-negative")
 
@@ -703,6 +710,10 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
                     c.button(f"Cycle: {cycle.name}", kind="ghost", icon="donut_large",
                              on_click=lambda: open_cycle(cycle.id)).props("dense").classes("self-start")
                 view["roles"] = roles_row(card)
+                for idea in session.ideas_for("card", card.id):
+                    with ui.row().classes("items-center gap-2 no-wrap w-full"):
+                        ui.icon("lightbulb").classes("text-[16px] faint")
+                        ui.label(f"From idea: {idea.title or idea.body[:60]}").classes("text-sm muted truncate")                             .tooltip(idea.body or idea.title).mark("from-idea")
                 with ui.expansion("Notes", value=bool(card.notes)).classes("w-full ds-notes"):
                     ui.textarea(value=card.notes, placeholder="Design notes, playtest feedback…",
                                 on_change=lambda e: changed("notes", e.value)) \

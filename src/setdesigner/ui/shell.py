@@ -19,6 +19,7 @@ from .widgets import served_url
 
 # (view, label, icon, tooltip); "cards" is the workspace, the rest open over it
 NAV = [("cards", "Cards", "view_module", "The set's cards"),
+       ("notebook", "Notebook", "lightbulb", "Ideas before they're cards"),
        ("skeleton", "Skeleton", "grid_view", "The slots the set plans to fill"),
        ("mechanics", "Mechanics", "auto_fix_high", "Keywords and ability words"),
        ("cycles", "Cycles", "donut_large", "Cards made as a cycle"),
@@ -41,7 +42,14 @@ class Shell:
     refresh_title: Callable[[], None]     # after the set's name, code or symbol change
     banner: ui.element = None              # full-width notices under the top bar (renderer_notice)
     renderer_chip: ui.button = None        # "Stand-in renderer" once its notice is put away
+    notebook_badge: ui.label = None        # the Notebook rail item's Inbox count
     busy: Callable[[], bool] = lambda: False   # a modal is open: the shell's keys rest
+
+    def set_inbox(self, ideas: int) -> None:
+        """The Notebook rail item's count of ideas in the Inbox (hidden at 0)."""
+        if self.notebook_badge is not None:
+            self.notebook_badge.text = str(ideas)
+            self.notebook_badge.set_visibility(ideas > 0)
 
     def set_health(self, warnings: int) -> None:
         self.health_badge.text = str(warnings)
@@ -56,7 +64,7 @@ class Shell:
 
 
 def set_shell(state, *, active: str = "cards", open_view: Callable[[str], None],
-              new_card: Callable[[], None], on_search: Callable[[str], None] | None = None,
+              new_card: Callable[[], None], new_idea: Callable[[], None] | None = None, on_search: Callable[[str], None] | None = None,
               search_text: str = "") -> Shell:
     """Build the shell for the open set. `open_view(view)` runs for a rail item ("mechanics",
     "settings", "sets", ...); `on_search` gets the top bar's search text."""
@@ -91,6 +99,9 @@ def set_shell(state, *, active: str = "cards", open_view: Callable[[str], None],
                 ui.label("Set Designer")
             for item in NAV:
                 b = nav(*item)
+                if item[0] == "notebook":
+                    with b:
+                        notebook_badge = ui.label().classes("ds-badge info ds-nav-badge")
                 if item[0] == "health":
                     health = b.mark("health")
                     with b:
@@ -129,6 +140,9 @@ def set_shell(state, *, active: str = "cards", open_view: Callable[[str], None],
                                          tooltip="Cards aren't drawn by Magic Set Editor right now")                     .props("dense").classes("ds-renderer-chip").mark("renderer-chip")
                 renderer_chip.set_visibility(False)
                 status = c.status("All changes saved")
+                if new_idea:
+                    c.button(icon="lightbulb", kind="icon", on_click=new_idea,
+                             tooltip="Catch an idea · Ctrl+Shift+N").mark("catch-idea")
                 c.button("New card", kind="primary", icon="add", on_click=new_card,
                          tooltip="New card · Ctrl+N")
                 with c.button(icon="more_horiz", kind="icon", tooltip="More").mark("more"):
@@ -155,11 +169,15 @@ def set_shell(state, *, active: str = "cards", open_view: Callable[[str], None],
             toggle_rail()
         elif key == "k":
             search.run_method("focus")
+        elif key == "n" and e.modifiers.shift:
+            if new_idea:
+                new_idea()
         elif key == "n":
             new_card()
 
     ui.keyboard(on_key=keys, ignore=["input", "select", "button", "textarea"])
     shell = Shell(main, dialogs, search, status, health, health_badge, dark, title.refresh, banner,
-                  renderer_chip)
+                  renderer_chip, notebook_badge)
     shell.set_health(0)
+    shell.set_inbox(sum(1 for i in session.project.notebook if i.lane == "inbox"))
     return shell

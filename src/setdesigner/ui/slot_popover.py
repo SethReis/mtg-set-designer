@@ -56,6 +56,16 @@ def slot_menu(session, slot: Slot, *, open_card: Callable[[Card], None],
         open_card(card)                         # first: closing clears the context we're in
         menu.close()
 
+    def add_idea() -> None:
+        """A notebook idea for this slot: its colors, type and archetype, linked to it."""
+        from .app import STATE
+        from .notebook_capture import capture_idea
+        menu.close()
+        capture_idea(STATE, parent=menu.client.layout, prefill={
+            "colors": "".join(x for x in slot.column if x in "WUBRG"),
+            "archetypes": [slot.archetype] if slot.archetype else [],
+            "sketch": {"type_line": slot.types}, "links": [{"kind": "slot", "id": slot.id}]})
+
     def editor() -> None:
         project = session.project
         with ui.element("div").classes("ds-part-editor").mark(f"slot-editor-{slot.id}"):
@@ -73,8 +83,11 @@ def slot_menu(session, slot: Slot, *, open_card: Callable[[Card], None],
                     c.button("Unassign", kind="ghost", on_click=lambda: fill(None)).props("dense") \
                         .mark("slot-unassign")
             else:
-                c.button("Create card from this slot", kind="primary", icon="add", on_click=create) \
-                    .props("dense").classes("self-start").mark("slot-create")
+                with ui.row().classes("items-center gap-2"):
+                    c.button("Create card from this slot", kind="primary", icon="add", on_click=create) \
+                        .props("dense").mark("slot-create")
+                    c.button("Add idea", kind="ghost", icon="lightbulb", on_click=add_idea) \
+                        .props("dense").mark("slot-idea").tooltip("A notebook idea for this slot")
             ui.label("What it asks for").classes("ds-label mt-2")
             with ui.row().classes("w-full no-wrap gap-2"):
                 ui.input("Type", value=slot.types, placeholder="Creature",

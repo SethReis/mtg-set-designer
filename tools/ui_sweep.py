@@ -50,6 +50,9 @@ VIEWS = {
     "mechanics-item": "/set?open=mechanics&dev_click=Flurry",
     "cycles-item": "/set?open=cycles&dev_click=Allied duals",
     "health-tune": "/set?open=health&dev_click=Tune checks",
+    "notebook": "/set?open=notebook",
+    "notebook-idea": "/set?open=notebook&dev_click=Graveyard-matters rare for BG",
+    "notebook-new": "/set?open=notebook&dev_click=New idea",
 }
 
 
@@ -122,12 +125,26 @@ class Edge:
         target.write_bytes(base64.b64decode(self.call("Page.captureScreenshot", format="png")["data"]))
 
     def close(self) -> None:
+        """Quit Edge and all its helper processes (killing only the main one leaves the
+        renderer and GPU processes behind, hundreds over a scan)."""
+        try:
+            self.call("Browser.close")
+        except Exception:
+            pass
         try:
             self.ws.close()
-        finally:
-            self.proc.kill()
+        except Exception:
+            pass
+        try:
+            self.proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(self.proc.pid)], capture_output=True)
             self.proc.wait()
+        for _ in range(20):                      # helpers let go of the profile last
             shutil.rmtree(self.profile, ignore_errors=True)
+            if not self.profile.exists():
+                break
+            time.sleep(0.25)
 
 
 def shoot(address: str, target: Path, width: int, height: int) -> bool:

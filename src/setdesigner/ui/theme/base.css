@@ -520,3 +520,27 @@ mark { background: var(--accent-soft); color: var(--text); border-radius: 2px; p
 /* dev (?part_outlines=1): every hotspot outlined, to check they sit on the card's parts */
 .ds-card-box.show-outlines .ds-hotspot { outline-color: var(--accent); }
 .ds-card-box.show-outlines .ds-hotspot::after { opacity: .85; }
+
+/* ------------------------------------------------------------------ notebook (notebook_page.py) */
+.ds-notebook { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.ds-notebook-bar { padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); flex: none; }
+.ds-notebook-main { display: grid; grid-template-columns: minmax(0, 1fr) clamp(300px, 30vw, 420px); flex: 1; min-height: 0; }
+.ds-notebook-board { overflow: auto; padding: var(--space-4); min-width: 0; }
+.ds-notebook-detail { overflow: auto; border-left: 1px solid var(--border); min-width: 0; }
+.ds-idea-board { display: grid; grid-template-columns: repeat(4, minmax(200px, 1fr)); gap: var(--space-3); min-height: 100%; }
+.ds-idea-lane { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2);
+                border: 1px solid var(--border); border-radius: var(--radius-md); min-width: 0; min-height: 200px; }
+.ds-idea-lane-head { padding: 2px 4px var(--space-1); }
+.ds-idea-lane-head .name { font-weight: 600; }
+.ds-idea { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border-radius: var(--radius-md);
+           background: var(--surface-2); border: 1px solid var(--border); cursor: grab; min-width: 0; }
+.ds-idea:hover { border-color: var(--border-strong, var(--text-faint)); }
+.ds-idea.selected { border-color: var(--accent); }
+.ds-idea .kind { font-size: 16px; color: var(--text-muted); flex: none; }
+.ds-idea .title { font-weight: 500; min-width: 0; overflow-wrap: anywhere; }
+.ds-idea .body { font-size: 12px; color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 3;
+                 -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.ds-tag { font-size: 11px; padding: 1px 6px; border-radius: 999px; background: var(--surface-3, var(--surface-1));
+          color: var(--text-muted); white-space: nowrap; }
+.ds-tag.link { color: var(--accent); }
+@media (max-width: 1100px) { .ds-notebook-main { grid-template-columns: minmax(0, 1fr) 300px; } }
