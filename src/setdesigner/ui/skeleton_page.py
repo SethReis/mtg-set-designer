@@ -101,7 +101,8 @@ def skeleton_panel(state, m: c.Modal, *, open_card: Callable[[Card], None],
             if view["group"] == "archetype":
                 rows = [(a.id, a.name) for a in project.archetypes] + [(None, "No archetype")]
                 for archetype, name in rows:
-                    in_row = [s for s in skeleton.slots if s.archetype == archetype]
+                    in_row = [s for s in skeleton.slots if (archetype in sk.slot_archetypes(s, project) if archetype
+                              else not sk.slot_archetypes(s, project))]
                     if not in_row and archetype is not None:
                         continue
                     full = sum(1 for s in in_row if s.card_id)
@@ -145,7 +146,7 @@ def skeleton_panel(state, m: c.Modal, *, open_card: Callable[[Card], None],
                  and (not view["column"] or s.column == view["column"])
                  and (not view["rarity"] or (s.rarity and s.rarity.value == view["rarity"]))]
         roles = {"": "—", **{rid: r.label for rid, r in ROLES.items()}}
-        archetypes = {"": "—", **{a.id: a.name for a in project.archetypes}}
+        archetypes = {a.id: a.name for a in project.archetypes}
         with ui.element("div").classes("ds-slot-table"):
             for heading in ("Slot", "Type", "MV", "Role", "Archetype", "Note", "Card"):
                 ui.label(heading).classes("head")
@@ -158,9 +159,9 @@ def skeleton_panel(state, m: c.Modal, *, open_card: Callable[[Card], None],
                     .props("dense borderless")
                 ui.select(roles, value=slot.role or "",
                           on_change=lambda e, s=slot: session.update_slot(s, role=e.value)).props("dense borderless")
-                ui.select(archetypes, value=slot.archetype or "",
-                          on_change=lambda e, s=slot: session.update_slot(s, archetype=e.value)) \
-                    .props("dense borderless")
+                ui.select(archetypes, value=sk.slot_archetypes(slot, project), multiple=True,
+                          on_change=lambda e, s=slot: session.update_slot(s, archetypes=e.value)) \
+                    .props("dense borderless use-chips").mark(f"table-archetypes-{slot.id}")
                 ui.input(value=slot.note, on_change=lambda e, s=slot: session.update_slot(s, note=e.value)) \
                     .props("dense borderless").mark(f"table-note-{slot.id}")
                 card = cards.get(slot.card_id) if slot.card_id else None

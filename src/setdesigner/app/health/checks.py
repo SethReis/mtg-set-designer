@@ -223,11 +223,12 @@ def skeleton_outside(project, _threshold):
 
 def archetype_coverage(project, threshold):
     """Per archetype: its skeleton slots against how many of them are filled."""
+    from ..skeleton import slot_archetypes
     if project.skeleton is None:
         return []
     out = []
     for archetype in project.archetypes:
-        slots = [s for s in project.skeleton.slots if s.archetype == archetype.id]
+        slots = [s for s in project.skeleton.slots if archetype.id in slot_archetypes(s, project)]
         if not slots:
             continue
         full = [s for s in slots if s.card_id]

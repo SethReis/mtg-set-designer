@@ -113,7 +113,8 @@ def test_skeleton_checks_and_targets() -> None:
     counts = {"G": {"common": 3}}
     p.skeleton = Skeleton(columns=["G"], counts=counts, slots=sk.generate(["G"], counts, p.archetypes))
     for slot in p.skeleton.slots:
-        slot.archetype = "ramp"
+        slot.archetypes = ["ramp"]
+    bear.archetypes = ["ramp"]                                 # a filled slot counts its card's tags
     sk.place_cards(p.skeleton, p)
     assert rarity_targets(p) == {Rarity.COMMON: 3}             # the skeleton, not SetInfo
     found = run_checks(p)

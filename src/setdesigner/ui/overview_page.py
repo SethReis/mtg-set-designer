@@ -256,7 +256,7 @@ def register(state) -> None:
                 if name == "rarity":
                     return [slot.rarity.value] if slot.rarity else []
                 if name == "archetype":
-                    return [slot.archetype or ov.NO_ARCHETYPE]
+                    return list(slot.archetypes) or [ov.NO_ARCHETYPE]
                 return None
             out = []
             for slot in skeleton.slots:

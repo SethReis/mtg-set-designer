@@ -437,14 +437,20 @@ class SetSession:
         self._save_skeleton()
 
     def update_slot(self, slot: Slot, **values: object) -> None:
-        """Change a slot's description: types, mana_value, role, archetype, note."""
+        """Change a slot's description: types, mana_value, role, archetypes, note. A filled
+        slot's archetypes are its card's, so changing them re-tags the card too."""
         for key, value in values.items():
-            if key not in ("types", "mana_value", "role", "archetype", "note"):
+            if key not in ("types", "mana_value", "role", "archetypes", "note"):
                 raise SessionError(f"Unknown slot field {key!r}")
             if key == "mana_value":
                 value = None if value in (None, "") else max(0, int(value))
-            elif key in ("role", "archetype"):
+            elif key == "role":
                 value = value or None
+            elif key == "archetypes":
+                value = [a for a in (value or []) if a]
+                card = next((c for c in self.project.cards if c.id == slot.card_id), None)
+                if card is not None:
+                    self.update(card, "archetypes", list(value))
             else:
                 value = str(value or "")
             setattr(slot, key, value)
@@ -493,8 +499,8 @@ class SetSession:
             self.update(card, "rarity", slot.rarity)
         if slot.types:
             self.update(card, "types", slot.types)
-        if slot.archetype:
-            self.update(card, "archetypes", [slot.archetype])
+        if slot.archetypes:
+            self.update(card, "archetypes", list(slot.archetypes))
         if slot.note:
             self.update(card, "notes", slot.note)
         self.assign(slot, card)
@@ -636,8 +642,8 @@ class SetSession:
                 self.update(card, "rarity", slot.rarity)
             if slot.types and not sketch.type_line:
                 self.update(card, "types", slot.types)
-            if slot.archetype and not idea.archetypes:
-                self.update(card, "archetypes", [slot.archetype])
+            if slot.archetypes and not idea.archetypes:
+                self.update(card, "archetypes", list(slot.archetypes))
             self.assign(slot, card)
             self._link(idea, "slot", slot.id)
         self._link(idea, "card", card.id)
@@ -658,7 +664,7 @@ class SetSession:
         def score(slot: Slot) -> tuple:
             return (slot.column == column,
                     bool(types and slot.types and slot.types.lower() in types),
-                    bool(slot.archetype and slot.archetype in idea.archetypes),
+                    bool(set(slot.archetypes) & set(idea.archetypes)),
                     len(set(slot.column) & set(column)))
 
         empty = [s for s in skeleton.slots if s.card_id is None]

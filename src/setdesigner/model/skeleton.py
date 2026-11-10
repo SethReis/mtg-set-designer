@@ -7,7 +7,7 @@ setdesigner.app.skeleton for generating, adjusting and filling it.
 """
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from .card import Rarity
 
@@ -21,10 +21,20 @@ class Slot(BaseModel):
     types: str = ""                  # the type line's left part it wants: "Creature", "Instant"
     mana_value: int | None = None
     role: str | None = None          # a Health role id (app/health/roles.ROLES)
-    archetype: str | None = None     # an archetype id
+    archetypes: list[str] = Field(default_factory=list)  # archetype ids it plans for (its card's, once filled)
     note: str = ""
     card_id: str | None = None       # the card that fills it
     cycle: str | None = None         # the cycle whose card was placed here
+
+    @model_validator(mode="before")
+    @classmethod
+    def _old_archetype(cls, data):
+        """Older skeletons kept one archetype id under "archetype"."""
+        if isinstance(data, dict) and "archetype" in data:
+            data = dict(data)
+            old = data.pop("archetype")
+            data.setdefault("archetypes", [old] if old else [])
+        return data
 
     @property
     def annotated(self) -> bool:

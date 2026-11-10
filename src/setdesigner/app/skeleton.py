@@ -146,7 +146,7 @@ def _archetype_for(column: str, archetypes: list[Archetype]) -> str | None:
 
 def _new_slot(column: str, rarity: str, index: int, archetypes: list[Archetype]) -> Slot:
     return Slot(id=label(column, rarity, index), column=column,
-                rarity=None if rarity == ANY else Rarity(rarity), archetype=_archetype_for(column, archetypes))
+                rarity=None if rarity == ANY else Rarity(rarity), archetypes=[a] if (a := _archetype_for(column, archetypes)) else [])
 
 
 def _rarity_key(slot: Slot) -> str:
@@ -238,8 +238,8 @@ def fits(card: Card, slot: Slot, columns: list[str], project: SetProject | None 
         score += 2 if mv == slot.mana_value else 1 if abs(mv - slot.mana_value) == 1 else -1
     if slot.role:
         score += 2 if slot.role in card_roles(card, project) else -1
-    if slot.archetype:
-        score += 2 if slot.archetype in card.archetypes else -1 if card.archetypes else 0
+    if slot.archetypes:
+        score += 2 if set(slot.archetypes) & set(card.archetypes) else -1 if card.archetypes else 0
     return score
 
 
@@ -286,13 +286,22 @@ def targets(skeleton: Skeleton) -> dict[Rarity, int]:
     return out
 
 
+def slot_archetypes(slot: Slot, project: SetProject) -> list[str]:
+    """A slot's archetypes: its card's tags once filled, else the archetypes it plans for."""
+    if slot.card_id is not None:
+        card = next((c for c in project.cards if c.id == slot.card_id), None)
+        if card is not None:
+            return list(card.archetypes)
+    return list(slot.archetypes)
+
+
 def describe(slot: Slot, project: SetProject | None = None) -> str:
     """What an empty slot asks for, in a few words: "Creature · 2 MV · Removal · note"."""
     from .health.roles import ROLES
     parts = [slot.types, f"{slot.mana_value} MV" if slot.mana_value is not None else "",
              ROLES[slot.role].label if slot.role in ROLES else ""]
-    if project is not None and slot.archetype:
-        name = next((a.name for a in project.archetypes if a.id == slot.archetype), "")
-        parts.append(name)
+    if project is not None:
+        names = {a.id: a.name for a in project.archetypes}
+        parts.extend(names.get(a, "") for a in slot_archetypes(slot, project))
     parts.append(slot.note)
     return " · ".join(p for p in parts if p)

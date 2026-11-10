@@ -48,8 +48,8 @@ def test_generated_labels_are_unique_and_archetype_columns_are_tagged() -> None:
     slots = sk.generate(columns, sk.default_counts("play_booster", columns), ARCHETYPES)
     assert len({s.id for s in slots}) == len(slots) == 261
     assert slots[0].id == "W-C01"
-    assert {s.archetype for s in slots if s.column == "WU"} == {"flyers"}
-    assert {s.archetype for s in slots if s.column == "W"} == {None}
+    assert {tuple(s.archetypes) for s in slots if s.column == "WU"} == {("flyers",)}
+    assert {tuple(s.archetypes) for s in slots if s.column == "W"} == {()}
 
 
 def skeleton_with(counts, columns=None) -> Skeleton:

@@ -261,7 +261,7 @@ def test_a_card_from_a_slot_starts_from_its_description(session) -> None:
     session.project.archetypes.append(Archetype(id="flyers", name="WU flyers", colors="WU"))
     skeleton = make_skeleton(session, {"W": {"uncommon": 1}})
     slot = skeleton.slots[0]
-    session.update_slot(slot, types="Creature", mana_value="2", archetype="flyers", note="2-drop flyer")
+    session.update_slot(slot, types="Creature", mana_value="2", archetypes=["flyers"], note="2-drop flyer")
     card = session.new_card_from_slot(slot)
     assert card.rarity == Rarity.UNCOMMON and card.faces[0].type_line == "Creature"
     assert card.archetypes == ["flyers"] and card.notes == "2-drop flyer"
@@ -293,3 +293,25 @@ def test_cycle_cards_land_in_matching_slots(session) -> None:
     made = session.generate_cycle(cycle)
     placed = [skeleton.slot_of(card.id) for card in made]
     assert all(placed) and {s.cycle for s in placed} == {cycle.id}
+
+def test_slot_and_card_archetypes_stay_in_sync(session) -> None:
+    from setdesigner.app.skeleton import slot_archetypes
+    from setdesigner.model import Archetype, Slot
+    for aid in ("flyers", "spells"):
+        session.project.archetypes.append(Archetype(id=aid, name=aid, colors="WU"))
+    skeleton = make_skeleton(session, {"W": {"common": 1}})
+    slot = skeleton.slots[0]
+    session.update_slot(slot, archetypes=["flyers"])               # an empty slot: its plan
+    card = session.new_card("Gull")
+    session.update(card, "archetypes", ["spells"])
+    session.assign(slot, card)
+    assert slot_archetypes(slot, session.project) == ["spells"]    # the card's tags win
+    session.update(card, "archetypes", ["spells", "flyers"])       # editor -> skeleton
+    assert slot_archetypes(slot, session.project) == ["spells", "flyers"]
+    session.update_slot(slot, archetypes=["flyers"])               # skeleton -> editor
+    assert card.archetypes == ["flyers"]
+    session.assign(slot, None)
+    session.update(card, "archetypes", [])
+    assert slot_archetypes(slot, session.project) == ["flyers"]    # empty again: the plan
+    assert Slot.model_validate({"id": "W-C01", "column": "W", "archetype": "flyers"}).archetypes == ["flyers"]
+    assert Slot.model_validate({"id": "W-C01", "column": "W", "archetype": None}).archetypes == []

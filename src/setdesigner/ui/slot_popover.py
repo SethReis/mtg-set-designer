@@ -63,7 +63,7 @@ def slot_menu(session, slot: Slot, *, open_card: Callable[[Card], None],
         menu.close()
         capture_idea(STATE, parent=menu.client.layout, prefill={
             "colors": "".join(x for x in slot.column if x in "WUBRG"),
-            "archetypes": [slot.archetype] if slot.archetype else [],
+            "archetypes": list(slot.archetypes),
             "sketch": {"type_line": slot.types}, "links": [{"kind": "slot", "id": slot.id}]})
 
     def editor() -> None:
@@ -98,9 +98,10 @@ def slot_menu(session, slot: Slot, *, open_card: Callable[[Card], None],
                 ui.select({"": "Any role", **{rid: r.label for rid, r in ROLES.items()}}, value=slot.role or "",
                           label="Role", on_change=lambda e: update(role=e.value)) \
                     .props("dense outlined").classes("grow")
-                ui.select({"": "No archetype", **{a.id: a.name for a in project.archetypes}},
-                          value=slot.archetype or "", label="Archetype",
-                          on_change=lambda e: update(archetype=e.value)).props("dense outlined").classes("grow")
+                ui.select({a.id: a.name for a in project.archetypes}, multiple=True,
+                          value=sk.slot_archetypes(slot, project), label="Archetypes",
+                          on_change=lambda e: update(archetypes=e.value)) \
+                    .props("dense outlined use-chips").classes("grow").mark(f"slot-archetypes-{slot.id}")
             ui.textarea("Note", value=slot.note, placeholder="2-drop flyer for the WU deck",
                         on_change=lambda e: update(note=e.value)).props("autogrow outlined").classes("w-full")
             if card is None:
