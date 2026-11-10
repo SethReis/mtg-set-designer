@@ -23,3 +23,4 @@ class SetInfo(BaseModel):
     language: str = "English"
     rarity_slots: dict[Rarity, int] = Field(default_factory=dict)
     health: dict[str, CheckSetting] = Field(default_factory=dict)   # check id -> settings
+    balance: dict[str, float] = Field(default_factory=dict)         # norm key -> value (app.balance.norms)

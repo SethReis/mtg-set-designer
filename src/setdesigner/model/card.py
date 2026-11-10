@@ -105,6 +105,10 @@ class Card(BaseModel):
     # transform cards: the front's symbol (model.layouts.TRANSFORM_SYMBOLS); "" = the triangle.
     # The back gets the matching one.
     transform_symbol: str = ""
+    # Balance (app/balance): mana added to the card's computed worth where the scorer
+    # misjudges it, and why
+    balance_adjust: float = 0.0
+    balance_note: str = ""
 
     def iter_faces(self) -> Iterator[tuple[int, Face]]:
         return iter(enumerate(self.faces))

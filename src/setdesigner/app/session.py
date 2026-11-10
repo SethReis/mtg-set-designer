@@ -39,7 +39,7 @@ FACE_FIELDS = {"name", "mana_cost", "type_line", "rules_text", "flavor_text", "p
 TYPE_PARTS = {"types", "subtypes"}      # the two halves of type_line, edited separately
 ART_FIELDS = {"art_path", "art_crop"}
 CARD_FIELDS = {"rarity", "collector_number", "frame", "status", "notes", "archetypes", "print_copies",
-               "transform_symbol"}
+               "transform_symbol", "balance_adjust", "balance_note"}
 OPTIONAL = {"power", "toughness", "loyalty"}            # "" means "not set"
 
 
@@ -243,6 +243,8 @@ class SetSession:
                 value = list(value or [])
             elif field == "print_copies":                   # None / "" = follow the rarity
                 value = None if value in (None, "") else max(0, int(value))
+            elif field == "balance_adjust":                 # None / "" = no adjustment
+                value = 0.0 if value in (None, "") else float(value)
             setattr(card, field, value)
         else:
             raise SessionError(f"Unknown field {field!r}")
@@ -301,6 +303,14 @@ class SetSession:
         """Tune one set-health check (app.health.checks); None threshold = its default.
         Only the health page reads these, so the renderer keeps running."""
         self.project.info.health[check_id] = CheckSetting(enabled=enabled, threshold=threshold)
+        save_info(self.folder, self.project.info)
+
+    def set_balance_norm(self, key: str, value: float | None) -> None:
+        """Override one Balance norm (app.balance.norms) for this set; None = the default."""
+        if value is None:
+            self.project.info.balance.pop(key, None)
+        else:
+            self.project.info.balance[key] = float(value)
         save_info(self.folder, self.project.info)
 
     def set_role(self, card: Card, role: str, value: bool | None) -> None:

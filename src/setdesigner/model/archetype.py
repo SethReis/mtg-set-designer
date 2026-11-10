@@ -13,3 +13,5 @@ class Archetype(BaseModel):
     description: str = ""
     key_mechanics: list[str] = Field(default_factory=list)    # mechanic ids
     targets: dict[Rarity, int] = Field(default_factory=dict)  # wanted card count per rarity
+    # roles the deck needs (Health role ids, plus "two_drop"); None = app.balance's defaults
+    key_roles: list[str] | None = None

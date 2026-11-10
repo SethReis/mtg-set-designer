@@ -45,3 +45,5 @@ class Mechanic(BaseModel):
     templates: list[AbilityTemplate] = Field(default_factory=list)
     # set-health roles (app/health/roles.ROLES ids) every card with this mechanic counts toward
     roles: list[str] = Field(default_factory=list)
+    # Balance (app/balance): what the mechanic is worth on a card, in mana
+    value: float = 0.5

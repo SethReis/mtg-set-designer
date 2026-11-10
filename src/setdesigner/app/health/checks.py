@@ -243,6 +243,37 @@ def archetype_coverage(project, threshold):
     return out
 
 
+def off_curve(project, threshold):
+    """Cards whose worth is beyond their rarity's tolerance (app.balance)."""
+    from ..balance import scores
+    above = [s.card_id for s in scores(project).values() if s.verdict == "above"]
+    below = [s.card_id for s in scores(project).values() if s.verdict == "below"]
+    out = []
+    if above:
+        out.append(Warning("off_curve", f"{_plural(len(above), 'card')} above curve for their rarity", above))
+    if below:
+        out.append(Warning("off_curve", f"{_plural(len(below), 'card')} below curve for their rarity", below, "info"))
+    return out
+
+
+def weak_archetype(project, threshold):
+    """Archetypes below the strength threshold, or missing a key role (app.balance)."""
+    from ..balance import ROLE_LABELS, archetype_strength
+    out = []
+    for a in archetype_strength(project):
+        if not a.cards:
+            continue
+        reasons = []
+        if a.strength < threshold:
+            reasons.append(f"strength {a.strength}")
+        if a.missing:
+            reasons.append("no " + ", ".join(ROLE_LABELS.get(r, r).lower() for r in a.missing))
+        if reasons:
+            out.append(Warning("weak_archetype", f"{a.archetype.name}: " + "; ".join(reasons),
+                               [c.id for c in a.cards]))
+    return out
+
+
 CHECKS: dict[str, Check] = {c.id: c for c in [
     Check("common_removal", "Common removal per color", 2, "cards", common_removal),
     Check("any_removal", "Removal per color at common or uncommon", 1, "cards", any_removal),
@@ -260,6 +291,8 @@ CHECKS: dict[str, Check] = {c.id: c for c in [
     Check("skeleton_empty", "Empty skeleton slots", None, "", skeleton_empty),
     Check("skeleton_outside", "Cards outside the skeleton", None, "", skeleton_outside),
     Check("archetype_coverage", "Archetype slots filled in the skeleton", 75, "%", archetype_coverage),
+    Check("off_curve", "Cards off curve for their rarity", None, "", off_curve),
+    Check("weak_archetype", "Weak archetypes", 60, "strength", weak_archetype),
 ]}
 
 
