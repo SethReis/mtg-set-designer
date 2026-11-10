@@ -24,7 +24,8 @@ NAV = [("cards", "Cards", "view_module", "The set's cards"),
        ("mechanics", "Mechanics", "auto_fix_high", "Keywords and ability words"),
        ("cycles", "Cycles", "donut_large", "Cards made as a cycle"),
        ("archetypes", "Archetypes", "hub", "Draft archetypes and their targets"),
-       ("health", "Health", "monitor_heart", "Curves, roles per color, mechanics, complexity")]
+       ("health", "Health", "monitor_heart", "Curves, roles per color, mechanics, complexity"),
+       ("balance", "Balance", "balance", "How strong each card and archetype is for its cost")]
 FOOT = [("print", "Print", "print", "Print the set as paper proxies"),
         ("settings", "Set", "tune", "The set's name, frame, symbol and rarity targets"),
         ("sets", "Sets", "arrow_back", "Back to sets")]

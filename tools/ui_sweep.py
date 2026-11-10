@@ -53,6 +53,10 @@ VIEWS = {
     "notebook": "/set?open=notebook",
     "notebook-idea": "/set?open=notebook&dev_click=Graveyard-matters rare for BG",
     "notebook-new": "/set?open=notebook&dev_click=New idea",
+    "balance": "/set?open=balance",
+    "balance-card": "/set?open=balance&dev_click=Wary Ensine",
+    "balance-archetypes": "/set?open=balance&dev_click=Archetypes",
+    "balance-norms": "/set?open=balance&dev_click=Norms",
 }
 
 

@@ -28,7 +28,7 @@ from .widgets import CARD_RATIO, STACK_CSS, compact_tile, served_url, skeleton_t
 THUMB_POLL = 0.5                         # seconds between checks for newly rendered pictures
 COLOR_CHOICES = {k: v for k, v in ov.COLOR_LABELS.items()}
 # the views that open over the workspace: workspace-size modals and the two dialogs
-WORKSPACE_VIEWS = {"notebook": "Notebook", "skeleton": "Skeleton", "mechanics": "Mechanics", "cycles": "Cycles", "health": "Set health"}
+WORKSPACE_VIEWS = {"notebook": "Notebook", "skeleton": "Skeleton", "mechanics": "Mechanics", "cycles": "Cycles", "health": "Set health", "balance": "Balance"}
 VIEWS = {*WORKSPACE_VIEWS, "archetypes", "settings", "print"}
 
 
@@ -574,7 +574,8 @@ def register(state) -> None:
                                      open_cycle=lambda cid: show("cycles", cid, back=here()),
                                      on_card=lambda card: shown(card.id if card else None),
                                      open_part_name=part if item == card else None,   # ?part=
-                                     outlines=bool(part_outlines))                    # dev: all hotspots
+                                     outlines=bool(part_outlines),                    # dev: all hotspots
+                                     open_balance=lambda cid: show("balance", cid, back=here()))
                     elif name == "mechanics":
                         mechanics_panel(state, m, select_id=item, on_select=shown,
                                         open_card=lambda card: open_card(card, back=here()))
@@ -591,6 +592,11 @@ def register(state) -> None:
                         from .skeleton_page import skeleton_panel
                         skeleton_panel(state, m, open_card=lambda card: open_card(card, back=here()),
                                        on_change=content.refresh)
+                    elif name == "balance":
+                        from .balance_page import balance_panel
+                        balance_panel(state, m, select_id=item, on_select=shown,
+                                      open_card=lambda card: open_card(card, back=here()),
+                                      on_change=content.refresh)
                     elif name == "health":
                         health_panel(state, m, open_card=lambda card: open_card(card, back=here()),
                                      open_cycle=lambda cid: show("cycles", cid, back=here()),

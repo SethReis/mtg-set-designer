@@ -19,6 +19,7 @@ from nicegui import run, ui
 
 from ..app import ability_words, text_input
 from ..app.health.roles import ROLES, detected_roles, mechanic_roles
+from ..app import balance as bal
 from ..model import Card, Layout, MechanicKind, Rarity, Status, validate_card
 from ..model.card import COLOR_NAMES, COLORS
 from ..model.layouts import TRANSFORM_SYMBOL_LABELS
@@ -46,7 +47,8 @@ BACK_FIELDS = ("name", "mana_cost", "type_line", "rules_text", "flavor_text", "p
 
 def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Card]],
                  open_cycle: Callable[[str], None], on_card: Callable[[Card | None], None],
-                 open_part_name: str | None = None, outlines: bool = False) -> None:
+                 open_part_name: str | None = None, outlines: bool = False,
+                 open_balance: Callable[[str], None] | None = None) -> None:
     """Build the editor into the modal `m`, showing `card_id`. `order()` is the workspace's
     card order (previous / next); `on_card` runs when another card is shown;
     `open_part_name` opens that part's editor once the card is shown ("name", "text", ...)."""
@@ -210,6 +212,8 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
             return
         used = list(card.mechanics)
         session.update(card, field, value, face=view["face"])
+        if field in ("mana_cost", "rules_text", "power", "toughness", "rarity", "types", "subtypes", "type_line"):
+            balance_badge.refresh()
         if field in ("name", "collector_number", "rarity", "mana_cost", "color_indicator"):
             card_list.refresh()
             retitle()
@@ -565,6 +569,19 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
         capture_idea(state, parent=m.body, prefill={"title": f"Variant of {card.faces[0].name}",
                                                    "links": [{"kind": "card", "id": card.id}]})
 
+    @ui.refreshable
+    def balance_badge() -> None:
+        """How the card scores for its cost (app.balance); click: the breakdown in Balance."""
+        card = view["card"]
+        s = bal.score(card, session.project) if card is not None else None
+        if s is None:
+            return
+        from .balance_page import VERDICTS, verdict_text
+        b = c.badge(f"Balance: {verdict_text(s)}", VERDICTS[s.verdict][1]).mark("balance-badge")             .tooltip(f"Worth {s.effective:g} mana, costs {s.actual}"
+                     + (f"; {len(s.unscored)} line(s) not scored" if s.unscored else ""))
+        if open_balance is not None:
+            b.classes("cursor-pointer").on("click", lambda: open_balance(card.id))
+
     # ------------------------------------------------------------ header
     with m.actions:
         status = c.status("All changes saved")
@@ -578,6 +595,8 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
         with c.button(icon="more_horiz", kind="icon", tooltip="More"):
             with ui.menu().props("anchor='bottom right' self='top right'"):
                 ui.menu_item("Duplicate · Ctrl+D", on_click=lambda: view["card"] and duplicate(view["card"]))
+                if open_balance is not None:
+                    ui.menu_item("Balance…", on_click=lambda: view["card"] and open_balance(view["card"].id))                         .mark("open-balance")
                 ui.menu_item("Spin off an idea…", on_click=lambda: view["card"] and spin_off(view["card"]))                     .mark("spin-off-idea")
                 ui.menu_item("Delete…", on_click=lambda: view["card"] and delete(view["card"])) \
                     .classes("text-negative")
@@ -668,6 +687,7 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
                     return
                 for problem in validate_card(card):
                     c.status(problem[0].upper() + problem[1:], "warning")
+                balance_badge()
                 face_label = "" if len(card.faces) == 1 else (" · front" if view["face"] == 0 else " · back")
                 ui.label(f"On this card{face_label}").classes("ds-form-h")
                 c.hint("Click a part of the card, or a line here, to edit it. Tab moves on.")

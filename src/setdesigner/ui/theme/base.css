@@ -563,3 +563,15 @@ mark { background: var(--accent-soft); color: var(--text); border-radius: 2px; p
   .ds-toolbar .ds-collapse .q-btn__content > .block { display: none; }
   .ds-size { width: 80px; }
 }
+
+/* ------------------------------------------------------------------ balance (balance_page.py) */
+.ds-link { color: var(--accent); cursor: pointer; min-width: 0; }
+.ds-link:hover { text-decoration: underline; }
+.ds-balance-scroll { flex: 1; min-height: 0; overflow: auto; padding: var(--space-4); }
+.ds-balance-arch { padding: var(--space-3) var(--space-2); border-bottom: 1px solid var(--border); }
+.ds-balance-arch .ds-badge { flex: none; }
+.ds-meter { height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; flex: none; }
+.ds-meter .fill { height: 100%; background: var(--accent); }
+.ds-bar { width: 18px; border-radius: 3px 3px 0 0; background: var(--accent); opacity: .8; }
+.ds-norms { display: grid; grid-template-columns: minmax(0, 1fr) auto 80px; gap: 6px var(--space-3);
+            align-items: center; max-width: 720px; margin-top: var(--space-2); }
