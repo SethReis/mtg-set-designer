@@ -153,23 +153,26 @@ def register(state) -> None:
                 slots_switch = ui.switch("Slots", value=settings.show_slots,
                                          on_change=lambda e: set_setting(show_slots=e.value))                     .props("dense").mark("show-slots")                     .tooltip("The skeleton's empty slots, as tiles in their groups")
                 ui.element("div").classes("grow")
-                count = ui.label().classes("muted num")
+                count = ui.label().classes("muted num ds-wide-only")
                 with c.button("Filters", kind="secondary", icon="filter_list") \
-                        .props("dense").classes("px-2") as filters_button:
+                        .props("dense").classes("px-2 ds-collapse") as filters_button:
                     filters_badge = ui.label().classes("ds-badge info ml-1")
                     with ui.menu().props("anchor='bottom right' self='top right'"), \
                             ui.column().classes("p-4 gap-3 w-[300px]"):
+                        ui.label("Status").classes("ds-label -mb-3")
                         ui.select({s.value: s.value.title() for s in Status}, multiple=True, label="Status",
                                   value=sorted(view.filters.statuses),
                                   on_change=lambda e: set_filter(statuses=set(e.value or []))) \
-                            .props("dense outlined use-chips clearable").classes("w-full")
+                            .props("dense outlined use-chips clearable").classes("w-full ds-unlabeled")
+                        ui.label("Rarity").classes("ds-label -mb-3")
                         ui.select({r.value: r.value.title() for r in Rarity}, multiple=True, label="Rarity",
                                   value=sorted(view.filters.rarities),
                                   on_change=lambda e: set_filter(rarities=set(e.value or []))) \
-                            .props("dense outlined use-chips clearable").classes("w-full")
+                            .props("dense outlined use-chips clearable").classes("w-full ds-unlabeled")
+                        ui.label("Color").classes("ds-label -mb-3")
                         ui.select(COLOR_CHOICES, multiple=True, label="Color", value=sorted(view.filters.colors),
                                   on_change=lambda e: set_filter(colors=set(e.value or []))) \
-                            .props("dense outlined use-chips clearable").classes("w-full")
+                            .props("dense outlined use-chips clearable").classes("w-full ds-unlabeled")
                 filters_button.tooltip("Status, rarity, color")
                 with ui.element("div").classes("ds-size").tooltip("Card size"):
                     ui.icon("photo_size_select_small").classes("text-[16px]")

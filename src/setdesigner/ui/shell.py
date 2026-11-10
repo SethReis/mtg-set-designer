@@ -144,7 +144,7 @@ def set_shell(state, *, active: str = "cards", open_view: Callable[[str], None],
                     c.button(icon="lightbulb", kind="icon", on_click=new_idea,
                              tooltip="Catch an idea · Ctrl+Shift+N").mark("catch-idea")
                 c.button("New card", kind="primary", icon="add", on_click=new_card,
-                         tooltip="New card · Ctrl+N")
+                         tooltip="New card · Ctrl+N").props("no-wrap")
                 with c.button(icon="more_horiz", kind="icon", tooltip="More").mark("more"):
                     with ui.menu().props("anchor='bottom right' self='top right'"):
                         ui.label("Theme").classes("ds-label px-4 pt-2")

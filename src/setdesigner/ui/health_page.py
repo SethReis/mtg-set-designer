@@ -111,9 +111,11 @@ def health_panel(state, m: c.Modal, *, open_card: Callable[[Card], None],
                     field = None
                     if check.default is not None:
                         setting = project.info.health.get(check.id)
-                        field = ui.number(check.unit, value=setting.threshold if setting else None,
+                        field = ui.number(value=setting.threshold if setting else None,
                                           placeholder=f"{check.default:g}", min=0) \
-                            .props("dense outlined").classes("w-36").mark(f"threshold-{check.id}")
+                            .props("dense outlined").classes("w-20").mark(f"threshold-{check.id}")
+                    # the unit beside the field, in a fixed column so the fields line up
+                    ui.label(check.unit if field else "").classes("muted text-sm w-40 shrink-0")
                     rows.append((check, on, field))
 
         def save() -> None:

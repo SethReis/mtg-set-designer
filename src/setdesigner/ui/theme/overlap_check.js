@@ -92,6 +92,21 @@
       if (s.overflowX === "visible") add({ kind: "spills", a: text, by: el.scrollWidth - el.clientWidth });
       else if (s.textOverflow !== "ellipsis") add({ kind: "clipped", a: text });
     }
+    // a field whose prefix, suffix or label leaves its value no room to show
+    for (const input of root().querySelectorAll(".q-field input")) {
+      if (!visible(input) || input.closest(IGNORE)) continue;
+      const w = input.getBoundingClientRect().width;
+      if (w < 16) add({ kind: "squeezed-field", a: (input.value || input.placeholder || "").slice(0, 40), width: Math.round(w) });
+    }
+    // the overview toolbar stays one row from 1000px up
+    if (window.innerWidth >= 1000) {
+      for (const bar of root().querySelectorAll(".ds-toolbar")) {
+        const kids = [...bar.children].filter(visible);
+        if (!kids.length) continue;
+        const tops = kids.map((k) => k.getBoundingClientRect().top);
+        if (Math.max(...tops) - Math.min(...tops) > 20) add({ kind: "toolbar-wraps" });
+      }
+    }
     let pre = document.getElementById("overlap-report");
     if (!pre) { pre = document.createElement("pre"); pre.id = "overlap-report"; pre.hidden = true; document.body.append(pre); }
     pre.textContent = JSON.stringify(found);

@@ -502,8 +502,10 @@ mark { background: var(--accent-soft); color: var(--text); border-radius: 2px; p
 .ds-slot-suggestions { display: flex; flex-wrap: wrap; gap: 4px; }
 .ds-slot-card { padding: 6px 8px; border-radius: var(--radius-sm); background: var(--surface-2); }
 .ds-slot-table { display: grid; grid-template-columns: 76px minmax(120px, 1fr) 64px minmax(110px, 1fr)
-                 minmax(120px, 1fr) minmax(160px, 2fr) minmax(140px, 1.4fr); gap: 0 var(--space-2);
+                 minmax(120px, 1fr) minmax(160px, 2fr) minmax(140px, 1.4fr); gap: 0;
                  align-items: center; }
+/* spacing inside the cells, not between them, so the heading underline runs unbroken */
+.ds-slot-table > * { padding-right: var(--space-2); min-width: 0; }
 .ds-slot-table .head { font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
                        color: var(--text-faint); padding-bottom: 4px; border-bottom: 1px solid var(--border); }
 .ds-slot-table-card { display: flex; align-items: center; cursor: pointer; min-width: 0; }
@@ -544,3 +546,20 @@ mark { background: var(--accent-soft); color: var(--text); border-radius: 2px; p
           color: var(--text-muted); white-space: nowrap; }
 .ds-tag.link { color: var(--accent); }
 @media (max-width: 1100px) { .ds-notebook-main { grid-template-columns: minmax(0, 1fr) 300px; } }
+
+/* a field whose name is a heading above it: its own label stays for screen readers and
+   tests, hidden along with the room Quasar keeps for it */
+.ds-unlabeled .q-field__label { display: none; }
+.ds-unlabeled.q-field--labeled .q-field__control-container { padding-top: 0; }
+.ds-unlabeled.q-field--labeled .q-field__native { padding: 4px 0; }
+
+/* the overview toolbar stays one row down to 1000px: narrower windows first drop the card
+   count and the Filters label (the icon and its badge stay); below 1000px it wraps */
+@media (min-width: 1000px) { .ds-toolbar { flex-wrap: nowrap; } }
+.ds-toolbar > * { flex: none; }
+.ds-toolbar > .grow { flex: 1 1 0; min-width: 0; }
+@media (max-width: 1100px) {
+  .ds-toolbar .ds-wide-only { display: none; }
+  .ds-toolbar .ds-collapse .q-btn__content > .block { display: none; }
+  .ds-size { width: 80px; }
+}
