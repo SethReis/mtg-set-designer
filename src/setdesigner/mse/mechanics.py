@@ -81,9 +81,32 @@ def _collector_order(card: Card) -> tuple:
     return (int(digits.group()) if digits else float("inf"), card.collector_number, card.id)
 
 
-def reminder_choices(project: SetProject) -> dict[str, dict[str, bool]]:
-    """card id -> {mechanic name: show reminder?} for every mechanic the card uses.
-    A card's own override (Card.reminders) wins over the mechanic's policy."""
+def _decide(policy: ReminderPolicy, override: bool | None, card: Card, seen_colors: set[str]) -> bool:
+    """One card's reminder choice: its own override, else the policy (updates seen_colors
+    for first-per-color)."""
+    if override is not None:                # the card's own choice wins
+        if policy == ReminderPolicy.FIRST_PER_COLOR:
+            seen_colors |= set(card.color_identity or "C")
+        return override
+    if policy == ReminderPolicy.ALWAYS:
+        return True
+    if policy == ReminderPolicy.NEVER:
+        return False
+    if policy == ReminderPolicy.COMMONS_ONLY:
+        return card.rarity == Rarity.COMMON
+    colors = set(card.color_identity or "C")    # first per color ("C" = colorless)
+    show = not colors <= seen_colors
+    seen_colors |= colors
+    return show
+
+
+def reminder_choices(project: SetProject, keywords=None, all_keywords: bool = False) -> dict[str, dict[str, bool]]:
+    """card id -> {mechanic or keyword name: show reminder?} for every set mechanic and
+    every Magic keyword (mse.game_keywords; `keywords` defaults to the game's) the card
+    uses. A card's own override (Card.reminders) wins over the policy. A keyword is only
+    listed where its choice differs from what MSE does by default (gk.mse_default), so
+    MSE's own output is untouched otherwise; `all_keywords` lists every one."""
+    from . import game_keywords as gk
     choices: dict[str, dict[str, bool]] = {card.id: {} for card in project.cards}
     ordered = sorted(project.cards, key=_collector_order)
     for mechanic in project.mechanics:
@@ -91,24 +114,19 @@ def reminder_choices(project: SetProject) -> dict[str, dict[str, bool]]:
         for card in ordered:
             if not uses(card, mechanic):
                 continue
-            policy = mechanic.reminder_policy
             if mechanic.kind == MechanicKind.ABILITY_WORD or not mechanic.reminder_text.strip():
                 show = False                        # nothing to show (ability words have none)
-            elif mechanic.id in card.reminders:     # the card's own choice wins
-                show = card.reminders[mechanic.id]
-                if policy == ReminderPolicy.FIRST_PER_COLOR:
-                    seen_colors |= set(card.color_identity or "C")
-            elif policy == ReminderPolicy.ALWAYS:
-                show = True
-            elif policy == ReminderPolicy.NEVER:
-                show = False
-            elif policy == ReminderPolicy.COMMONS_ONLY:
-                show = card.rarity == Rarity.COMMON
-            else:                                   # first per color ("C" = colorless)
-                colors = set(card.color_identity or "C")
-                show = not colors <= seen_colors
-                seen_colors |= colors
+            else:
+                show = _decide(mechanic.reminder_policy, card.reminders.get(mechanic.id), card, seen_colors)
             choices[card.id][mechanic.name] = show
+    keywords = gk.game_keywords() if keywords is None else keywords
+    seen: dict[str, set[str]] = {}
+    for card in ordered:
+        for kw in gk.used(card, project, keywords):
+            show = _decide(gk.policy(project, kw), card.reminders.get(kw.card_key), card,
+                           seen.setdefault(kw.key, set()))
+            if all_keywords or show != gk.mse_default(kw):
+                choices[card.id][kw.name] = show
     return choices
 
 

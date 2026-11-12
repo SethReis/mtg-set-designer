@@ -23,6 +23,7 @@ from ..app import balance as bal
 from ..model import Card, Layout, MechanicKind, Rarity, Status, validate_card
 from ..model.card import COLOR_NAMES, COLORS
 from ..model.layouts import TRANSFORM_SYMBOL_LABELS
+from ..mse import game_keywords as gk
 from ..mse.mapping import split_type_line
 from . import components as c
 from . import renderer_notice
@@ -211,6 +212,7 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
         if card is None:
             return
         used = list(card.mechanics)
+        keywords = [k.name for k in gk.used(card, session.project)] if field == "rules_text" else []
         session.update(card, field, value, face=view["face"])
         if field in ("mana_cost", "rules_text", "power", "toughness", "rarity", "types", "subtypes", "type_line"):
             balance_badge.refresh()
@@ -222,18 +224,22 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
         ability_word = any(x.kind == MechanicKind.ABILITY_WORD and x.id in card.mechanics
                            for x in session.project.mechanics)
         if view["mechanics"] is not None and (card.mechanics != used
-                                              or (field == "rules_text" and ability_word)):
+                                              or (field == "rules_text" and ability_word)
+                                              or (field == "rules_text" and keywords
+                                                  != [k.name for k in gk.used(card, session.project)])):
             view["mechanics"].refresh()     # a mechanic appeared or went, or a variant check
         if field in ("rules_text", "name", "types") and view["roles"] is not None:
             view["roles"].refresh()         # detection reads the text and the types
         schedule_preview()
 
     def mechanics_row(card: Card):
-        """One chip per mechanic on the card, each with its reminder-text choice."""
+        """One chip per mechanic on the card, each with its reminder-text choice; then
+        Magic's own keywords on it (Flying, Cycling...), with the same choice."""
         @ui.refreshable
         def row() -> None:
             used = [x for x in session.project.mechanics if x.id in card.mechanics]
-            if not used:
+            keywords = [k for k in gk.used(card, session.project) if k.reminder]
+            if not used and not keywords:
                 return
             with ui.row().classes("w-full items-center gap-3"):
                 c.label("Mechanics").classes("mb-0")
@@ -259,6 +265,19 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
                         schedule_preview(now=True)
                     ui.select(options, value=value, on_change=choose) \
                         .props("dense options-dense outlined").classes("min-w-[260px]")
+                for kw in keywords:
+                    current = card.reminders.get(kw.card_key)
+                    policy = POLICY_LABELS[gk.policy(session.project, kw).value].lower()
+                    options = {"policy": f"{kw.name}: reminder as set ({policy})",
+                               "show": f"{kw.name}: show reminder", "hide": f"{kw.name}: hide reminder"}
+                    value = "policy" if current is None else "show" if current else "hide"
+
+                    def choose_kw(e, name=kw.name) -> None:
+                        session.set_keyword_reminder(card, name, None if e.value == "policy" else e.value == "show")
+                        schedule_preview(now=True)
+                    ui.select(options, value=value, on_change=choose_kw) \
+                        .props("dense options-dense outlined").classes("min-w-[260px]") \
+                        .mark(f"keyword-reminder-{kw.key}").tooltip(kw.preview())
         row()
         return row
 

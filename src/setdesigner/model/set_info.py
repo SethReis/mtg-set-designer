@@ -4,6 +4,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from .card import Rarity
+from .mechanic import ReminderPolicy
 
 
 class CheckSetting(BaseModel):
@@ -24,3 +25,6 @@ class SetInfo(BaseModel):
     rarity_slots: dict[Rarity, int] = Field(default_factory=dict)
     health: dict[str, CheckSetting] = Field(default_factory=dict)   # check id -> settings
     balance: dict[str, float] = Field(default_factory=dict)         # norm key -> value (app.balance.norms)
+    # Magic's own keywords (mse.game_keywords): lower-case name -> reminder policy, where
+    # the set changes the default
+    keyword_reminders: dict[str, ReminderPolicy] = Field(default_factory=dict)

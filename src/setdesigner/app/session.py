@@ -756,6 +756,26 @@ class SetSession:
             card.reminders[mechanic.id] = show
         self._changed(card)        # re-rendering the card works its reminder choices out again
 
+    def set_keyword_reminder(self, card: Card, keyword: str, show: bool | None) -> None:
+        """Show or hide a Magic keyword's reminder text on one card (keyword: its name);
+        None follows the set's policy for it."""
+        key = "kw:" + keyword.lower()
+        if show is None:
+            card.reminders.pop(key, None)
+        else:
+            card.reminders[key] = show
+        self._changed(card)
+
+    def set_keyword_policy(self, keyword: str, policy: ReminderPolicy | str | None) -> None:
+        """A Magic keyword's reminder policy for this set; None goes back to the default."""
+        key = keyword.lower()
+        if policy is None:
+            self.project.info.keyword_reminders.pop(key, None)
+        else:
+            self.project.info.keyword_reminders[key] = ReminderPolicy(policy)
+        save_info(self.folder, self.project.info)
+        self._restart_renderer()                    # every card using it may change
+
     def _mechanics_changed(self) -> None:
         save_mechanics(self.folder, self.project.mechanics)
         for card in self.project.cards:             # what each card uses may have changed

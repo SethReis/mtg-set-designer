@@ -51,5 +51,7 @@ def keyword_project() -> SetProject:
                               power="2" if "Creature" in type_line else None,
                               toughness="2" if "Creature" in type_line else None)])
              for n, (cid, rarity, cost, type_line, text) in enumerate(CARDS)]
-    return SetProject(info=SetInfo(name="Keyword Test Set", code="KWT"),
+    # Ward's reminder on the rare, as MSE drew it for the oracle (our default: commons only)
+    return SetProject(info=SetInfo(name="Keyword Test Set", code="KWT",
+                                   keyword_reminders={"ward": ReminderPolicy.ALWAYS}),
                       mechanics=MECHANICS, cards=cards)

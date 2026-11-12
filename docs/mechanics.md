@@ -52,6 +52,30 @@ This is stored as `Card.reminders` and wins over the mechanic's policy
 (`mse/mechanics.reminder_choices`). The choice becomes MSE's own per-mention `<kw-1>` /
 `<kw-0>` switch, so the picture is exactly what MSE draws (tested with real MSE).
 
+## Magic's own keywords
+
+Real keywords (Flying, Lifelink, Cycling, Ward, Scry and about 300 more, from the MSE
+game's keyword list, `mse/game_keywords.py`) work on every card without being added to
+the set. Their reminder text follows real sets:
+- **Core keywords** (Flying, Trample, Lifelink, Scry...) never show it.
+- **The rest** (Cycling, Kicker, Ward, Flashback...) show it on commons only.
+
+Where the keywords are controlled:
+- **On the Mechanics page,** *Magic keywords on your cards* lists the ones your cards use.
+  For each one you can:
+  - read its reminder text;
+  - change when it shows for the whole set (`SetInfo.keyword_reminders`);
+  - **Customize as a set mechanic** to write your own reminder text. A set mechanic with
+    the same name replaces the game's keyword.
+- **In the card editor,** each keyword on a card gets the same *show / hide / as set*
+  control as a mechanic (`Card.reminders["kw:<name>"]`).
+
+A choice is passed to MSE only where it differs from what MSE would do by default, so
+otherwise MSE's output is untouched.
+
+The printer-friendly print doesn't write these keywords' reminder text yet. It covers
+set mechanics only.
+
 ## Ability words: variants and shared phrases
 
 Ability words (Flurry, Renew, Settled) have no reminder text. The name is set in italics

@@ -17,6 +17,7 @@ from ..app.health.roles import ROLES
 from ..app.mechanics import PARAMETER_TYPES, find_uses, reminder_preview, rename_plan, suggest_forms, usage
 from ..app.overview import COLOR_LABELS
 from ..model import AbilityTemplate, Card, Mechanic, MechanicKind, ReminderPolicy
+from ..mse import game_keywords as gk
 from ..mse.mechanics import words_pattern
 from . import components as c
 from .widgets import number_label, responsive_grid
@@ -44,13 +45,26 @@ def mechanics_panel(state, m: c.Modal, *, select_id: str | None = None,
     project = session.project
     first = project.mechanics[0].id if project.mechanics else None
     view = {"id": select_id if any(x.id == select_id for x in project.mechanics) else first,
-            "dialogs": m.body}
+            "dialogs": m.body, "kw": None}       # kw: a Magic keyword's key, when one is shown
+
+    def keyword_uses() -> dict[str, tuple[gk.GameKeyword, list[Card]]]:
+        """Magic's own keywords on the set's cards: key -> (keyword, cards), most used first."""
+        out: dict[str, tuple[gk.GameKeyword, list[Card]]] = {}
+        for card in project.cards:
+            for kw in gk.used(card, project):
+                out.setdefault(kw.key, (kw, []))[1].append(card)
+        return dict(sorted(out.items(), key=lambda item: (-len(item[1][1]), item[0])))
+
+    def select_keyword(key: str) -> None:
+        view["id"], view["kw"] = None, key
+        mechanic_list.refresh()
+        detail.refresh()
 
     def selected() -> Mechanic | None:
         return next((x for x in project.mechanics if x.id == view["id"]), None)
 
     def select(mechanic: Mechanic | None) -> None:
-        view["id"] = mechanic.id if mechanic else None
+        view["id"], view["kw"] = (mechanic.id if mechanic else None), None
         mechanic_list.refresh()
         detail.refresh()
         on_select(view["id"])
@@ -118,6 +132,51 @@ def mechanics_panel(state, m: c.Modal, *, select_id: str | None = None,
                     parts["preview"] = ui.label(reminder_preview(mechanic)).classes("italic")
             c.button("Delete mechanic", kind="danger", icon="delete", on_click=lambda: delete(mechanic)) \
                 .props("dense").classes("self-start")
+
+    # ---------------------------------------------------------------- Magic keywords
+    def keyword_detail(kw: gk.GameKeyword, cards: list[Card]) -> None:
+        """A Magic keyword: it works on every card as it is; the set picks when its
+        reminder text shows, or makes it a set mechanic to write its own."""
+        default = POLICY_LABELS[kw.default_policy.value].lower()
+
+        def set_policy(value: str) -> None:
+            session.set_keyword_policy(kw.name, value or None)
+
+        def customize() -> None:
+            mechanic = session.new_mechanic(kw.name)
+            session.update_mechanic(mechanic, reminder_text=kw.preview(),
+                                    reminder_policy=gk.policy(project, kw).value,
+                                    kind=(MechanicKind.KEYWORD_ACTION if kw.mode == "action"
+                                          else MechanicKind.KEYWORD).value)
+            select(mechanic)
+
+        with ui.column().classes("w-full gap-2").mark(f"keyword-{kw.key}"):
+            ui.label(kw.name).classes("ds-part-title")
+            c.hint("A Magic keyword: it works on every card without being added to the set.")
+            ui.select({"": f"Like real sets ({default})", **POLICY_LABELS},
+                      value=project.info.keyword_reminders[kw.key].value
+                      if kw.key in project.info.keyword_reminders else "",
+                      label="Show reminder text", on_change=lambda e: set_policy(e.value)) \
+                .props("dense outlined").classes("w-72").mark("keyword-policy")
+            with ui.row().classes("items-center gap-2"):
+                ui.label("Reminder:").classes("muted")
+                ui.label(f"({kw.preview()})").classes("italic")
+            c.hint("Each card can show or hide it in the editor. To write your own reminder text, "
+                   "make it a set mechanic: it then replaces Magic's.")
+            c.button("Customize as a set mechanic", kind="secondary", icon="edit", on_click=customize) \
+                .props("dense").classes("self-start").mark("keyword-customize")
+        ui.element("div").classes("ds-divider")
+        ui.label(f"Used on {len(cards)} card{'s' * (len(cards) != 1)}").classes("ds-section-title")
+
+        def sentences(card: Card) -> Callable[[], None]:
+            def show() -> None:
+                with ui.column().classes("gap-0"):
+                    for face in card.faces:
+                        for line in face.rules_text.splitlines():
+                            if kw.key in line.lower():
+                                ui.label(line)
+            return show
+        c.data_table(USE_COLUMNS, [use_row(card, 0, sentences(card)) for card in cards])
 
     # ---------------------------------------------------------------- ability words
     def throughline(mechanic: Mechanic) -> None:
@@ -322,11 +381,25 @@ def mechanics_panel(state, m: c.Modal, *, select_id: str | None = None,
                                         on_click=lambda x=mechanic: select(x)):
                             ui.label(mechanic.name or "(no name)").classes("grow truncate font-medium")
                             ui.label(f"{n} card{'s' * (n != 1)}").classes("faint num text-xs")
+                    keywords = keyword_uses()
+                    if keywords:
+                        ui.label("Magic keywords on your cards").classes("ds-label px-3 mt-3") \
+                            .tooltip("They work without being added; pick one to set its reminder text")
+                    for key, (kw, cards) in keywords.items():
+                        with c.list_row(selected=key == view["kw"], on_click=lambda k=key: select_keyword(k)) as row:
+                            row.mark(f"keyword-row-{key}")
+                            ui.label(kw.name).classes("grow truncate")
+                            ui.label(f"{len(cards)} card{'s' * (len(cards) != 1)}").classes("faint num text-xs")
             mechanic_list()
 
         with ui.element("div").classes("ds-split-detail"):
             @ui.refreshable
             def detail() -> None:
+                if view["kw"] is not None:
+                    found = keyword_uses().get(view["kw"])
+                    if found is not None:
+                        keyword_detail(*found)
+                        return
                 mechanic = selected()
                 if mechanic is None:
                     c.empty_state("auto_fix_high", "Nothing selected",
