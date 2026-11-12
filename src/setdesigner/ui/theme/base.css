@@ -52,8 +52,11 @@ body { font-family: var(--font-ui); font-size: var(--text-sm); line-height: 18px
 .q-menu { background: var(--surface-1); color: var(--text); border: 1px solid var(--border);
           border-radius: var(--radius-md); box-shadow: var(--shadow-2); }
 .q-item { min-height: 32px; font-size: var(--text-sm); }
+/* the highlight is the item's own background: Quasar's focus helper is positioned, so an
+   opaque one would paint over the item's text */
+.q-item.q-manual-focusable--focused, .q-item.q-item--clickable:hover { background: var(--surface-2); }
 .q-item.q-manual-focusable--focused > .q-focus-helper,
-.q-item:hover > .q-focus-helper { background: var(--surface-2) !important; opacity: 1 !important; }
+.q-item:hover > .q-focus-helper { opacity: 0 !important; }
 .q-item--active, .q-item.q-router-link--active { color: var(--accent); }
 .q-tooltip { background: var(--surface-3); color: var(--text); font-size: var(--text-xs);
              border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 4px 8px; }
