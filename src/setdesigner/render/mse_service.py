@@ -224,7 +224,8 @@ def render_keys(project: SetProject, env: ScriptEnvironment, cards: list[Card]) 
     Cards must be known to `env`."""
     uids = {card.id: [face_uid(card, i) for i in range(len(card.faces))] for card in cards}
     set_values, card_values = preview_overrides(env, [u for us in uids.values() for u in us])
-    header, blocks = set_file_parts(project, set_values, card_values)
+    all_uids = [u for us in uids.values() for u in us]
+    header, blocks = set_file_parts(project, set_values, card_values, env.fitted_styling(all_uids))
     stamp = file_stamp(project.resolve(project.info.symbol_path))
     return {cid: hashlib.sha1((header + stamp + "".join(blocks[u] + art_stamp(env, u) for u in us))
                               .encode("utf-8")).hexdigest()
@@ -318,7 +319,8 @@ class MSERenderer:
         files, art_values = art_files(self.env, uids)
         for uid, values in art_values.items():
             card_values[uid].update(values)
-        options = dict(only_uids=uids, extra_set_values=set_values, extra_card_values=card_values)
+        options = dict(only_uids=uids, extra_set_values=set_values, extra_card_values=card_values,
+                       extra_styling=self.env.fitted_styling(uids))
         path = self.workdir / "batch.mse-set"
         for attempt in (1, 2):
             try:
@@ -347,7 +349,8 @@ class MSERenderer:
         """One face, as MSE draws it, with our set symbol on top."""
         uids, set_values, card_values = self.preview_values(card)
         art = "".join(art_stamp(self.env, uid) for uid in sorted(uids))
-        options = dict(only_uids=uids, extra_set_values=set_values, extra_card_values=card_values)
+        options = dict(only_uids=uids, extra_set_values=set_values, extra_card_values=card_values,
+                       extra_styling=self.env.fitted_styling(uids))
         digest = hashlib.sha1((set_file_text(self.project, **options) + art).encode("utf-8")).hexdigest()
         path = self.workdir / "preview.mse-set"
         for attempt in (1, 2):

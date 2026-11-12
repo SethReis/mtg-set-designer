@@ -364,8 +364,16 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
         # events); whichever of the text and the caret updates arrives last refreshes the
         # suggestions with both up to date. Tab's keyup is skipped: it would report the
         # caret from before the suggestion it accepted
+        # in rules text, "Raid - " becomes "Raid — " as you type (text_input.long_dashes,
+        # which saving applies too), the caret kept where it was
+        dashes = "" if field != "rules_text" else (
+            r"const t = e.target, re = /^([A-Z][A-Za-z']*(?: [A-Za-z']+){0,3}) ?(?:--|-|–)(?= |$)/gm;"
+            r" const v = t.value.replace(re, (m, a) => a + ' —');"
+            r" if (v !== t.value) { const p = t.selectionStart - (t.value.length - v.length);"
+            r" t.value = v; t.dispatchEvent(new Event('input'));"
+            r" for (const ms of [0, 60, 200]) setTimeout(() => t.setSelectionRange(p, p), ms); }")
         element.on("keyup", on_caret,
-                   js_handler="(e) => { if (e.key !== 'Tab') emit(e.target.selectionStart); }")
+                   js_handler="(e) => { " + dashes + " if (e.key !== 'Tab') emit(e.target.selectionStart); }")
         element.on("click", on_caret, js_handler="(e) => emit(e.target.selectionStart)")
         # Tab accepts the first suggestion, but only while suggestions are shown
         element.on("keydown", on_tab, js_handler=(

@@ -32,3 +32,12 @@ def test_apply_and_insert_move_the_caret() -> None:
     option = suggestions("Bl", 2, MECHANICS)[0]
     assert apply("Bl and more", 2, option) == ("Bloodpact {1} and more", 13)
     assert insert("Deals damage", 0, "CARDNAME ") == ("CARDNAME Deals damage", 9)
+
+
+def test_long_dashes_after_ability_words() -> None:
+    from setdesigner.app.text_input import long_dashes
+    assert long_dashes("Raid - When this dies, draw a card.") == "Raid — When this dies, draw a card."
+    assert long_dashes("Flying\nSpell mastery -- If") == "Flying\nSpell mastery — If"
+    assert long_dashes("Choose one -\n• Draw a card.") == "Choose one —\n• Draw a card."
+    for same in ("+1: Target creature gets -1/-1.", "Raid — Already long.", "Self-mill - not a word"):
+        assert long_dashes(same) == same

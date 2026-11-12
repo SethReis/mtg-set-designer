@@ -104,3 +104,15 @@ def insert(text: str, caret: int, snippet: str) -> tuple[str, int]:
     """Insert a snippet (e.g. "{W}" from the symbol palette, or "CARDNAME") at the caret."""
     caret = max(0, min(caret, len(text)))
     return text[:caret] + snippet + text[caret:], caret + len(snippet)
+
+
+# "Raid - When ...", "Raid -- When ...", "Choose one -": a line's opening words (an ability
+# word, a modal "Choose one") followed by a hyphen, two or an en dash, as people type it
+LINE_DASH = re.compile(r"^([A-Z][A-Za-z']*(?: [A-Za-z']+){0,3}) ?(?:--|-|–)(?= |$)", re.MULTILINE)
+
+
+def long_dashes(text: str) -> str:
+    """The long dash after an ability word, as cards print it: "Raid - When ..." ->
+    "Raid — When ...". Only a line's first few words (from a capital letter) count, so
+    "+1/-1", "{T}, Pay 2 - X life" and hyphenated words are left alone."""
+    return LINE_DASH.sub(lambda m: m.group(1) + " —", text)

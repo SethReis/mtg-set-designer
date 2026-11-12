@@ -48,3 +48,21 @@ def test_old_frames_have_their_own_boxes(renderer) -> None:
     m15 = renderer.field_boxes(renderer.project.card("grizzly-bears"))
     assert {"name", "type", "text"} <= set(old) and all(inside(box) for box in old.values())
     assert old["name"] != m15["name"]
+
+
+def test_long_text_keeps_clear_of_the_pt_box() -> None:
+    """MSE's text box runs under the P/T box: a creature whose text would reach it gets a
+    shorter box (styling "chop bottom"), so its text shrinks to end above it."""
+    from setdesigner.mse.environment import ScriptEnvironment
+    text = ("{1}: Add {U}, {B}, or {R}. Activate only once each turn.\nRaid — When this creature dies, "
+            "if you attacked this turn, create a tapped Treasure token.")
+    flavor = "The henchmen on Bellamy's crew were keen on pillaging Mont Blanc Nolan's gold."
+    project = oracle_project()
+    project.cards = [Card(id="long", faces=[Face(name="Hooligan", mana_cost="{1}{B}", type_line="Creature — Pirate",
+                                                 rules_text=text, flavor_text=flavor, power="2", toughness="2")]),
+                     Card(id="short", faces=[Face(name="Bear", mana_cost="{1}{G}", type_line="Creature — Bear",
+                                                  rules_text="Trample", power="2", toughness="2")])]
+    env = ScriptEnvironment(project)
+    fitted = env.fitted_styling(["long", "short"])
+    assert list(fitted) == ["long"] and 10 <= int(fitted["long"]["chop bottom"]) <= 20
+    assert env.card_object(project.card("long")).mse.styling == fitted["long"]

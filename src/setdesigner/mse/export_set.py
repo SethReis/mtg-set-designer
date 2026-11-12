@@ -33,7 +33,8 @@ BLANK_SYMBOL_TEXT = f"mse_version: {MSE_VERSION}\n"
 
 
 def set_file_parts(project: SetProject, extra_set_values: dict[str, str] | None = None,
-                   extra_card_values: dict[str, dict[str, str]] | None = None
+                   extra_card_values: dict[str, dict[str, str]] | None = None,
+                   extra_styling: dict[str, dict[str, str]] | None = None
                    ) -> tuple[str, dict[str, str]]:
     """The `set` file in pieces: its header (set info, keywords) and each MSE card's
     block by uid, in file order. The extra values are added to / override the set's and
@@ -52,6 +53,7 @@ def set_file_parts(project: SetProject, extra_set_values: dict[str, str] | None 
     blocks: dict[str, str] = {}
     for card in project_to_mse(project):
         card.values = {**card.values, **(extra_card_values or {}).get(card.uid, {})}
+        card.styling = {**card.styling, **(extra_styling or {}).get(card.uid, {})}
         block = ["card:"]
         if card.stylesheet != default_style:
             block += _entry("stylesheet", stylesheet_name(card.stylesheet), 1)
@@ -74,11 +76,12 @@ def set_file_parts(project: SetProject, extra_set_values: dict[str, str] | None 
 
 def set_file_text(project: SetProject, only_uids: set[str] | None = None,
                   extra_set_values: dict[str, str] | None = None,
-                  extra_card_values: dict[str, dict[str, str]] | None = None) -> str:
+                  extra_card_values: dict[str, dict[str, str]] | None = None,
+                  extra_styling: dict[str, dict[str, str]] | None = None) -> str:
     """The `set` file. `only_uids` keeps just those MSE cards (reminder policies and
     other set-wide choices are still worked out on the whole project); the extra
     values are added to / override the set's and individual cards' field values."""
-    header, blocks = set_file_parts(project, extra_set_values, extra_card_values)
+    header, blocks = set_file_parts(project, extra_set_values, extra_card_values, extra_styling)
     return header + "".join(b for uid, b in blocks.items() if only_uids is None or uid in only_uids)
 
 

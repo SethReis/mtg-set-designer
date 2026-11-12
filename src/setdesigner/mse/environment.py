@@ -11,6 +11,7 @@ value bound, just as MSE runs them.
 """
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
 
 from ..model import Card, SetProject
@@ -46,6 +47,7 @@ class ScriptEnvironment:
         self._game_scripts: dict[str, A.Node] | None = None
         self._entry_scripts: dict[str, dict[tuple[str, str], A.Node]] = {}
         self._keyword_db: KeywordDatabase | None = None
+        self._fits: dict[str, tuple[CardObject, CardObject, dict[str, str]]] = {}
         self.load_reports: dict[str, LoadReport] = {}
 
         self.set = SetObject(self, set_values(project.info, project.resolve))
@@ -181,7 +183,39 @@ class ScriptEnvironment:
     # ---------------------------------------------------------- our cards
 
     def card_object(self, card: Card, face_index: int = 0) -> CardObject:
-        return self.set.by_uid[face_uid(card, face_index)]
+        """A face as drawn: with the text box shortened where its text would run behind the
+        power/toughness box (see fitted_styling)."""
+        return self._fitted(face_uid(card, face_index))[1]
+
+    def fitted_styling(self, uids) -> dict[str, dict[str, str]]:
+        """Styling options added per MSE card so it draws well, by uid: "chop bottom" where
+        the rules text would run behind the power/toughness box (render.mse_layout.pt_overlap).
+        Worked out when first asked for, per card."""
+        return {uid: extra for uid in uids if uid in self.set.by_uid
+                for extra in [self._fitted(uid)[2]] if extra}
+
+    def _fitted(self, uid: str) -> tuple[CardObject, CardObject, dict[str, str]]:
+        obj = self.set.by_uid[uid]
+        cached = self._fits.get(uid)
+        if cached is None or cached[0] is not obj:
+            from ..render.mse_layout import pt_overlap
+            extra: dict[str, str] = {}
+            fitted = obj
+            defs, _ = self.style_field_defs(obj.style)
+            if "chop bottom" in defs and not (obj.mse.styling.get("chop bottom") or obj.mse.styling.get("chop top")):
+                try:
+                    chop = pt_overlap(self, obj)
+                except Exception:               # never stop a render over this
+                    chop = 0.0
+                if chop:
+                    extra = {"chop bottom": str(int(chop))}
+                    fitted = CardObject(self, dataclasses.replace(obj.mse, styling={**obj.mse.styling, **extra}))
+                    # it takes the plain one's place, so set-wide scripts (numbering) find it
+                    self.set.cards[self.set.cards.index(obj)] = fitted
+                    self.set.by_uid[uid] = fitted
+            cached = (fitted, fitted, extra)
+            self._fits[uid] = cached
+        return cached
 
     def card_values(self, card: Card, face_index: int = 0) -> dict[str, object]:
         """Every MSE card field of one face, computed."""

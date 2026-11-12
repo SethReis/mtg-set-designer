@@ -424,3 +424,24 @@ def cover_fit(img: Image.Image, size: tuple[int, int]) -> Image.Image:
 
 def mse_layout(env: ScriptEnvironment, card: CardObject) -> CardLayout:
     return MSELayoutBuilder(env, card).build()
+
+
+def pt_overlap(env: ScriptEnvironment, card: CardObject) -> float:
+    """How far (pixels) the rules text box would need to shrink from the bottom so its
+    text clears the power/toughness box, or 0 when it already does (or there's no P/T).
+    MSE's frames let the text box run under the P/T box and fit the text to the whole box,
+    so long text can end up behind it."""
+    if not (str(card.fields.get("power") or "") or str(card.fields.get("toughness") or "")):
+        return 0.0
+    b = MSELayoutBuilder(env, card)
+    text, pt = b.entry("text"), b.entry("pt")
+    if text is None or pt is None or not b.visible(pt):
+        return 0.0
+    tb, pb = b.box(text), b.box(pt)
+    if tb is None or pb is None or tb.top + tb.height <= pb.top:
+        return 0.0
+    laid = layout_text(b.text_layer(text, tb, to_str(b.value(text) or "")))
+    for line in laid.lines:
+        if tb.top + line.bottom > pb.top + 1 and tb.left + line.left + line.width > pb.left:
+            return float(np.ceil(tb.top + tb.height - pb.top)) + 1.0
+    return 0.0

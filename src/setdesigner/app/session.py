@@ -30,6 +30,7 @@ from ..model import (LAYOUTS, AbilityTemplate, Archetype, ArtCrop, Card, CheckSe
 from ..model.project import slug
 from ..mse.mapping import join_type_line, split_type_line
 from .mechanics import mechanic_ids
+from .text_input import long_dashes
 from .overview import matches_text, number_key
 
 AUTOSAVE_DELAY = 0.5                    # seconds after the last edit
@@ -231,6 +232,8 @@ class SetSession:
                 value = (str(value).strip() or None) if value is not None else None
             else:
                 value = "" if value is None else str(value)
+            if field == "rules_text":
+                value = long_dashes(value)
             setattr(card.faces[face], field, value)
         elif field in CARD_FIELDS:
             if field == "rarity":
