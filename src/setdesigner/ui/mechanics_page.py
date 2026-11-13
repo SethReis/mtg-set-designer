@@ -136,35 +136,51 @@ def mechanics_panel(state, m: c.Modal, *, select_id: str | None = None,
     # ---------------------------------------------------------------- Magic keywords
     def keyword_detail(kw: gk.GameKeyword, cards: list[Card]) -> None:
         """A Magic keyword: it works on every card as it is; the set picks when its
-        reminder text shows, or makes it a set mechanic to write its own."""
+        reminder text shows and can replace the text itself."""
         default = POLICY_LABELS[kw.default_policy.value].lower()
+        from ..mse.keyword_fixes import FIXES
+        fixed = kw.key in FIXES
+        default_text = gk.reminder_text(None, kw)        # the corrected or the game's, unchanged
 
         def set_policy(value: str) -> None:
             session.set_keyword_policy(kw.name, value or None)
 
-        def customize() -> None:
-            mechanic = session.new_mechanic(kw.name)
-            session.update_mechanic(mechanic, reminder_text=kw.preview(),
-                                    reminder_policy=gk.policy(project, kw).value,
-                                    kind=(MechanicKind.KEYWORD_ACTION if kw.mode == "action"
-                                          else MechanicKind.KEYWORD).value)
-            select(mechanic)
+        def save_text() -> None:
+            value = " ".join((text.value or "").split())
+            session.set_keyword_text(kw.name, None if value in ("", default_text) else value)
+            keyword_header.refresh()
+
+        def reset_text() -> None:
+            session.set_keyword_text(kw.name, None)
+            text.value = default_text
+            keyword_header.refresh()
+
+        @ui.refreshable
+        def keyword_header() -> None:
+            with ui.row().classes("items-center gap-2"):
+                ui.label(kw.name).classes("ds-part-title")
+                if kw.key in project.info.keyword_text:
+                    c.badge("Customized", "info").mark("keyword-customized")
+                elif fixed:
+                    c.badge("Corrected default", "neutral") \
+                        .tooltip("MSE's own text reads wrong on modern cards; this is ours")
 
         with ui.column().classes("w-full gap-2").mark(f"keyword-{kw.key}"):
-            ui.label(kw.name).classes("ds-part-title")
+            keyword_header()
             c.hint("A Magic keyword: it works on every card without being added to the set.")
             ui.select({"": f"Like real sets ({default})", **POLICY_LABELS},
                       value=project.info.keyword_reminders[kw.key].value
                       if kw.key in project.info.keyword_reminders else "",
                       label="Show reminder text", on_change=lambda e: set_policy(e.value)) \
                 .props("dense outlined").classes("w-72").mark("keyword-policy")
-            with ui.row().classes("items-center gap-2"):
-                ui.label("Reminder:").classes("muted")
-                ui.label(f"({kw.preview()})").classes("italic")
-            c.hint("Each card can show or hide it in the editor. To write your own reminder text, "
-                   "make it a set mechanic: it then replaces Magic's.")
-            c.button("Customize as a set mechanic", kind="secondary", icon="edit", on_click=customize) \
-                .props("dense").classes("self-start").mark("keyword-customize")
+            text = ui.textarea("Reminder text", value=project.info.keyword_text.get(kw.key, default_text)) \
+                .props("autogrow outlined").classes("w-full").mark("keyword-text")
+            text.on("blur", lambda: save_text())
+            with ui.row().classes("w-full items-center gap-2"):
+                c.hint(("Use {N} where the keyword's value goes. " if kw.has_param else "")
+                       + "Each card can show or hide it in the editor.").classes("grow")
+                c.button("Reset to default", kind="ghost", icon="restart_alt", on_click=reset_text) \
+                    .props("dense").mark("keyword-reset")
         ui.element("div").classes("ds-divider")
         ui.label(f"Used on {len(cards)} card{'s' * (len(cards) != 1)}").classes("ds-section-title")
 

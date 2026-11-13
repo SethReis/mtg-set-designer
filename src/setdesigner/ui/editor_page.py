@@ -277,7 +277,8 @@ def editor_panel(state, m: c.Modal, card_id: str, *, order: Callable[[], list[Ca
                         schedule_preview(now=True)
                     ui.select(options, value=value, on_change=choose_kw) \
                         .props("dense options-dense outlined").classes("min-w-[260px]") \
-                        .mark(f"keyword-reminder-{kw.key}").tooltip(kw.preview())
+                        .mark(f"keyword-reminder-{kw.key}").tooltip(gk.reminder_text(
+                            session.project.info, kw, "\n".join(f.rules_text for f in card.faces)))
         row()
         return row
 

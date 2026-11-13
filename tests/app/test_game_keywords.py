@@ -56,3 +56,34 @@ def test_a_set_mechanic_replaces_the_keyword(tmp_path) -> None:
     mechanic = s.new_mechanic("Cycling")
     s.update_mechanic(mechanic, reminder_text="Pay {param}, discard this: draw.")
     assert gk.used(fish, s.project) == []
+
+
+def test_explore_reads_this_creature_and_the_set_can_replace_it(tmp_path) -> None:
+    from setdesigner.mse.environment import ScriptEnvironment
+    from setdesigner.mse.script.builtins.tags import to_text
+    from setdesigner.model import load_project
+    s = SetSession.create(tmp_path / "s", "Test", "TST")
+    scout = made(s, "Scout", "When this creature enters, it explores.")
+    other = made(s, "Guide", "When this creature enters, target creature you control explores.")
+
+    def drawn(card) -> str:
+        return to_text(ScriptEnvironment(s.project).card_object(card).fields.get("rule text"))
+    assert "+1/+1 counter on this creature," in drawn(scout)
+    assert "+1/+1 counter on that creature," in drawn(other)
+    assert drawn(scout).count("(") == 1                    # MSE's own reminder is switched off
+    s.set_keyword_text("Explore", "Look at the top card; keep it or not.")
+    assert drawn(scout).endswith("it explores. (Look at the top card; keep it or not.)")
+    assert gk.reminder_text(s.project.info, gk.find("explore")) == "Look at the top card; keep it or not."
+    assert load_project(s.folder).info.keyword_text == {"explore": "Look at the top card; keep it or not."}
+    s.set_keyword_text("Explore", None)
+    assert "on this creature," in drawn(scout)
+
+
+def test_replaced_text_fills_in_the_value(tmp_path) -> None:
+    from setdesigner.mse.environment import ScriptEnvironment
+    from setdesigner.mse.script.builtins.tags import to_text
+    s = SetSession.create(tmp_path / "s", "Test", "TST")
+    fish = made(s, "Carp", "Cycling {2}")
+    s.set_keyword_text("Cycling", "{N}, Discard this card: Draw a card. Then scry 1.")
+    text = to_text(ScriptEnvironment(s.project).card_object(fish).fields.get("rule text"))
+    assert text == "Cycling 2 (2, Discard this card: Draw a card. Then scry 1.)"

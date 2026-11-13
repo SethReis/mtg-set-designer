@@ -131,9 +131,11 @@ def loyalty_abilities(rules_text: str) -> list[tuple[str, str]]:
 
 
 def face_values(card: Card, face: Face, reminders: dict[str, bool] | None = None,
-                forms: dict[str, list[str]] | None = None) -> dict[str, str]:
+                forms: dict[str, list[str]] | None = None, custom: dict | None = None) -> dict[str, str]:
     """`reminders`: mechanic name -> show its reminder text on this card (see mechanics.py);
-    `forms`: mechanic name -> word forms that count as a mention too."""
+    `forms`: mechanic name -> word forms that count as a mention too; `custom`: Magic
+    keyword name -> (GameKeyword, text) whose reminder text is replaced
+    (mechanics.custom_reminders): ours is written in where shown, MSE's switched off."""
     from .mechanics import tag_reminders
     supertype, subtype = split_type_line(face.type_line)
     rules_text = face.rules_text
@@ -143,6 +145,12 @@ def face_values(card: Card, face: Face, reminders: dict[str, bool] | None = None
         rules_text = "\n".join(text for _, text in abilities)
         costs = {f"loyalty cost {i}": cost
                  for i, (cost, _) in enumerate(abilities[:MAX_LOYALTY_ABILITIES], 1)}
+    if custom:
+        from .game_keywords import insert_reminder
+        for name, (keyword, text) in custom.items():
+            if (reminders or {}).get(name):
+                rules_text = insert_reminder(rules_text, keyword, text)
+        reminders = {**(reminders or {}), **{name: False for name in custom}}
     values = {
         "name": face.name,
         "casting cost": mse_mana_cost(face.mana_cost),
@@ -175,7 +183,7 @@ def set_values(info: SetInfo, resolve: Callable[[str], Path | None] | None = Non
 
 def card_to_mse(card: Card, set_info: SetInfo, reminders: dict[str, bool] | None = None,
                 resolve: Callable[[str], Path | None] | None = None,
-                forms: dict[str, list[str]] | None = None) -> list[MSECard]:
+                forms: dict[str, list[str]] | None = None, custom: dict | None = None) -> list[MSECard]:
     """The MSE cards for one of our cards (one per face), linked if multi-faced.
     `reminders` are this card's reminder-text choices per mechanic name
     (mechanics.reminder_choices); use mechanics.project_to_mse for a whole project.
@@ -187,7 +195,7 @@ def card_to_mse(card: Card, set_info: SetInfo, reminders: dict[str, bool] | None
         out.append(MSECard(
             uid=face_uid(card, index),
             stylesheet=stylesheet_package(frame, planeswalker=planeswalker),
-            values=face_values(card, face, reminders, forms),
+            values=face_values(card, face, reminders, forms, custom),
             notes=card.notes,
             art=ArtRef(art_path, face.art_crop) if art_path is not None else None,
             styling=frame_styling(frame, planeswalker=planeswalker),

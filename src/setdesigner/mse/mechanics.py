@@ -125,7 +125,7 @@ def reminder_choices(project: SetProject, keywords=None, all_keywords: bool = Fa
         for kw in gk.used(card, project, keywords):
             show = _decide(gk.policy(project, kw), card.reminders.get(kw.card_key), card,
                            seen.setdefault(kw.key, set()))
-            if all_keywords or show != gk.mse_default(kw):
+            if all_keywords or show != gk.mse_default(kw) or gk.custom_text(project.info, kw, ""):
                 choices[card.id][kw.name] = show
     return choices
 
@@ -147,7 +147,25 @@ def tag_reminders(text: str, choices: dict[str, bool],
 
 def project_to_mse(project: SetProject) -> list[MSECard]:
     """All MSE cards of a project, in card order, with reminder policies applied."""
+    from . import game_keywords as gk
     choices = reminder_choices(project)
     forms = {m.name: [f for f in m.forms if f.strip()] for m in project.mechanics if not m.parameter}
+    for kw in gk.game_keywords():               # "Explore" is "explores" on cards
+        if kw.literal.lower() != kw.name.lower():
+            forms.setdefault(kw.name, [kw.literal])
     return [mse_card for card in project.cards
-            for mse_card in card_to_mse(card, project.info, choices[card.id], project.resolve, forms)]
+            for mse_card in card_to_mse(card, project.info, choices[card.id], project.resolve, forms,
+                                        custom_reminders(project, card))]
+
+
+def custom_reminders(project: SetProject, card: Card) -> dict:
+    """keyword name -> (GameKeyword, reminder text) for the Magic keywords on the card whose
+    reminder text is replaced (the set's own text or our correction: game_keywords)."""
+    from . import game_keywords as gk
+    text = "\n".join(face.rules_text for face in card.faces)
+    out = {}
+    for kw in gk.used(card, project):
+        custom = gk.custom_text(project.info, kw, text)
+        if custom:
+            out[kw.name] = (kw, custom)
+    return out

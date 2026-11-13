@@ -65,8 +65,19 @@ Where the keywords are controlled:
   For each one you can:
   - read its reminder text;
   - change when it shows for the whole set (`SetInfo.keyword_reminders`);
-  - **Customize as a set mechanic** to write your own reminder text. A set mechanic with
-    the same name replaces the game's keyword.
+  - edit its **reminder text** for the set (`SetInfo.keyword_text`, `{N}` for its value),
+    with **Reset to default** to undo it.
+
+Some of MSE's own reminder texts read wrong on modern cards. For example, "it explores"
+got "put a +1/+1 counter on *that* creature". Our corrections live in
+`mse/keyword_fixes.py` (Explore, Connives), and `tools/keyword_survey.py` checks every
+keyword for more.
+
+MSE's built-in keyword always wins over another keyword of the same name, so a replaced
+text isn't given to MSE as a keyword. Instead, MSE's reminder is switched off and ours is
+written into the rules text in parentheses, which MSE sets in italics like any reminder
+text. For the same reason, a set mechanic named after a Magic keyword doesn't replace it.
+Edit the keyword's text instead.
 - **In the card editor,** each keyword on a card gets the same *show / hide / as set*
   control as a mechanic (`Card.reminders["kw:<name>"]`).
 

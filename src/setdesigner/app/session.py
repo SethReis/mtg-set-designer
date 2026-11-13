@@ -779,6 +779,19 @@ class SetSession:
         save_info(self.folder, self.project.info)
         self._restart_renderer()                    # every card using it may change
 
+    def set_keyword_text(self, keyword: str, text: str | None) -> None:
+        """Replace a Magic keyword's reminder text in this set ({N} = its value); None or ""
+        goes back to the default (mse.game_keywords.custom_text)."""
+        key, text = keyword.lower(), (text or "").strip()
+        if text == self.project.info.keyword_text.get(key, ""):
+            return
+        if text:
+            self.project.info.keyword_text[key] = text
+        else:
+            self.project.info.keyword_text.pop(key, None)
+        save_info(self.folder, self.project.info)
+        self._restart_renderer()
+
     def _mechanics_changed(self) -> None:
         save_mechanics(self.folder, self.project.mechanics)
         for card in self.project.cards:             # what each card uses may have changed

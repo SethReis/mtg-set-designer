@@ -28,3 +28,5 @@ class SetInfo(BaseModel):
     # Magic's own keywords (mse.game_keywords): lower-case name -> reminder policy, where
     # the set changes the default
     keyword_reminders: dict[str, ReminderPolicy] = Field(default_factory=dict)
+    # Magic keywords whose reminder text the set replaces: lower-case name -> text ({N} = value)
+    keyword_text: dict[str, str] = Field(default_factory=dict)
